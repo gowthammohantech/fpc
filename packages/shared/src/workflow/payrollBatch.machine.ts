@@ -1,0 +1,21 @@
+import { PayrollBatchStatus as S } from '../enums.js';
+import { defineStateMachine } from './stateMachine.js';
+
+/** Payroll batch lifecycle — PRD §17–§19, §38. */
+const T: Record<S, S[]> = {
+  [S.DRAFT]: [S.IMPORTED, S.CANCELLED],
+  [S.IMPORTED]: [S.REVIEW_REQUIRED, S.VALIDATED, S.CANCELLED],
+  [S.REVIEW_REQUIRED]: [S.VALIDATED, S.IMPORTED, S.CANCELLED],
+  [S.VALIDATED]: [S.PENDING_APPROVAL, S.APPROVED, S.REVIEW_REQUIRED, S.CANCELLED],
+  [S.PENDING_APPROVAL]: [S.APPROVED, S.REJECTED, S.CANCELLED],
+  [S.APPROVED]: [S.PAYMENT_PENDING, S.CANCELLED],
+  [S.PAYMENT_PENDING]: [S.PAYMENT_BATCHED, S.CANCELLED],
+  [S.PAYMENT_BATCHED]: [S.PAYMENT_PROCESSING, S.PAYMENT_PENDING, S.CANCELLED],
+  [S.PAYMENT_PROCESSING]: [S.PAID, S.PAYMENT_PENDING],
+  [S.PAID]: [S.RECONCILED],
+  [S.RECONCILED]: [],
+  [S.REJECTED]: [S.REVIEW_REQUIRED, S.CANCELLED],
+  [S.CANCELLED]: [],
+};
+
+export const payrollBatchMachine = defineStateMachine<S>('PayrollBatch', T);

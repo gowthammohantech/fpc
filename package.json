@@ -1,0 +1,25 @@
+{
+  "name": "fpc",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Finance Operations MVP — vendor invoice and payroll money-out workflow",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "pnpm -r --filter @fpc/shared --filter @fpc/api-client build && pnpm -r --filter @fpc/server --filter @fpc/web build",
+    "dev": "pnpm --parallel --filter @fpc/server --filter @fpc/web dev",
+    "dev:server": "pnpm --filter @fpc/server dev",
+    "dev:web": "pnpm --filter @fpc/web dev",
+    "dev:mobile": "pnpm --filter @fpc/mobile start",
+    "seed": "pnpm --filter @fpc/server seed",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}

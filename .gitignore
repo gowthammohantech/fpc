@@ -1,0 +1,14 @@
+node_modules/
+dist/
+build/
+.data/
+coverage/
+*.log
+.env
+.env.local
+.DS_Store
+.expo/
+.turbo/
+apps/web/dist/
+apps/server/dist/
+packages/*/dist/
