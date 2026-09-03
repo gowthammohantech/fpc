@@ -17,6 +17,8 @@ import { payrollRouter } from './modules/payroll/payroll.routes.js';
 import { bankingRouter } from './modules/banking/banking.routes.js';
 import { reconciliationRouter } from './modules/reconciliation/reconciliation.routes.js';
 import { notificationRouter } from './modules/notifications/notification.routes.js';
+import { dashboardRouter } from './modules/dashboard/dashboard.routes.js';
+import { reportRouter } from './modules/reports/report.routes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -53,16 +55,18 @@ export function createApp(): Express {
   // Everything below this line requires an authenticated principal; each
   // route additionally names the permission it needs.
   api.use(authenticate);
+  api.use('/settings/approval-rules', approvalRuleRouter);
   api.use('/settings', organizationRouter);
   api.use('/invoices', invoiceRouter);
   api.use('/approvals', approvalRouter);
-  api.use('/settings/approval-rules', approvalRuleRouter);
   api.use('/payables', payableRouter);
   api.use('/payments', paymentRouter);
   api.use('/payroll', payrollRouter);
   api.use('/banking', bankingRouter);
   api.use('/reconciliation', reconciliationRouter);
   api.use('/notifications', notificationRouter);
+  api.use('/dashboard', dashboardRouter);
+  api.use('/reports', reportRouter);
   api.use('/audit', auditRouter);
 
   app.use('/api', api);
