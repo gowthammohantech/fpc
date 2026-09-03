@@ -38,6 +38,7 @@ const NAV_GROUPS: Array<{ title: string | null; items: NavItem[] }> = [
       { to: '/payments', label: 'Payment Queue', permissions: ['obligation:read'] },
       { to: '/payments/batches', label: 'Payment Batches', permissions: ['payment_batch:read'] },
       { to: '/banking/statements', label: 'Bank Statements', permissions: ['bank_statement:read'] },
+      { to: '/banking/transactions', label: 'Bank Transactions', permissions: ['bank_transaction:read'] },
       { to: '/reconciliation', label: 'Reconciliation', permissions: ['reconciliation:read'] },
     ],
   },
@@ -53,7 +54,9 @@ const NAV_GROUPS: Array<{ title: string | null; items: NavItem[] }> = [
     items: [
       { to: '/settings/companies', label: 'Companies', permissions: ['company:read'] },
       { to: '/settings/locations', label: 'Locations', permissions: ['location:read'] },
+      { to: '/settings/departments', label: 'Departments', permissions: ['department:read'] },
       { to: '/settings/vendors', label: 'Vendors', permissions: ['vendor:read'] },
+      { to: '/settings/bank-accounts', label: 'Bank Accounts', permissions: ['bank_account:read'] },
       { to: '/settings/users', label: 'Users', permissions: ['user:read'] },
       { to: '/settings/roles', label: 'Roles', permissions: ['role:read'] },
       { to: '/settings/approvals', label: 'Approval Rules', permissions: ['approval_rule:read'] },
@@ -169,6 +172,13 @@ export function Layout() {
 
             {menuOpen ? (
               <div className="absolute right-0 z-20 mt-1 w-48 rounded-md border border-slate-200 bg-white py-1 shadow-lg">
+                <NavLink
+                  to="/account"
+                  className="block px-4 py-2 text-left text-sm hover:bg-slate-50"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Your account
+                </NavLink>
                 <button
                   className="block w-full px-4 py-2 text-left text-sm hover:bg-slate-50"
                   onClick={() => {

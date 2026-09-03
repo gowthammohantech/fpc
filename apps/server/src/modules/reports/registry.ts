@@ -110,6 +110,7 @@ const pendingApproval: ReportDefinition = {
     { key: 'currentLevel', header: 'Level', width: 22 },
     { key: 'requestedAt', header: 'Submitted', format: 'date', width: 14 },
     { key: 'ageDays', header: 'Days Waiting', format: 'number', width: 14 },
+    { key: 'slaStatus', header: 'SLA', width: 16 },
   ],
   async run(filters, limit) {
     const query = scope(filters);
@@ -121,12 +122,18 @@ const pendingApproval: ReportDefinition = {
 
     return requests.map((request) => {
       const step = request.steps.find((entry) => entry.order === request.currentStepOrder);
+      const dueAt = step?.dueAt ? new Date(step.dueAt) : null;
       return {
         ...request,
         currentLevel: step?.label ?? '—',
         // Answers the PRD §45 question "who is holding an approval?".
         currentApprover: step?.label ?? 'Unassigned',
         ageDays: Math.floor((Date.now() - new Date(request.requestedAt).getTime()) / 86_400_000),
+        slaStatus: !dueAt
+          ? 'No SLA'
+          : dueAt.getTime() < Date.now()
+            ? `Overdue by ${Math.floor((Date.now() - dueAt.getTime()) / 86_400_000)}d`
+            : 'Within SLA',
       };
     });
   },

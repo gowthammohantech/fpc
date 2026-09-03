@@ -58,7 +58,7 @@ export function ApprovalsPage() {
                   <th className="th">Type</th>
                   <th className="th text-right">Amount</th>
                   <th className="th">Current level</th>
-                  <th className="th">Submitted</th>
+                  <th className="th">Waiting</th>
                   <th className="th">Status</th>
                 </tr>
               </thead>
@@ -76,10 +76,19 @@ export function ApprovalsPage() {
                       <td className="td text-right"><Money minor={request.amount} /></td>
                       <td className="td">{step?.label ?? '—'}</td>
                       <td className="td">
-                        {formatDateTime(request.requestedAt)}
-                        <span className="ml-2 text-xs text-slate-400">
-                          {relativeDays(request.requestedAt)}
+                        <span title={formatDateTime(request.requestedAt)}>
+                          {request.waitingDays === 0
+                            ? 'today'
+                            : `${request.waitingDays} day${request.waitingDays === 1 ? '' : 's'}`}
                         </span>
+                        {request.overdue ? (
+                          <span
+                            className="ml-2 rounded bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-800"
+                            title={`SLA expired ${relativeDays(request.dueAt)}`}
+                          >
+                            Overdue
+                          </span>
+                        ) : null}
                       </td>
                       <td className="td"><StatusBadge status={request.status} /></td>
                     </tr>

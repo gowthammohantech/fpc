@@ -9,6 +9,7 @@ import { fromMinor } from '@fpc/shared';
 import {
   Card,
   ConfidenceBadge,
+  ConfirmWithReason,
   ErrorState,
   Modal,
   Money,
@@ -31,6 +32,7 @@ export function InvoiceDetailPage() {
   const queryClient = useQueryClient();
   const { can } = useAuth();
   const [resolving, setResolving] = useState<ValidationFinding | null>(null);
+  const [cancelling, setCancelling] = useState(false);
 
   const { data: invoice, isLoading, error } = useQuery({
     queryKey: ['invoice', id],
@@ -54,6 +56,24 @@ export function InvoiceDetailPage() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['invoice', id] });
       void queryClient.invalidateQueries({ queryKey: ['invoices'] });
+    },
+  });
+
+  const cancel = useMutation({
+    mutationFn: (reason: string) => api.invoices.cancel(id, reason),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['invoice', id] });
+      void queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      setCancelling(false);
+    },
+  });
+
+  // Re-running extraction discards reviewer edits, so it is offered only
+  // where those edits do not exist yet or have already failed.
+  const reextract = useMutation({
+    mutationFn: () => api.invoices.reextract(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['invoice', id] });
     },
   });
 
@@ -81,6 +101,21 @@ export function InvoiceDetailPage() {
         actions={
           <>
             <button className="btn-secondary" onClick={() => navigate(-1)}>Back</button>
+            {editable && can('invoice:update') ? (
+              <button
+                className="btn-secondary"
+                disabled={reextract.isPending}
+                title="Read the document again, discarding any manual corrections"
+                onClick={() => reextract.mutate()}
+              >
+                {reextract.isPending ? 'Queued…' : 'Re-run extraction'}
+              </button>
+            ) : null}
+            {can('invoice:cancel') && !['PAID', 'RECONCILED', 'CANCELLED'].includes(invoice.status) ? (
+              <button className="btn-secondary" onClick={() => setCancelling(true)}>
+                Cancel invoice
+              </button>
+            ) : null}
             {editable && can('invoice:submit') ? (
               <button
                 className="btn-primary"
@@ -176,6 +211,26 @@ export function InvoiceDetailPage() {
             ))}
           </ol>
         </Card>
+      ) : null}
+
+      {cancelling ? (
+        <ConfirmWithReason
+          title="Cancel this invoice"
+          actionLabel="Cancel invoice"
+          description={
+            <>
+              <p>
+                {invoice.vendorName ?? 'This invoice'} {invoice.invoiceNumber ?? ''} will be
+                cancelled and can no longer be paid. Any approval still in progress is withdrawn.
+              </p>
+              <p className="mt-2">This cannot be undone.</p>
+            </>
+          }
+          pending={cancel.isPending}
+          error={cancel.error}
+          onClose={() => setCancelling(false)}
+          onConfirm={(reason) => cancel.mutate(reason)}
+        />
       ) : null}
 
       {resolving ? (

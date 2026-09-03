@@ -66,7 +66,7 @@ export const endpoints = (api: ApiClient) => ({
   },
 
   approvals: {
-    list: (query?: Query) => api.get<Paginated<ApprovalRequest>>('/approvals', query),
+    list: (query?: Query) => api.get<Paginated<ApprovalRow>>('/approvals', query),
     get: (id: string) => api.get<ApprovalRequest & { canAct: boolean }>(`/approvals/${id}`),
     act: (id: string, action: 'APPROVE' | 'REJECT', comment?: string) =>
       api.post<ApprovalRequest>(`/approvals/${id}/act`, { action, comment }),
@@ -280,6 +280,7 @@ export interface StatementImportResult {
 
 export interface PaymentBatchItemView {
   id: string;
+  obligationId: string;
   type: 'VENDOR' | 'PAYROLL';
   beneficiaryName: string;
   beneficiaryAccount: string;
@@ -317,6 +318,13 @@ export interface MatchCandidateView {
   confidence: number;
   signals: MatchSignalsView;
   obligation: PaymentObligation | null;
+}
+
+/** An approval request plus the waiting/SLA fields the inbox renders. */
+export interface ApprovalRow extends ApprovalRequest {
+  waitingDays: number;
+  dueAt: string | null;
+  overdue: boolean;
 }
 
 export interface ReportDescriptor {

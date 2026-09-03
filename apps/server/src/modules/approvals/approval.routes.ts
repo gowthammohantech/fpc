@@ -9,7 +9,7 @@ import { requirePrincipal } from '../../middleware/authenticate.js';
 import { requireAnyPermission, requirePermission } from '../../middleware/requirePermission.js';
 import { scopeFilter } from '../../middleware/tenantScope.js';
 import { toApi } from '../../models/base.js';
-import { ApprovalRequest } from '../../models/approvalRequest.model.js';
+import { ApprovalRequest, type ApprovalRequestDoc } from '../../models/approvalRequest.model.js';
 import { ApprovalRule } from '../../models/approvalRule.model.js';
 import { auditContext } from '../audit/audit.service.js';
 import * as approvalService from './approval.service.js';
@@ -50,17 +50,37 @@ approvalRouter.get(
       throw ApiError.forbidden('Viewing all approvals requires approval:read_all');
     }
 
-    res.json(
-      await paginate(ApprovalRequest, filter, {
-        page: q.page,
-        pageSize: q.pageSize,
-        sort: q.sort,
-        order: q.order,
-        defaultSort: { requestedAt: -1 },
-      }, toApi),
-    );
+    const page = await paginate(ApprovalRequest, filter, {
+      page: q.page,
+      pageSize: q.pageSize,
+      sort: q.sort,
+      order: q.order,
+      defaultSort: { requestedAt: -1 },
+    }, decorate);
+
+    res.json(page);
   }),
 );
+
+/**
+ * Adds the derived fields the inbox needs: how long this has been waiting,
+ * and whether the active step has passed the SLA its rule set.
+ */
+function decorate(doc: unknown): Record<string, unknown> | null {
+  const api = toApi(doc);
+  if (!api) return null;
+
+  const request = doc as ApprovalRequestDoc;
+  const step = request.steps?.find((entry) => entry.order === request.currentStepOrder);
+  const dueAt = step?.dueAt ? new Date(step.dueAt) : null;
+
+  return {
+    ...api,
+    waitingDays: Math.floor((Date.now() - new Date(request.requestedAt).getTime()) / 86_400_000),
+    dueAt: dueAt?.toISOString() ?? null,
+    overdue: !!dueAt && dueAt.getTime() < Date.now(),
+  };
+}
 
 approvalRouter.get(
   '/:id',

@@ -80,6 +80,69 @@ export function LocationsPage() {
   );
 }
 
+/**
+ * Departments — PRD §7, §9.
+ *
+ * The load-bearing field is the head: DEPARTMENT_HEAD approval steps resolve
+ * through it, so without this screen the PRD §15 ₹1L–₹10L and >₹10L ladders
+ * could not be configured at all without direct API access.
+ */
+export function DepartmentsPage() {
+  const { companyId } = useAuth();
+
+  const { data: users } = useQuery({
+    queryKey: ['users', 'for-departments', companyId],
+    queryFn: () => api.settings.users({ companyId, pageSize: 200 }),
+  });
+
+  const userName = (id: string | undefined) =>
+    users?.items.find((user) => user.id === id)?.name;
+
+  return (
+    <CrudPage
+      title="Departments"
+      subtitle="Used to route approvals and to filter invoices, payroll and reports"
+      queryKey="settings-departments"
+      permissions={{
+        read: 'department:read',
+        create: 'department:create',
+        update: 'department:update',
+        delete: 'department:delete',
+      }}
+      list={(query) => api.settings.departments(query)}
+      create={(body) => api.settings.createDepartment(body)}
+      update={(id, body) => api.settings.updateDepartment(id, body)}
+      remove={(id) => api.settings.deleteDepartment(id)}
+      columns={[
+        { header: 'Name', render: (row) => <span className="font-medium">{row.name}</span> },
+        { header: 'Code', render: (row) => <span className="font-mono text-xs">{row.code}</span> },
+        {
+          header: 'Head',
+          render: (row) =>
+            row.headUserId ? (
+              (userName(row.headUserId) ?? 'Unknown user')
+            ) : (
+              <span className="text-amber-700">Not set — approvals fall back to any approver</span>
+            ),
+        },
+        { header: 'Status', render: (row) => <StatusBadge status={row.active ? 'ACTIVE' : 'INACTIVE'} /> },
+      ]}
+      fields={[
+        { name: 'name', label: 'Name', required: true },
+        { name: 'code', label: 'Code', required: true, help: 'Short code used in payroll files.' },
+        {
+          name: 'headUserId',
+          label: 'Department head',
+          type: 'select',
+          options: (users?.items ?? []).map((user) => ({ value: user.id, label: user.name })),
+          help: 'Approval rules with a "Department head" step route to this person.',
+        },
+      ]}
+      toFormValues={(row) => ({ name: row.name, code: row.code, headUserId: row.headUserId ?? '' })}
+    />
+  );
+}
+
 export function VendorsPage() {
   return (
     <CrudPage
@@ -372,6 +435,7 @@ export function BankAccountsPage() {
       list={(query) => api.settings.bankAccounts(query)}
       create={(body) => api.settings.createBankAccount(body)}
       update={(id, body) => api.settings.updateBankAccount(id, body)}
+      remove={(id) => api.settings.deleteBankAccount(id)}
       columns={[
         { header: 'Label', render: (row) => <span className="font-medium">{row.label}</span> },
         { header: 'Bank', render: (row) => row.bankName },

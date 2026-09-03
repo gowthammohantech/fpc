@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { formatCompactINR, formatINR } from '@/lib/format';
 import { humanize } from '@/lib/format';
 
@@ -244,6 +244,69 @@ export function Modal({
         ) : null}
       </div>
     </div>
+  );
+}
+
+/**
+ * Destructive action guarded by a typed reason.
+ *
+ * Cancelling an invoice, deleting a statement or voiding a payroll batch all
+ * need the same shape: explain the consequence, capture a reason for the
+ * audit trail, and refuse to submit without one.
+ */
+export function ConfirmWithReason({
+  title,
+  description,
+  actionLabel,
+  requireReason = true,
+  onClose,
+  onConfirm,
+  pending,
+  error,
+}: {
+  title: string;
+  description: ReactNode;
+  actionLabel: string;
+  requireReason?: boolean;
+  onClose(): void;
+  onConfirm(reason: string): void;
+  pending?: boolean;
+  error?: unknown;
+}) {
+  const [reason, setReason] = useState('');
+  const tooShort = requireReason && reason.trim().length < 3;
+
+  return (
+    <Modal
+      title={title}
+      onClose={onClose}
+      footer={
+        <>
+          <button className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button
+            className="btn-danger"
+            disabled={tooShort || pending}
+            onClick={() => onConfirm(reason.trim())}
+          >
+            {pending ? 'Working…' : actionLabel}
+          </button>
+        </>
+      }
+    >
+      <div className="text-sm text-slate-600">{description}</div>
+      <label className="label mt-4" htmlFor="confirm-reason">
+        Reason{requireReason ? '' : ' (optional)'}
+      </label>
+      <textarea
+        id="confirm-reason"
+        className="input"
+        rows={3}
+        value={reason}
+        onChange={(event) => setReason(event.target.value)}
+        placeholder="Recorded in the audit trail"
+      />
+      {error ? <div className="mt-3"><ErrorState error={error} /></div> : null}
+    </Modal>
   );
 }
 

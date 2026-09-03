@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { formatCompactINR, formatDate, formatDateTime, humanize } from '@/lib/format';
 import {
   Card,
+  ConfirmWithReason,
   EmptyState,
   ErrorState,
   Modal,
@@ -30,10 +31,29 @@ export function PaymentQueuePage() {
   const [type, setType] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [batchOpen, setBatchOpen] = useState(false);
+  const [status, setStatus] = useState('');
+  const [holding, setHolding] = useState<{ id: string; payee: string } | null>(null);
+  const queryClient = useQueryClient();
+
+  const setHold = useMutation({
+    mutationFn: ({ id, hold, reason }: { id: string; hold: boolean; reason?: string }) =>
+      api.payments.hold(id, hold, reason),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['payment-queue'] });
+      setHolding(null);
+    },
+  });
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['payment-queue', companyId, page, type],
-    queryFn: () => api.payments.queue({ companyId, page, pageSize: 50, type: type || undefined }),
+    queryKey: ['payment-queue', companyId, page, type, status],
+    queryFn: () =>
+      api.payments.queue({
+        companyId,
+        page,
+        pageSize: 50,
+        type: type || undefined,
+        paymentStatus: status || undefined,
+      }),
   });
 
   const rows = data?.items ?? [];
@@ -84,6 +104,16 @@ export function PaymentQueuePage() {
             <option value="VENDOR">Vendor</option>
             <option value="PAYROLL">Payroll</option>
           </select>
+          <select
+            className="input w-auto"
+            value={status}
+            onChange={(event) => { setStatus(event.target.value); setPage(1); }}
+          >
+            <option value="">Ready to pay</option>
+            <option value="ON_HOLD">On hold</option>
+            <option value="BATCHED">Batched</option>
+            <option value="PROCESSING">With the bank</option>
+          </select>
           {selected.size > 0 ? (
             <span className="text-sm text-slate-600">
               {selected.size} selected · <Money minor={selectedTotal} className="font-medium" />
@@ -120,6 +150,7 @@ export function PaymentQueuePage() {
                   <th className="th">Due</th>
                   <th className="th text-right">Amount</th>
                   <th className="th">Status</th>
+                  <th className="th" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
@@ -151,7 +182,32 @@ export function PaymentQueuePage() {
                       <td className="td font-mono text-xs">{row.reference}</td>
                       <td className="td">{formatDate(row.dueDate)}</td>
                       <td className="td text-right"><Money minor={row.amount} /></td>
-                      <td className="td"><StatusBadge status={row.paymentStatus} /></td>
+                      <td className="td">
+                        <StatusBadge status={row.paymentStatus} />
+                        {row.holdReason ? (
+                          <p className="mt-1 text-xs text-slate-500">{row.holdReason}</p>
+                        ) : null}
+                      </td>
+                      <td className="td text-right">
+                        {!aggregate && can('obligation:update') ? (
+                          row.paymentStatus === 'ON_HOLD' ? (
+                            <button
+                              className="text-sm text-brand-600"
+                              disabled={setHold.isPending}
+                              onClick={() => setHold.mutate({ id: row.id, hold: false })}
+                            >
+                              Release
+                            </button>
+                          ) : (
+                            <button
+                              className="text-sm text-slate-500 hover:text-slate-800"
+                              onClick={() => setHolding({ id: row.id, payee: row.payeeName })}
+                            >
+                              Hold
+                            </button>
+                          )
+                        ) : null}
+                      </td>
                     </tr>
                   );
                 })}
@@ -166,6 +222,23 @@ export function PaymentQueuePage() {
           </>
         )}
       </div>
+
+      {holding ? (
+        <ConfirmWithReason
+          title="Put this payment on hold"
+          actionLabel="Hold payment"
+          description={
+            <p>
+              {holding.payee} will stay approved but will be excluded from payment batches until
+              it is released.
+            </p>
+          }
+          pending={setHold.isPending}
+          error={setHold.error}
+          onClose={() => setHolding(null)}
+          onConfirm={(reason) => setHold.mutate({ id: holding.id, hold: true, reason })}
+        />
+      ) : null}
 
       {batchOpen ? (
         <CreateBatchModal
@@ -348,6 +421,8 @@ export function PaymentBatchDetailPage() {
   const queryClient = useQueryClient();
   const { can } = useAuth();
 
+  const [removing, setRemoving] = useState<{ id: string; name: string } | null>(null);
+
   const { data: batch, isLoading, error } = useQuery({
     queryKey: ['payment-batch', id],
     queryFn: () => api.payments.batch(id),
@@ -368,12 +443,43 @@ export function PaymentBatchDetailPage() {
     },
   });
 
+  // Only a draft batch can be changed — once the file is with the bank,
+  // removing a line here would not stop the payment.
+  const removeItems = useMutation({
+    mutationFn: (obligationIds: string[]) =>
+      api.payments.updateBatch(id, { removeObligationIds: obligationIds }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['payment-batch', id] });
+      void queryClient.invalidateQueries({ queryKey: ['payment-queue'] });
+      setRemoving(null);
+    },
+  });
+
   if (isLoading) return <Spinner />;
   if (error) return <ErrorState error={error} />;
   if (!batch) return null;
 
+  const isDraft = batch.status === 'DRAFT';
+
   return (
     <>
+      {removing ? (
+        <ConfirmWithReason
+          title="Remove this payment from the batch"
+          actionLabel="Remove"
+          requireReason={false}
+          description={
+            <p>
+              {removing.name} returns to the payment queue and can be included in a later batch.
+            </p>
+          }
+          pending={removeItems.isPending}
+          error={removeItems.error}
+          onClose={() => setRemoving(null)}
+          onConfirm={() => removeItems.mutate([removing.id])}
+        />
+      ) : null}
+
       <PageHeader
         title={batch.reference}
         subtitle={
@@ -439,7 +545,14 @@ export function PaymentBatchDetailPage() {
 
       <Card>
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
-          <h2 className="font-semibold">Payments in this batch</h2>
+          <h2 className="font-semibold">
+            Payments in this batch
+            {isDraft ? (
+              <span className="ml-2 text-xs font-normal text-slate-500">
+                draft — items can still be removed
+              </span>
+            ) : null}
+          </h2>
           {batch.payrollItemsHidden > 0 ? (
             <span className="text-xs text-slate-500">
               {batch.payrollItemsHidden} payroll rows hidden — requires payroll access
@@ -456,6 +569,7 @@ export function PaymentBatchDetailPage() {
               <th className="th">Reference</th>
               <th className="th text-right">Amount</th>
               <th className="th">Reconciliation</th>
+              <th className="th" />
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 bg-white">
@@ -468,6 +582,16 @@ export function PaymentBatchDetailPage() {
                 <td className="td font-mono text-xs">{item.reference}</td>
                 <td className="td text-right"><Money minor={item.amount} /></td>
                 <td className="td"><StatusBadge status={item.reconciliationStatus} /></td>
+                <td className="td text-right">
+                  {isDraft && can('payment_batch:update') ? (
+                    <button
+                      className="text-sm text-red-600"
+                      onClick={() => setRemoving({ id: item.obligationId, name: item.beneficiaryName })}
+                    >
+                      Remove
+                    </button>
+                  ) : null}
+                </td>
               </tr>
             ))}
           </tbody>

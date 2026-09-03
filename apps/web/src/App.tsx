@@ -15,9 +15,11 @@ import { ReconciliationPage } from '@/pages/Reconciliation';
 import { ReportsPage } from '@/pages/Reports';
 import { AuditPage } from '@/pages/Audit';
 import { NotificationsPage } from '@/pages/Notifications';
+import { AccountPage } from '@/pages/Account';
 import {
   BankAccountsPage,
   CompaniesPage,
+  DepartmentsPage,
   LocationsPage,
   RolesPage,
   UsersPage,
@@ -197,6 +199,7 @@ export function App() {
             </RequirePermission>
           }
         />
+        <Route path="/account" element={<AccountPage />} />
         <Route
           path="/notifications"
           element={
@@ -219,6 +222,14 @@ export function App() {
           element={
             <RequirePermission permissions={['location:read']}>
               <LocationsPage />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="/settings/departments"
+          element={
+            <RequirePermission permissions={['department:read']}>
+              <DepartmentsPage />
             </RequirePermission>
           }
         />

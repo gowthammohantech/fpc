@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { formatCompactINR, formatDate, humanize } from '@/lib/format';
 import {
   Card,
+  ConfirmWithReason,
   EmptyState,
   ErrorState,
   Money,
@@ -380,9 +381,11 @@ export function PayrollImportPage() {
 /** Payroll batch detail — PRD §18, §19. */
 export function PayrollDetailPage() {
   const { id = '' } = useParams();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { can } = useAuth();
   const [page, setPage] = useState(1);
+  const [cancelling, setCancelling] = useState(false);
 
   const { data: batch, isLoading, error } = useQuery({
     queryKey: ['payroll-batch', id],
@@ -402,11 +405,23 @@ export function PayrollDetailPage() {
     },
   });
 
+  const cancel = useMutation({
+    mutationFn: () => api.payroll.cancel(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['payroll'] });
+      navigate('/payroll');
+    },
+  });
+
   if (isLoading) return <Spinner />;
   if (error) return <ErrorState error={error} />;
   if (!batch) return null;
 
   const submittable = ['VALIDATED', 'IMPORTED', 'REVIEW_REQUIRED'].includes(batch.status);
+  // Once obligations exist the money is in flight; the server refuses too.
+  const cancellable = [
+    'DRAFT', 'IMPORTED', 'REVIEW_REQUIRED', 'VALIDATED', 'PENDING_APPROVAL', 'REJECTED',
+  ].includes(batch.status);
 
   return (
     <>
@@ -420,13 +435,43 @@ export function PayrollDetailPage() {
           </span>
         }
         actions={
-          submittable && can('payroll:submit') ? (
-            <button className="btn-primary" disabled={submit.isPending} onClick={() => submit.mutate()}>
-              {submit.isPending ? 'Submitting…' : 'Submit for approval'}
-            </button>
-          ) : null
+          <>
+            {cancellable && can('payroll:delete') ? (
+              <button className="btn-secondary" onClick={() => setCancelling(true)}>
+                Cancel batch
+              </button>
+            ) : null}
+            {submittable && can('payroll:submit') ? (
+              <button className="btn-primary" disabled={submit.isPending} onClick={() => submit.mutate()}>
+                {submit.isPending ? 'Submitting…' : 'Submit for approval'}
+              </button>
+            ) : null}
+          </>
         }
       />
+
+      {cancelling ? (
+        <ConfirmWithReason
+          title="Cancel this payroll batch"
+          actionLabel="Cancel batch"
+          requireReason={false}
+          description={
+            <>
+              <p>
+                {batch.label} and its {batch.employeeCount.toLocaleString('en-IN')} employee rows
+                will be cancelled, and any approval in progress withdrawn.
+              </p>
+              <p className="mt-2">
+                Re-import the corrected payroll file afterwards to replace it.
+              </p>
+            </>
+          }
+          pending={cancel.isPending}
+          error={cancel.error}
+          onClose={() => setCancelling(false)}
+          onConfirm={() => cancel.mutate()}
+        />
+      ) : null}
 
       {submit.error ? <div className="mb-4"><ErrorState error={submit.error} /></div> : null}
 
