@@ -8,6 +8,7 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { requestId } from './middleware/requestId.js';
 import { authRouter } from './modules/auth/auth.routes.js';
 import { auditRouter } from './modules/audit/audit.routes.js';
+import { approvalRouter, approvalRuleRouter } from './modules/approvals/approval.routes.js';
 import { invoiceRouter } from './modules/invoices/invoice.routes.js';
 import { organizationRouter } from './modules/organization/index.js';
 
@@ -48,6 +49,8 @@ export function createApp(): Express {
   api.use(authenticate);
   api.use('/settings', organizationRouter);
   api.use('/invoices', invoiceRouter);
+  api.use('/approvals', approvalRouter);
+  api.use('/settings/approval-rules', approvalRuleRouter);
   api.use('/audit', auditRouter);
 
   app.use('/api', api);

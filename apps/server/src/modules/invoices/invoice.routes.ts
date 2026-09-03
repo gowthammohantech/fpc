@@ -291,6 +291,95 @@ invoiceRouter.post(
   }),
 );
 
+/**
+ * Submit for approval — PRD §14 (VALIDATED → SUBMITTED → PENDING_APPROVAL).
+ *
+ * Validation must be clean first: an unresolved duplicate warning blocks
+ * submission, which is the whole point of detecting it before payment.
+ */
+invoiceRouter.post(
+  '/:id/submit',
+  requirePermission('invoice:submit'),
+  asyncHandler(async (req, res) => {
+    const principal = requirePrincipal(req);
+    const invoice = await findScopedDoc(req);
+
+    if (invoice.status !== InvoiceStatus.REVIEW_REQUIRED && invoice.status !== InvoiceStatus.VALIDATED) {
+      throw ApiError.conflict(`An invoice in ${invoice.status} cannot be submitted`);
+    }
+
+    // Re-validate at the moment of submission rather than trusting whatever
+    // was computed when the invoice was last edited.
+    invoice.findings = await invoiceService.revalidate(invoice);
+    invoiceService.assertSubmittable(invoice);
+
+    if (invoice.status === InvoiceStatus.REVIEW_REQUIRED) {
+      await invoiceService.transition(invoice, InvoiceStatus.VALIDATED);
+    }
+    await invoiceService.transition(invoice, InvoiceStatus.SUBMITTED);
+    invoice.submittedBy = principal.userId;
+    invoice.submittedAt = new Date();
+    await invoice.save();
+
+    const { startApproval } = await import('../approvals/approval.service.js');
+    const outcome = await startApproval(
+      {
+        tenantId: invoice.tenantId,
+        companyId: invoice.companyId,
+        subjectType: 'VENDOR_INVOICE',
+        subjectId: invoice._id,
+        subjectLabel: `${invoice.vendorName ?? 'Invoice'} ${invoice.invoiceNumber ?? ''}`.trim(),
+        amount: invoice.totalAmount ?? 0,
+        requestedByUserId: principal.userId,
+        departmentId: invoice.departmentId,
+        locationId: invoice.locationId,
+        vendorId: invoice.vendorId,
+        link: `/invoices/${String(invoice._id)}`,
+      },
+      auditContext(req),
+    );
+
+    if (outcome.request) {
+      await invoiceService.transition(invoice, InvoiceStatus.PENDING_APPROVAL);
+      invoice.approvalRequestId = outcome.request._id;
+      invoice.approvalStatus = 'IN_PROGRESS';
+      await invoice.save();
+    } else {
+      // No rule matched: approve directly and record why in the audit trail.
+      await invoiceService.transition(invoice, InvoiceStatus.APPROVED);
+      invoice.approvalStatus = 'APPROVED';
+      await invoice.save();
+
+      const { createObligationForInvoice } = await import('../payments/obligation.service.js');
+      await createObligationForInvoice(invoice._id, auditContext(req));
+    }
+
+    await audit.record(
+      {
+        event: 'invoice.submitted',
+        entityType: 'INVOICE',
+        entityId: invoice._id,
+        entityLabel: invoice.invoiceNumber,
+        tenantId: invoice.tenantId,
+        companyId: invoice.companyId,
+        metadata: {
+          amount: invoice.totalAmount,
+          approvalRequestId: outcome.request ? String(outcome.request._id) : null,
+          autoApprovedReason: outcome.autoApprovedReason,
+        },
+      },
+      auditContext(req),
+    );
+
+    const fresh = await Invoice.findById(invoice._id).lean();
+    res.json({
+      invoice: toApi(fresh),
+      approvalRequestId: outcome.request ? String(outcome.request._id) : null,
+      autoApprovedReason: outcome.autoApprovedReason,
+    });
+  }),
+);
+
 invoiceRouter.post(
   '/:id/cancel',
   requirePermission('invoice:cancel'),
@@ -300,6 +389,9 @@ invoiceRouter.post(
     const { reason } = req.body as { reason: string };
     const from = await invoiceService.transition(invoice, InvoiceStatus.CANCELLED);
     await invoice.save();
+
+    const { cancel: cancelApproval } = await import('../approvals/approval.service.js');
+    await cancelApproval(invoice._id, reason, auditContext(req));
 
     await audit.recordStatusChange(
       {
