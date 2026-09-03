@@ -24,9 +24,17 @@ export async function onApprovalDecided(
     return;
   }
 
-  // Payroll batches are handled by the payroll module, which registers its
-  // own handler; nothing to do here.
-  logger.debug({ subjectType: request.subjectType }, 'approval decision handed to subject module');
+  if (request.subjectType === 'PAYROLL_BATCH') {
+    const payroll = await import('../payroll/payroll.service.js');
+    if (decision.finalStatus === ApprovalStatus.REJECTED) {
+      await payroll.onRejected(request.subjectId, context);
+    } else {
+      await payroll.onApproved(request.subjectId, context);
+    }
+    return;
+  }
+
+  logger.warn({ subjectType: request.subjectType }, 'no handler for approval subject type');
 }
 
 async function applyToInvoice(decision: ApprovalDecision, context: AuditContext): Promise<void> {

@@ -13,6 +13,7 @@ import { invoiceRouter } from './modules/invoices/invoice.routes.js';
 import { organizationRouter } from './modules/organization/index.js';
 import { payableRouter } from './modules/payables/payable.routes.js';
 import { paymentRouter } from './modules/payments/payment.routes.js';
+import { payrollRouter } from './modules/payroll/payroll.routes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -55,6 +56,7 @@ export function createApp(): Express {
   api.use('/settings/approval-rules', approvalRuleRouter);
   api.use('/payables', payableRouter);
   api.use('/payments', paymentRouter);
+  api.use('/payroll', payrollRouter);
   api.use('/audit', auditRouter);
 
   app.use('/api', api);
