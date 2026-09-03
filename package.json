@@ -7,18 +7,19 @@
     "node": ">=20.12"
   },
   "scripts": {
-    "build": "pnpm -r --filter @fpc/shared --filter @fpc/api-client build && pnpm -r --filter @fpc/server --filter @fpc/web build",
+    "build": "pnpm build:packages && pnpm -r --filter @fpc/server --filter @fpc/web build",
     "dev": "pnpm --parallel --filter @fpc/server --filter @fpc/web dev",
     "dev:server": "pnpm --filter @fpc/server dev",
     "dev:web": "pnpm --filter @fpc/web dev",
     "dev:mobile": "pnpm --filter @fpc/mobile start",
     "seed": "pnpm --filter @fpc/server seed",
-    "test": "pnpm -r test",
-    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm build:packages && pnpm -r test",
+    "typecheck": "pnpm build:packages && pnpm -r typecheck",
     "lint": "eslint . && prettier --check .",
     "infra:up": "docker compose up -d",
     "infra:down": "docker compose down",
-    "lint:fix": "eslint . --fix && prettier --write ."
+    "lint:fix": "eslint . --fix && prettier --write .",
+    "build:packages": "pnpm -r --filter @fpc/shared --filter @fpc/api-client build"
   },
   "devDependencies": {
     "typescript": "^5.6.3",

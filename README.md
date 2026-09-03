@@ -47,17 +47,22 @@ that money actually moved.
 
 ## Getting started
 
-Requirements: Node 20+, pnpm, and Docker (or any MongoDB).
+Requirements: Node 20.12+, pnpm, and Docker (or any MongoDB).
 
 ```bash
 pnpm install
 cp .env.example .env
 
 docker compose up -d          # MongoDB, plus Mailpit on http://localhost:8025
-pnpm --filter @fpc/shared build
+pnpm build                    # required first — see note below
 pnpm seed                     # demo data and the demo input files
 pnpm dev                      # API on :4000, web on :5173
 ```
+
+Workspace packages are consumed through their built output, so `pnpm build`
+must run before anything else on a fresh checkout. `pnpm test` and
+`pnpm typecheck` build the shared packages themselves, so those two work
+directly.
 
 Open http://localhost:5173 and sign in. Every seeded account uses the
 password `FinanceOps@2026`:
@@ -72,6 +77,11 @@ password `FinanceOps@2026`:
 | `auditor@nova.example.com` | Auditor | Read-only, including the audit trail |
 | `admin@nova.example.com` | Platform Admin | Everything |
 | `companyadmin@nova.example.com` | Company Admin | Master data and users |
+
+New accounts are created without a password and are **invited** rather than
+active: the administrator gets a one-time link, and the recipient sets their
+own password at `/accept-invite`, which activates the account. An invited
+account cannot sign in until that happens.
 
 Nothing external is required to run any of this: blob storage, the invoice
 mailbox and document extraction all default to local drivers.
@@ -204,11 +214,16 @@ documents every setting.
 ```bash
 pnpm dev            # API and web together
 pnpm dev:mobile     # Expo
-pnpm build          # build everything
+pnpm build          # shared packages, then server and web
 pnpm test           # all tests
 pnpm typecheck      # all packages
+pnpm lint           # ESLint + Prettier check
+pnpm lint:fix       # fix and format
 pnpm seed           # demo data (--reset to wipe first)
 ```
+
+`apps/mobile` is not part of `pnpm build` — Expo bundles at start or EAS build
+time — but it is covered by `typecheck` and `lint`.
 
 ## Tests
 
@@ -232,6 +247,10 @@ MONGO_TEST_URI=mongodb://localhost:27017/fpc-test pnpm --filter @fpc/server test
 
 Without either they skip with a printed reason rather than failing for an
 environmental cause — check the output rather than assuming a pass.
+
+CI runs the whole set on every push against a `mongo:7` service container, and
+fails the build if the integration suites skip, since a silent skip is
+otherwise indistinguishable from a pass.
 
 ## Deliberately out of scope
 
