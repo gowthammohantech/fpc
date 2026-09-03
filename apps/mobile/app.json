@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "Finance Ops",
+    "slug": "fpc-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#1d4ed8"
+    },
+    "ios": { "supportsTablet": true, "bundleIdentifier": "com.financeops.mobile" },
+    "android": { "package": "com.financeops.mobile" },
+    "extra": {
+      "apiBaseUrl": "http://localhost:4000/api"
+    },
+    "plugins": ["expo-secure-store"]
+  }
+}
