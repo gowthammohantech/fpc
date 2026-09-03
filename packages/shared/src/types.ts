@@ -578,6 +578,7 @@ export interface ApiErrorBody {
 // ── Dashboard ───────────────────────────────────────────────
 
 export interface DashboardSummary {
+  /** Minor units. Excludes payroll when the viewer lacks payroll access. */
   totalPayables: number;
   invoices: {
     received: number;
@@ -590,23 +591,32 @@ export interface DashboardSummary {
     overdueAmount: number;
   };
   payroll: {
-    batchId?: Id;
-    label?: string;
+    batchId: Id;
+    label: string;
     employeeCount: number;
     amount: number;
-    status?: PayrollBatchStatus;
+    previousAmount: number | null;
+    difference: number | null;
+    status: PayrollBatchStatus;
   } | null;
+  /** True when payroll figures were withheld from this response. */
+  payrollHidden: boolean;
   payments: {
     readyForPayment: number;
+    readyForPaymentCount: number;
     batched: number;
+    inFlightBatchAmount: number;
     reconciledToday: number;
     unreconciled: number;
+    unreconciledCount: number;
   };
   cash: {
     bankBalance: number;
     approvedVendorPayables: number;
     approvedPayroll: number;
     knownUpcomingOutflow: number;
+    /** True when payroll is not included in the outflow figure above. */
+    payrollExcluded: boolean;
   };
 }
 
