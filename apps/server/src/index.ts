@@ -2,17 +2,21 @@ import { connectDatabase, disconnectDatabase } from './config/db.js';
 import { env } from './config/env.js';
 import { logger } from './config/logger.js';
 import { createApp } from './app.js';
+import { startScheduler, stopScheduler } from './jobs/scheduler.js';
 
 async function main(): Promise<void> {
   await connectDatabase();
 
   const app = createApp();
+  startScheduler();
+
   const server = app.listen(env.PORT, () => {
     logger.info({ port: env.PORT, env: env.NODE_ENV }, 'finance operations API listening');
   });
 
   const shutdown = (signal: string) => {
     logger.info({ signal }, 'shutting down');
+    stopScheduler();
     server.close(() => {
       void disconnectDatabase().finally(() => process.exit(0));
     });

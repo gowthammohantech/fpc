@@ -12,7 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.32.1",
+    "@anthropic-ai/sdk": "^0.123.0",
     "@azure/identity": "^4.5.0",
     "@azure/storage-blob": "^12.26.0",
     "@fpc/shared": "workspace:*",
@@ -28,7 +28,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.9.5",
     "multer": "^1.4.5-lts.1",
-    "node-cron": "^3.0.3",
+    "node-cron": "^4.2.1",
     "nodemailer": "^6.9.16",
     "pdf-parse": "^1.1.1",
     "pino": "^9.5.0",

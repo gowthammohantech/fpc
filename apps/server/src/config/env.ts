@@ -43,7 +43,7 @@ const schema = z.object({
   OCR_DRIVER: z.enum(['stub', 'claude', 'azure-doc-intelligence']).default('stub'),
   OCR_REVIEW_THRESHOLD: z.coerce.number().min(0).max(1).default(0.85),
   ANTHROPIC_API_KEY: z.string().optional(),
-  ANTHROPIC_MODEL: z.string().default('claude-sonnet-5'),
+  ANTHROPIC_MODEL: z.string().default('claude-opus-5'),
   AZURE_DOC_INTEL_ENDPOINT: z.string().optional(),
   AZURE_DOC_INTEL_KEY: z.string().optional(),
 
