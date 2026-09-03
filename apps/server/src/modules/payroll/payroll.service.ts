@@ -19,8 +19,18 @@ import { createObligationsForPayroll } from '../payments/obligation.service.js';
 import { parsePayrollFile, type PayrollField, type PayrollImportResult } from './payroll.import.js';
 
 const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
 ];
 
 export interface ImportInput {
@@ -97,14 +107,17 @@ export async function importBatch(input: ImportInput, context: AuditContext) {
   // Resolve free-text location and department names to real records where
   // they match, so the CFO's location filters work on the payroll too.
   const [locations, departments] = await Promise.all([
-    Location.find({ tenantId: input.tenantId, companyId: input.companyId }).select('name code').lean(),
-    Department.find({ tenantId: input.tenantId, companyId: input.companyId }).select('name code').lean(),
+    Location.find({ tenantId: input.tenantId, companyId: input.companyId })
+      .select('name code')
+      .lean(),
+    Department.find({ tenantId: input.tenantId, companyId: input.companyId })
+      .select('name code')
+      .lean(),
   ]);
   const locationByName = byNameOrCode(locations);
   const departmentByName = byNameOrCode(departments);
 
-  const label =
-    input.label ?? `${MONTHS[input.periodMonth - 1]} ${input.periodYear} Payroll`;
+  const label = input.label ?? `${MONTHS[input.periodMonth - 1]} ${input.periodYear} Payroll`;
   const previous = await PayrollBatch.findOne({
     tenantId: input.tenantId,
     companyId: input.companyId,
@@ -157,7 +170,9 @@ export async function importBatch(input: ImportInput, context: AuditContext) {
       ifsc: row.ifsc,
       netAmount: row.netAmount,
       departmentName: row.departmentName,
-      departmentId: row.departmentName ? departmentByName.get(canonical(row.departmentName)) : undefined,
+      departmentId: row.departmentName
+        ? departmentByName.get(canonical(row.departmentName))
+        : undefined,
       locationName: row.locationName,
       locationId: row.locationName ? locationByName.get(canonical(row.locationName)) : undefined,
       email: row.email,

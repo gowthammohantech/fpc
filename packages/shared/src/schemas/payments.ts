@@ -33,8 +33,14 @@ export const paymentBatchListQuery = paginationQuery.extend({
   companyId: objectId.optional(),
   status: z
     .enum([
-      'DRAFT', 'READY', 'EXPORTED', 'PROCESSING',
-      'COMPLETED', 'PARTIALLY_RECONCILED', 'RECONCILED', 'CANCELLED',
+      'DRAFT',
+      'READY',
+      'EXPORTED',
+      'PROCESSING',
+      'COMPLETED',
+      'PARTIALLY_RECONCILED',
+      'RECONCILED',
+      'CANCELLED',
     ])
     .optional(),
 });

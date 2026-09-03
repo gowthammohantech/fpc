@@ -59,15 +59,17 @@ export function hashToken(token: string): string {
 
 /** Seconds until an access token expires, for the client's refresh timer. */
 export function accessTokenTtlSeconds(): number {
-  const decoded = jwt.decode(signAccessToken({
-    sub: '0'.repeat(24),
-    tenantId: '0'.repeat(24),
-    email: 'ttl@probe',
-    name: 'ttl',
-    roleKeys: [],
-    companyIds: [],
-    locationIds: [],
-    departmentIds: [],
-  })) as { exp?: number; iat?: number } | null;
+  const decoded = jwt.decode(
+    signAccessToken({
+      sub: '0'.repeat(24),
+      tenantId: '0'.repeat(24),
+      email: 'ttl@probe',
+      name: 'ttl',
+      roleKeys: [],
+      companyIds: [],
+      locationIds: [],
+      departmentIds: [],
+    }),
+  ) as { exp?: number; iat?: number } | null;
   return decoded?.exp && decoded.iat ? decoded.exp - decoded.iat : 900;
 }

@@ -17,9 +17,7 @@ export const logger = pino({
     ],
     censor: '[redacted]',
   },
-  ...(isProduction
-    ? {}
-    : { transport: { target: 'pino/file', options: { destination: 1 } } }),
+  ...(isProduction ? {} : { transport: { target: 'pino/file', options: { destination: 1 } } }),
 });
 
 export type Logger = typeof logger;

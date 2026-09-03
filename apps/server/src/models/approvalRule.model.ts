@@ -1,5 +1,10 @@
 import { Schema, Types, model } from 'mongoose';
-import { ROLE_KEYS, type ApprovalSubjectType, type RuleCondition, type RuleStepDefinition } from '@fpc/shared';
+import {
+  ROLE_KEYS,
+  type ApprovalSubjectType,
+  type RuleCondition,
+  type RuleStepDefinition,
+} from '@fpc/shared';
 import { baseSchemaOptions, scopedFields } from './base.js';
 
 /**
@@ -48,7 +53,12 @@ const schema = new Schema<ApprovalRuleDoc>(
     ...scopedFields(),
     name: { type: String, required: true, trim: true },
     description: String,
-    appliesTo: { type: String, enum: ['VENDOR_INVOICE', 'PAYROLL_BATCH'], required: true, index: true },
+    appliesTo: {
+      type: String,
+      enum: ['VENDOR_INVOICE', 'PAYROLL_BATCH'],
+      required: true,
+      index: true,
+    },
     priority: { type: Number, default: 100 },
     active: { type: Boolean, default: true, index: true },
     conditions: { type: [conditionSchema], default: [] },

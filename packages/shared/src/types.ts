@@ -242,15 +242,10 @@ export interface Invoice extends Timestamps {
 // ── Approvals ───────────────────────────────────────────────
 
 export type ConditionField =
-  | 'amount'
-  | 'vendorId'
-  | 'departmentId'
-  | 'locationId'
-  | 'currency'
-  | 'employeeCount';
+  'amount' | 'vendorId' | 'departmentId' | 'locationId' | 'currency' | 'employeeCount';
 
 export type ConditionOperator =
-  | 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'in' | 'nin' | 'between';
+  'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'in' | 'nin' | 'between';
 
 export interface RuleCondition {
   field: ConditionField;
@@ -330,7 +325,12 @@ export interface PayrollBatch extends Timestamps {
   /** Minor units. */
   totalNetAmount: number;
   currency: Currency;
-  locationBreakdown: Array<{ locationId?: Id; locationName: string; count: number; amount: number }>;
+  locationBreakdown: Array<{
+    locationId?: Id;
+    locationName: string;
+    count: number;
+    amount: number;
+  }>;
   previousBatchId?: Id;
   previousTotalNetAmount?: number;
   sourceFileId?: Id;
@@ -621,7 +621,8 @@ export interface DashboardSummary {
 }
 
 export interface GlobalSearchResult {
-  type: 'INVOICE' | 'VENDOR' | 'PAYMENT_BATCH' | 'PAYROLL_BATCH' | 'PAYROLL_EMPLOYEE' | 'OBLIGATION';
+  type:
+    'INVOICE' | 'VENDOR' | 'PAYMENT_BATCH' | 'PAYROLL_BATCH' | 'PAYROLL_EMPLOYEE' | 'OBLIGATION';
   id: Id;
   title: string;
   subtitle?: string;

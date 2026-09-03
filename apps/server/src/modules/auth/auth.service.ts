@@ -34,7 +34,8 @@ export async function login(
 
   // Compare against a dummy hash when the user is unknown, so a missing
   // account and a wrong password take the same time to answer.
-  const passwordHash = user?.passwordHash ?? '$2a$12$invalidinvalidinvalidinvalidinvalidinvalidinvalidinva';
+  const passwordHash =
+    user?.passwordHash ?? '$2a$12$invalidinvalidinvalidinvalidinvalidinvalidinvalidinva';
   const passwordMatches = await bcrypt.compare(password, passwordHash);
 
   if (!user || !passwordMatches) {

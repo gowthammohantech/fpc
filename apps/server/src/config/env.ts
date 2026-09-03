@@ -40,7 +40,10 @@ const schema = z.object({
   MONGO_URI: z.string().default('mongodb://localhost:27017/fpc'),
 
   JWT_ACCESS_SECRET: z.string().min(16).default('dev-access-secret-change-me-in-production-000000'),
-  JWT_REFRESH_SECRET: z.string().min(16).default('dev-refresh-secret-change-me-in-production-00000'),
+  JWT_REFRESH_SECRET: z
+    .string()
+    .min(16)
+    .default('dev-refresh-secret-change-me-in-production-00000'),
   JWT_ACCESS_TTL: z.string().default('15m'),
   JWT_REFRESH_TTL: z.string().default('7d'),
 
@@ -92,7 +95,10 @@ function load(): Env {
 
   // Fail loudly rather than silently running production on dev secrets.
   if (value.NODE_ENV === 'production') {
-    if (value.JWT_ACCESS_SECRET.includes('change-me') || value.JWT_REFRESH_SECRET.includes('change-me')) {
+    if (
+      value.JWT_ACCESS_SECRET.includes('change-me') ||
+      value.JWT_REFRESH_SECRET.includes('change-me')
+    ) {
       throw new Error('Refusing to start in production with the default JWT secrets');
     }
     if (value.STORAGE_DRIVER === 'azure' && !value.AZURE_STORAGE_CONNECTION_STRING) {

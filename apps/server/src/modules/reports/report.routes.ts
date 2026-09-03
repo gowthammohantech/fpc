@@ -92,7 +92,12 @@ reportRouter.get(
         columns: report.columns,
         rowCount: rows.length,
         truncated: rows.length >= q.limit,
-        rows: rows.map((row) => project(row, report.columns.map((column) => column.key))),
+        rows: rows.map((row) =>
+          project(
+            row,
+            report.columns.map((column) => column.key),
+          ),
+        ),
       });
       return;
     }

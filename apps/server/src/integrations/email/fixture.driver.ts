@@ -51,9 +51,7 @@ export class FixtureMailFetcher implements MailFetcher {
         to: meta.to ?? [_mailbox],
         subject: meta.subject ?? `Invoice ${basename(entry, extname(entry))}`,
         receivedAt: info.mtime,
-        attachments: [
-          { filename: entry, contentType: contentTypeFor(entry), content },
-        ],
+        attachments: [{ filename: entry, contentType: contentTypeFor(entry), content }],
       });
     }
     return messages;

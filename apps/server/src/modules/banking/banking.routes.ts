@@ -45,13 +45,18 @@ bankingRouter.get(
     const q = query<typeof statementListQuery>(req);
 
     res.json(
-      await paginate(BankStatement, scopeFilter(principal, q.companyId) as Record<string, unknown>, {
-        page: q.page,
-        pageSize: q.pageSize,
-        sort: q.sort,
-        order: q.order,
-        defaultSort: { createdAt: -1 },
-      }, toApi),
+      await paginate(
+        BankStatement,
+        scopeFilter(principal, q.companyId) as Record<string, unknown>,
+        {
+          page: q.page,
+          pageSize: q.pageSize,
+          sort: q.sort,
+          order: q.order,
+          defaultSort: { createdAt: -1 },
+        },
+        toApi,
+      ),
     );
   }),
 );
@@ -243,13 +248,18 @@ bankingRouter.get(
     }
 
     res.json(
-      await paginate(BankTransaction, filter, {
-        page: q.page,
-        pageSize: q.pageSize,
-        sort: q.sort,
-        order: q.order,
-        defaultSort: { transactionDate: -1 },
-      }, toApi),
+      await paginate(
+        BankTransaction,
+        filter,
+        {
+          page: q.page,
+          pageSize: q.pageSize,
+          sort: q.sort,
+          order: q.order,
+          defaultSort: { transactionDate: -1 },
+        },
+        toApi,
+      ),
     );
   }),
 );

@@ -68,9 +68,12 @@ export const createVendorRequest = z.object({
   notes: z.string().trim().max(1000).optional(),
 });
 export type CreateVendorRequest = z.infer<typeof createVendorRequest>;
-export const updateVendorRequest = createVendorRequest.omit({ companyId: true }).partial().extend({
-  status: z.enum(['ACTIVE', 'INACTIVE', 'BLOCKED']).optional(),
-});
+export const updateVendorRequest = createVendorRequest
+  .omit({ companyId: true })
+  .partial()
+  .extend({
+    status: z.enum(['ACTIVE', 'INACTIVE', 'BLOCKED']).optional(),
+  });
 
 export const createBankAccountRequest = z.object({
   companyId: objectId,

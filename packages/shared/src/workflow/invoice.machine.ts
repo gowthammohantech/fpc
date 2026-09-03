@@ -67,7 +67,11 @@ const T: Record<InvoiceStatus, InvoiceStatus[]> = {
   [InvoiceStatus.REJECTED]: [InvoiceStatus.REVIEW_REQUIRED, InvoiceStatus.CANCELLED],
   [InvoiceStatus.DUPLICATE]: [InvoiceStatus.REVIEW_REQUIRED, InvoiceStatus.CANCELLED],
   [InvoiceStatus.CANCELLED]: [],
-  [InvoiceStatus.FAILED]: [InvoiceStatus.EXTRACTING, InvoiceStatus.REVIEW_REQUIRED, InvoiceStatus.CANCELLED],
+  [InvoiceStatus.FAILED]: [
+    InvoiceStatus.EXTRACTING,
+    InvoiceStatus.REVIEW_REQUIRED,
+    InvoiceStatus.CANCELLED,
+  ],
 };
 
 export const invoiceMachine = defineStateMachine<InvoiceStatus>('Invoice', T);

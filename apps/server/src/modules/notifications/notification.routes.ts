@@ -33,11 +33,16 @@ notificationRouter.get(
     if (q.unreadOnly) filter.readAt = { $exists: false };
 
     res.json(
-      await paginate(Notification, filter, {
-        page: q.page,
-        pageSize: q.pageSize,
-        defaultSort: { createdAt: -1 },
-      }, toApi),
+      await paginate(
+        Notification,
+        filter,
+        {
+          page: q.page,
+          pageSize: q.pageSize,
+          defaultSort: { createdAt: -1 },
+        },
+        toApi,
+      ),
     );
   }),
 );

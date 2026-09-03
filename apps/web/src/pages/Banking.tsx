@@ -5,7 +5,6 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDate, formatDateTime } from '@/lib/format';
 import {
-  Card,
   ConfirmWithReason,
   EmptyState,
   ErrorState,
@@ -68,7 +67,9 @@ export function BankStatementsPage() {
         {isLoading ? (
           <Spinner />
         ) : error ? (
-          <div className="p-4"><ErrorState error={error} /></div>
+          <div className="p-4">
+            <ErrorState error={error} />
+          </div>
         ) : !data?.items.length ? (
           <EmptyState
             title="No statements imported"
@@ -111,11 +112,21 @@ export function BankStatementsPage() {
                         </span>
                       ) : null}
                     </td>
-                    <td className="td text-right"><Money minor={statement.totalDebit} compact /></td>
-                    <td className="td text-right"><Money minor={statement.totalCredit} compact /></td>
-                    <td className="td text-right"><Money minor={statement.closingBalance} compact /></td>
-                    <td className="td"><StatusBadge status={statement.status} /></td>
-                    <td className="td text-xs text-slate-500">{formatDateTime(statement.createdAt)}</td>
+                    <td className="td text-right">
+                      <Money minor={statement.totalDebit} compact />
+                    </td>
+                    <td className="td text-right">
+                      <Money minor={statement.totalCredit} compact />
+                    </td>
+                    <td className="td text-right">
+                      <Money minor={statement.closingBalance} compact />
+                    </td>
+                    <td className="td">
+                      <StatusBadge status={statement.status} />
+                    </td>
+                    <td className="td text-xs text-slate-500">
+                      {formatDateTime(statement.createdAt)}
+                    </td>
                     <td className="td text-right">
                       {can('bank_statement:delete') ? (
                         <button
@@ -132,7 +143,12 @@ export function BankStatementsPage() {
                 ))}
               </tbody>
             </Table>
-            <Pagination page={data.page} pageSize={data.pageSize} total={data.total} onChange={setPage} />
+            <Pagination
+              page={data.page}
+              pageSize={data.pageSize}
+              total={data.total}
+              onChange={setPage}
+            />
           </>
         )}
       </div>
@@ -147,8 +163,8 @@ export function BankStatementsPage() {
           description={
             <>
               <p>
-                {deleting.fileName} and its imported transactions will be removed. The statement
-                can be uploaded again afterwards.
+                {deleting.fileName} and its imported transactions will be removed. The statement can
+                be uploaded again afterwards.
               </p>
               <p className="mt-2">
                 Transactions that already settled a payment cannot be deleted — reverse those
@@ -202,10 +218,16 @@ function UploadStatementModal({ onClose }: { onClose(): void }) {
       <Modal
         title="Statement imported"
         onClose={onClose}
-        footer={<button className="btn-primary" onClick={onClose}>Done</button>}
+        footer={
+          <button className="btn-primary" onClick={onClose}>
+            Done
+          </button>
+        }
       >
         <ul className="space-y-2 text-sm">
-          <li><span className="font-medium">{result.imported}</span> new transactions imported</li>
+          <li>
+            <span className="font-medium">{result.imported}</span> new transactions imported
+          </li>
           {result.duplicates > 0 ? (
             <li>
               <span className="font-medium">{result.duplicates}</span> rows were already held and
@@ -216,7 +238,10 @@ function UploadStatementModal({ onClose }: { onClose(): void }) {
             <span className="font-medium">{result.suggested}</span> payments matched automatically
             and are waiting for your confirmation
           </li>
-          <li><span className="font-medium">{result.unmatched}</span> debits need manual reconciliation</li>
+          <li>
+            <span className="font-medium">{result.unmatched}</span> debits need manual
+            reconciliation
+          </li>
         </ul>
         {result.skipped.length ? (
           <details className="mt-4 text-sm">
@@ -225,7 +250,9 @@ function UploadStatementModal({ onClose }: { onClose(): void }) {
             </summary>
             <ul className="mt-2 space-y-1 text-slate-500">
               {result.skipped.map((entry) => (
-                <li key={entry.rowNumber}>Row {entry.rowNumber}: {entry.reason}</li>
+                <li key={entry.rowNumber}>
+                  Row {entry.rowNumber}: {entry.reason}
+                </li>
               ))}
             </ul>
           </details>
@@ -240,7 +267,9 @@ function UploadStatementModal({ onClose }: { onClose(): void }) {
       onClose={onClose}
       footer={
         <>
-          <button className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn-secondary" onClick={onClose}>
+            Cancel
+          </button>
           <button
             className="btn-primary"
             disabled={!file || !bankAccountId || upload.isPending}
@@ -253,7 +282,9 @@ function UploadStatementModal({ onClose }: { onClose(): void }) {
     >
       <div className="space-y-4">
         <div>
-          <label className="label" htmlFor="account">Bank account</label>
+          <label className="label" htmlFor="account">
+            Bank account
+          </label>
           <select
             id="account"
             className="input"
@@ -269,7 +300,9 @@ function UploadStatementModal({ onClose }: { onClose(): void }) {
           </select>
         </div>
         <div>
-          <label className="label" htmlFor="file">Statement file</label>
+          <label className="label" htmlFor="file">
+            Statement file
+          </label>
           <input
             id="file"
             type="file"
@@ -293,12 +326,14 @@ function UploadStatementModal({ onClose }: { onClose(): void }) {
           {showMapping ? (
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <p className="text-xs text-slate-500 sm:col-span-2">
-                Only needed when this bank's export is not recognised. Enter the exact heading
-                text from the statement.
+                Only needed when this bank's export is not recognised. Enter the exact heading text
+                from the statement.
               </p>
               {STATEMENT_FIELDS.map((field) => (
                 <div key={field.name}>
-                  <label className="label" htmlFor={`map-${field.name}`}>{field.label}</label>
+                  <label className="label" htmlFor={`map-${field.name}`}>
+                    {field.label}
+                  </label>
                   <input
                     id={`map-${field.name}`}
                     className="input"
@@ -314,7 +349,11 @@ function UploadStatementModal({ onClose }: { onClose(): void }) {
           ) : null}
         </div>
       </div>
-      {upload.error ? <div className="mt-4"><ErrorState error={upload.error} /></div> : null}
+      {upload.error ? (
+        <div className="mt-4">
+          <ErrorState error={upload.error} />
+        </div>
+      ) : null}
     </Modal>
   );
 }
@@ -357,12 +396,20 @@ export function BankTransactionsPage() {
               }
             }}
           />
-          <select className="input w-auto" value={direction} onChange={(event) => setDirection(event.target.value)}>
+          <select
+            className="input w-auto"
+            value={direction}
+            onChange={(event) => setDirection(event.target.value)}
+          >
             <option value="">All</option>
             <option value="DEBIT">Debits</option>
             <option value="CREDIT">Credits</option>
           </select>
-          <select className="input w-auto" value={status} onChange={(event) => setStatus(event.target.value)}>
+          <select
+            className="input w-auto"
+            value={status}
+            onChange={(event) => setStatus(event.target.value)}
+          >
             <option value="">Any reconciliation state</option>
             <option value="MATCHED">Matched</option>
             <option value="SUGGESTED">Suggested</option>
@@ -374,7 +421,9 @@ export function BankTransactionsPage() {
         {isLoading ? (
           <Spinner />
         ) : error ? (
-          <div className="p-4"><ErrorState error={error} /></div>
+          <div className="p-4">
+            <ErrorState error={error} />
+          </div>
         ) : !data?.items.length ? (
           <EmptyState title="No transactions" />
         ) : (
@@ -400,20 +449,33 @@ export function BankTransactionsPage() {
                     </td>
                     <td className="td font-mono text-xs">{transaction.reference ?? '—'}</td>
                     <td className="td">
-                      <span className={transaction.direction === 'DEBIT' ? 'text-red-700' : 'text-emerald-700'}>
+                      <span
+                        className={
+                          transaction.direction === 'DEBIT' ? 'text-red-700' : 'text-emerald-700'
+                        }
+                      >
                         {transaction.direction === 'DEBIT' ? 'Dr' : 'Cr'}
                       </span>
                     </td>
-                    <td className="td text-right"><Money minor={transaction.amount} /></td>
+                    <td className="td text-right">
+                      <Money minor={transaction.amount} />
+                    </td>
                     <td className="td text-right text-slate-500">
                       <Money minor={transaction.balance} compact />
                     </td>
-                    <td className="td"><StatusBadge status={transaction.reconciliationStatus} /></td>
+                    <td className="td">
+                      <StatusBadge status={transaction.reconciliationStatus} />
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </Table>
-            <Pagination page={data.page} pageSize={data.pageSize} total={data.total} onChange={setPage} />
+            <Pagination
+              page={data.page}
+              pageSize={data.pageSize}
+              total={data.total}
+              onChange={setPage}
+            />
           </>
         )}
       </div>

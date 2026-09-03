@@ -29,13 +29,18 @@ companyRouter.get(
     if (principal.companyIds.length > 0) filter._id = { $in: principal.companyIds };
 
     res.json(
-      await paginate(Company, filter, {
-        page: q.page,
-        pageSize: q.pageSize,
-        sort: q.sort,
-        order: q.order,
-        defaultSort: { name: 1 },
-      }, (doc) => toApi(doc)),
+      await paginate(
+        Company,
+        filter,
+        {
+          page: q.page,
+          pageSize: q.pageSize,
+          sort: q.sort,
+          order: q.order,
+          defaultSort: { name: 1 },
+        },
+        (doc) => toApi(doc),
+      ),
     );
   }),
 );

@@ -168,7 +168,9 @@ export async function exportBatch(
   const items = await PaymentBatchItem.find({ paymentBatchId: batch._id }).lean();
   if (!items.length) throw ApiError.unprocessable('This batch has no payments to export');
 
-  const bankAccount = batch.bankAccountId ? await BankAccount.findById(batch.bankAccountId).lean() : null;
+  const bankAccount = batch.bankAccountId
+    ? await BankAccount.findById(batch.bankAccountId).lean()
+    : null;
 
   // Vendor emails are included so the bank can send its own advice; payroll
   // rows deliberately carry none.
@@ -184,7 +186,10 @@ export async function exportBatch(
       amount: item.amount,
       reference: `${batch.reference}/${item.reference}`.slice(0, 60),
       paymentDate: batch.paymentDate,
-      email: item.type === ObligationType.VENDOR ? vendorEmails.get(String(item.obligationId)) : undefined,
+      email:
+        item.type === ObligationType.VENDOR
+          ? vendorEmails.get(String(item.obligationId))
+          : undefined,
       transactionType: transactionTypeFor(item.amount),
       debitAccount: bankAccount?.accountNumber,
     })),
@@ -282,7 +287,10 @@ export async function removeFromBatch(
     throw ApiError.conflict('Only a draft batch can be changed. Cancel it and create a new one.');
   }
 
-  await PaymentBatchItem.deleteMany({ paymentBatchId: batch._id, obligationId: { $in: obligationIds } });
+  await PaymentBatchItem.deleteMany({
+    paymentBatchId: batch._id,
+    obligationId: { $in: obligationIds },
+  });
 
   const obligations = await PaymentObligation.find({
     _id: { $in: obligationIds },
@@ -345,7 +353,8 @@ export async function refreshReconciliationTotals(batchId: Types.ObjectId): Prom
 function totalsOf(obligations: Array<{ type: string; amount: number }>) {
   const vendor = obligations.filter((entry) => entry.type === ObligationType.VENDOR);
   const payroll = obligations.filter((entry) => entry.type === ObligationType.PAYROLL);
-  const sum = (rows: Array<{ amount: number }>) => rows.reduce((total, row) => total + row.amount, 0);
+  const sum = (rows: Array<{ amount: number }>) =>
+    rows.reduce((total, row) => total + row.amount, 0);
 
   return {
     itemCount: obligations.length,
@@ -390,9 +399,13 @@ async function vendorEmailsFor(
   const invoices = await Invoice.find({ _id: { $in: obligations.map((entry) => entry.sourceId) } })
     .select('_id vendorId')
     .lean();
-  const vendorByInvoice = new Map(invoices.map((invoice) => [String(invoice._id), invoice.vendorId]));
+  const vendorByInvoice = new Map(
+    invoices.map((invoice) => [String(invoice._id), invoice.vendorId]),
+  );
 
-  const vendors = await Vendor.find({ _id: { $in: invoices.map((invoice) => invoice.vendorId).filter(Boolean) } })
+  const vendors = await Vendor.find({
+    _id: { $in: invoices.map((invoice) => invoice.vendorId).filter(Boolean) },
+  })
     .select('_id email')
     .lean();
   const emailByVendor = new Map(vendors.map((vendor) => [String(vendor._id), vendor.email]));

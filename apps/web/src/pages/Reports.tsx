@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { api, downloadBlob } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
-import { formatDate, formatINR, humanize } from '@/lib/format';
+import { formatDate, formatINR } from '@/lib/format';
 import {
   Card,
   EmptyState,
@@ -81,7 +81,9 @@ export function ReportsPage() {
                 <div>
                   <h2 className="font-semibold">{report.name}</h2>
                   <p className="text-sm text-slate-500">
-                    {data ? `${data.rowCount} rows${data.truncated ? ' (truncated)' : ''}` : 'Running…'}
+                    {data
+                      ? `${data.rowCount} rows${data.truncated ? ' (truncated)' : ''}`
+                      : 'Running…'}
                   </p>
                 </div>
                 {can('report:export') ? (
@@ -98,7 +100,9 @@ export function ReportsPage() {
               {report.filters.includes('dateRange') ? (
                 <div className="flex flex-wrap gap-3 border-b border-slate-200 px-5 py-3">
                   <div>
-                    <label className="label" htmlFor="from">From</label>
+                    <label className="label" htmlFor="from">
+                      From
+                    </label>
                     <input
                       id="from"
                       type="date"
@@ -108,7 +112,9 @@ export function ReportsPage() {
                     />
                   </div>
                   <div>
-                    <label className="label" htmlFor="to">To</label>
+                    <label className="label" htmlFor="to">
+                      To
+                    </label>
                     <input
                       id="to"
                       type="date"
@@ -123,7 +129,9 @@ export function ReportsPage() {
               {isFetching ? (
                 <Spinner />
               ) : error ? (
-                <div className="p-4"><ErrorState error={error} /></div>
+                <div className="p-4">
+                  <ErrorState error={error} />
+                </div>
               ) : !data?.rows.length ? (
                 <EmptyState title="No rows for these filters" />
               ) : (
@@ -165,7 +173,8 @@ export function ReportsPage() {
 }
 
 function renderCell(value: unknown, format?: string) {
-  if (value === null || value === undefined || value === '') return <span className="text-slate-300">—</span>;
+  if (value === null || value === undefined || value === '')
+    return <span className="text-slate-300">—</span>;
   if (format === 'money') return formatINR(Number(value));
   if (format === 'date') return formatDate(String(value));
   if (format === 'status') return <StatusBadge status={String(value)} />;

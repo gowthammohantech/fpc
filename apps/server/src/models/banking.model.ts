@@ -1,5 +1,11 @@
 import { Schema, Types, model } from 'mongoose';
-import type { BankTransactionDirection, MatchMethod, MatchSignals, ReconciliationStatus, StatementImportStatus } from '@fpc/shared';
+import type {
+  BankTransactionDirection,
+  MatchMethod,
+  MatchSignals,
+  ReconciliationStatus,
+  StatementImportStatus,
+} from '@fpc/shared';
 import { baseSchemaOptions, scopedFields } from './base.js';
 
 export interface BankStatementDoc {
@@ -70,7 +76,12 @@ const transactionSchema = new Schema<BankTransactionDoc>(
   {
     ...scopedFields(),
     bankAccountId: { type: Schema.Types.ObjectId, ref: 'BankAccount', required: true, index: true },
-    bankStatementId: { type: Schema.Types.ObjectId, ref: 'BankStatement', required: true, index: true },
+    bankStatementId: {
+      type: Schema.Types.ObjectId,
+      ref: 'BankStatement',
+      required: true,
+      index: true,
+    },
     transactionDate: { type: Date, required: true, index: true },
     valueDate: Date,
     description: { type: String, required: true },
@@ -88,7 +99,12 @@ const transactionSchema = new Schema<BankTransactionDoc>(
 
 // The same statement row must never be imported twice.
 transactionSchema.index({ tenantId: 1, bankAccountId: 1, dedupeHash: 1 }, { unique: true });
-transactionSchema.index({ tenantId: 1, companyId: 1, reconciliationStatus: 1, transactionDate: -1 });
+transactionSchema.index({
+  tenantId: 1,
+  companyId: 1,
+  reconciliationStatus: 1,
+  transactionDate: -1,
+});
 transactionSchema.index({ tenantId: 1, companyId: 1, direction: 1, amount: 1 });
 
 export const BankTransaction = model<BankTransactionDoc>('BankTransaction', transactionSchema);
@@ -112,7 +128,12 @@ export interface ReconciliationDoc {
 const reconciliationSchema = new Schema<ReconciliationDoc>(
   {
     ...scopedFields(),
-    bankTransactionId: { type: Schema.Types.ObjectId, ref: 'BankTransaction', required: true, index: true },
+    bankTransactionId: {
+      type: Schema.Types.ObjectId,
+      ref: 'BankTransaction',
+      required: true,
+      index: true,
+    },
     obligationId: { type: Schema.Types.ObjectId, ref: 'PaymentObligation', index: true },
     paymentBatchId: { type: Schema.Types.ObjectId, ref: 'PaymentBatch', index: true },
     status: { type: String, required: true, index: true },

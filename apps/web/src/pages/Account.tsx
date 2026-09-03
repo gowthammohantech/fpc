@@ -64,7 +64,9 @@ export function AccountPage() {
           <h2 className="font-semibold">Change password</h2>
           <form onSubmit={onSubmit} className="mt-4 space-y-4">
             <div>
-              <label className="label" htmlFor="current">Current password</label>
+              <label className="label" htmlFor="current">
+                Current password
+              </label>
               <input
                 id="current"
                 className="input"
@@ -76,7 +78,9 @@ export function AccountPage() {
               />
             </div>
             <div>
-              <label className="label" htmlFor="new">New password</label>
+              <label className="label" htmlFor="new">
+                New password
+              </label>
               <input
                 id="new"
                 className="input"
@@ -92,7 +96,9 @@ export function AccountPage() {
               </p>
             </div>
             <div>
-              <label className="label" htmlFor="confirmNew">Confirm new password</label>
+              <label className="label" htmlFor="confirmNew">
+                Confirm new password
+              </label>
               <input
                 id="confirmNew"
                 className="input"

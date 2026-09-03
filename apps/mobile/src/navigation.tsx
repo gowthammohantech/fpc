@@ -48,7 +48,11 @@ export function Navigation() {
               ),
             })}
           />
-          <Stack.Screen name="Approvals" component={ApprovalsScreen} options={{ title: 'Approvals' }} />
+          <Stack.Screen
+            name="Approvals"
+            component={ApprovalsScreen}
+            options={{ title: 'Approvals' }}
+          />
           <Stack.Screen
             name="ApprovalDetail"
             component={ApprovalDetailScreen}

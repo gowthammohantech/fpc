@@ -3,7 +3,10 @@ import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
 import { processPendingExtractions } from './extractionWorker.js';
 import { pollInvoiceMailboxes } from './mailPoller.js';
-import { dispatchPendingEmails, registerNotificationHandlers } from '../modules/notifications/notification.service.js';
+import {
+  dispatchPendingEmails,
+  registerNotificationHandlers,
+} from '../modules/notifications/notification.service.js';
 
 const tasks: ScheduledTask[] = [];
 

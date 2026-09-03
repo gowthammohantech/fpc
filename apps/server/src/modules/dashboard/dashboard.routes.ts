@@ -69,39 +69,52 @@ dashboardRouter.get(
         ...base,
         status: { $in: [InvoiceStatus.REVIEW_REQUIRED, InvoiceStatus.FAILED] },
       }),
-      aggregateOne(Invoice, {
-        ...base,
-        status: { $in: OPEN_INVOICE_STATUSES },
-        dueDate: { $lt: startOfToday },
-      }, '$totalAmount'),
+      aggregateOne(
+        Invoice,
+        {
+          ...base,
+          status: { $in: OPEN_INVOICE_STATUSES },
+          dueDate: { $lt: startOfToday },
+        },
+        '$totalAmount',
+      ),
       canSeePayroll ? latestPayroll(base) : null,
       sumBy(PaymentObligation, { ...base, approvalStatus: 'APPROVED' }, 'paymentStatus', '$amount'),
-      aggregateOne(PaymentBatch, {
-        ...base,
-        status: { $in: ['EXPORTED', 'PROCESSING', 'PARTIALLY_RECONCILED'] },
-      }, '$totalAmount'),
-      aggregateOne(BankTransaction, {
-        ...base,
-        direction: 'DEBIT',
-        reconciliationStatus: 'MATCHED',
-        updatedAt: { $gte: startOfToday },
-      }, '$amount'),
-      aggregateOne(BankTransaction, {
-        ...base,
-        direction: 'DEBIT',
-        reconciliationStatus: { $in: ['UNMATCHED', 'SUGGESTED'] },
-      }, '$amount'),
+      aggregateOne(
+        PaymentBatch,
+        {
+          ...base,
+          status: { $in: ['EXPORTED', 'PROCESSING', 'PARTIALLY_RECONCILED'] },
+        },
+        '$totalAmount',
+      ),
+      aggregateOne(
+        BankTransaction,
+        {
+          ...base,
+          direction: 'DEBIT',
+          reconciliationStatus: 'MATCHED',
+          updatedAt: { $gte: startOfToday },
+        },
+        '$amount',
+      ),
+      aggregateOne(
+        BankTransaction,
+        {
+          ...base,
+          direction: 'DEBIT',
+          reconciliationStatus: { $in: ['UNMATCHED', 'SUGGESTED'] },
+        },
+        '$amount',
+      ),
       aggregateOne(BankAccount, { ...base, active: true }, '$currentBalance'),
     ]);
 
     const pendingApproval = invoiceStats.get(InvoiceStatus.PENDING_APPROVAL) ?? empty();
-    const approvedUnpaid = OPEN_INVOICE_STATUSES.reduce(
-      (sum, status) => {
-        const entry = invoiceStats.get(status) ?? empty();
-        return { count: sum.count + entry.count, amount: sum.amount + entry.amount };
-      },
-      empty(),
-    );
+    const approvedUnpaid = OPEN_INVOICE_STATUSES.reduce((sum, status) => {
+      const entry = invoiceStats.get(status) ?? empty();
+      return { count: sum.count + entry.count, amount: sum.amount + entry.amount };
+    }, empty());
 
     const readyForPayment = obligationStats.get('QUEUED') ?? empty();
     const batched = obligationStats.get('BATCHED') ?? empty();
@@ -174,7 +187,12 @@ dashboardRouter.get(
     const amount = Number(q.q.replace(/[₹,\s]/g, ''));
     const amountFilter =
       Number.isFinite(amount) && amount > 0
-        ? { totalAmount: { $gte: Math.round(amount * 100) - 100, $lte: Math.round(amount * 100) + 100 } }
+        ? {
+            totalAmount: {
+              $gte: Math.round(amount * 100) - 100,
+              $lte: Math.round(amount * 100) + 100,
+            },
+          }
         : null;
 
     const canSeePayroll = principal.permissions.includes(PAYROLL_VISIBILITY_PERMISSION);
@@ -271,10 +289,12 @@ async function sumBy(
   groupField: string,
   sumField: string,
 ): Promise<Map<string, { count: number; amount: number }>> {
-  const rows = (await model.aggregate([
-    { $match: match },
-    { $group: { _id: `$${groupField}`, count: { $sum: 1 }, amount: { $sum: sumField } } },
-  ] as PipelineStage[]).exec()) as Array<{ _id: string; count: number; amount: number }>;
+  const rows = (await model
+    .aggregate([
+      { $match: match },
+      { $group: { _id: `$${groupField}`, count: { $sum: 1 }, amount: { $sum: sumField } } },
+    ] as PipelineStage[])
+    .exec()) as Array<{ _id: string; count: number; amount: number }>;
   return new Map(rows.map((row) => [row._id, { count: row.count, amount: row.amount ?? 0 }]));
 }
 
@@ -283,10 +303,12 @@ async function aggregateOne(
   match: Record<string, unknown>,
   sumField: string,
 ): Promise<{ count: number; amount: number }> {
-  const rows = (await model.aggregate([
-    { $match: match },
-    { $group: { _id: null, count: { $sum: 1 }, amount: { $sum: sumField } } },
-  ] as PipelineStage[]).exec()) as Array<{ count: number; amount: number }>;
+  const rows = (await model
+    .aggregate([
+      { $match: match },
+      { $group: { _id: null, count: { $sum: 1 }, amount: { $sum: sumField } } },
+    ] as PipelineStage[])
+    .exec()) as Array<{ count: number; amount: number }>;
   return { count: rows[0]?.count ?? 0, amount: rows[0]?.amount ?? 0 };
 }
 

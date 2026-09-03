@@ -43,7 +43,10 @@ const MAX_EXTRACTION_ATTEMPTS = 3;
  * (PRD §11). The document is stored first, so the record always has something
  * a reviewer can open, then extraction is left to the background worker.
  */
-export async function intake(input: IntakeInput, context: AuditContext): Promise<InvoiceDoc & { _id: Types.ObjectId }> {
+export async function intake(
+  input: IntakeInput,
+  context: AuditContext,
+): Promise<InvoiceDoc & { _id: Types.ObjectId }> {
   if (input.emailMessageId) {
     const existing = await Invoice.findOne({
       tenantId: input.tenantId,
@@ -125,7 +128,9 @@ export async function runExtraction(invoiceId: Types.ObjectId): Promise<void> {
   await invoice.save();
 
   try {
-    const file = invoice.documentFileId ? await DocumentFile.findById(invoice.documentFileId) : null;
+    const file = invoice.documentFileId
+      ? await DocumentFile.findById(invoice.documentFileId)
+      : null;
     if (!file) throw new Error('Invoice document is missing');
 
     const vendors = await Vendor.find({
@@ -194,7 +199,9 @@ async function applyExtraction(
   };
   const amount = (key: string): number | undefined => {
     const value = fields[key]?.value;
-    return value === null || value === undefined ? undefined : (parseAmountToMinor(value) ?? undefined);
+    return value === null || value === undefined
+      ? undefined
+      : (parseAmountToMinor(value) ?? undefined);
   };
   const date = (key: string): Date | undefined => {
     const raw = text(key);
@@ -216,7 +223,10 @@ async function applyExtraction(
     invoice.lines = result.lineItems.map((item) => ({
       description: item.description,
       quantity: item.quantity,
-      unitPrice: item.unitPrice !== undefined ? (parseAmountToMinor(item.unitPrice) ?? undefined) : undefined,
+      unitPrice:
+        item.unitPrice !== undefined
+          ? (parseAmountToMinor(item.unitPrice) ?? undefined)
+          : undefined,
       amount: parseAmountToMinor(item.amount ?? 0) ?? 0,
       hsnSac: item.hsnSac,
       taxRate: item.taxRate,
@@ -270,7 +280,8 @@ function notifyIfDuplicate(invoice: InvoiceDoc & { _id: Types.ObjectId }): void 
     entityId: String(invoice._id),
     recipientUserIds: [],
     recipientRoleKeys: DUPLICATE_ALERT_ROLES,
-    title: `Possible duplicate: ${invoice.vendorName ?? 'invoice'} ${invoice.invoiceNumber ?? ''}`.trim(),
+    title:
+      `Possible duplicate: ${invoice.vendorName ?? 'invoice'} ${invoice.invoiceNumber ?? ''}`.trim(),
     body: duplicate.message,
     link: `/invoices/${String(invoice._id)}`,
   });
@@ -295,7 +306,9 @@ export async function revalidate(
   // Resolutions a reviewer has already recorded survive re-validation, so an
   // acknowledged duplicate warning does not reappear on every save.
   const resolved = new Map(
-    invoice.findings.filter((finding) => finding.resolved).map((finding) => [finding.code, finding]),
+    invoice.findings
+      .filter((finding) => finding.resolved)
+      .map((finding) => [finding.code, finding]),
   );
   return fresh.map((finding) => {
     const previous = resolved.get(finding.code);

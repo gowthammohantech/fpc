@@ -17,16 +17,24 @@ export function StatusBadge({ status }: { status: string | null | undefined }) {
 
 function toneFor(status: string): string {
   const value = status.toUpperCase();
-  if (['PAID', 'RECONCILED', 'APPROVED', 'MATCHED', 'ACTIVE', 'COMPLETED', 'SENT'].includes(value)) {
+  if (
+    ['PAID', 'RECONCILED', 'APPROVED', 'MATCHED', 'ACTIVE', 'COMPLETED', 'SENT'].includes(value)
+  ) {
     return 'bg-emerald-100 text-emerald-800';
   }
   if (['REJECTED', 'FAILED', 'CANCELLED', 'BLOCKED', 'DUPLICATE', 'SUSPENDED'].includes(value)) {
     return 'bg-red-100 text-red-800';
   }
-  if (['PENDING_APPROVAL', 'REVIEW_REQUIRED', 'SUGGESTED', 'IN_PROGRESS', 'PENDING'].includes(value)) {
+  if (
+    ['PENDING_APPROVAL', 'REVIEW_REQUIRED', 'SUGGESTED', 'IN_PROGRESS', 'PENDING'].includes(value)
+  ) {
     return 'bg-amber-100 text-amber-800';
   }
-  if (['PAYMENT_PROCESSING', 'PROCESSING', 'EXPORTED', 'BATCHED', 'PARTIALLY_RECONCILED'].includes(value)) {
+  if (
+    ['PAYMENT_PROCESSING', 'PROCESSING', 'EXPORTED', 'BATCHED', 'PARTIALLY_RECONCILED'].includes(
+      value,
+    )
+  ) {
     return 'bg-blue-100 text-blue-800';
   }
   if (['UNMATCHED', 'IGNORED', 'DRAFT'].includes(value)) return 'bg-slate-100 text-slate-700';
@@ -165,7 +173,8 @@ export function Pagination({
   return (
     <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3 text-sm text-slate-600">
       <span>
-        {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} of {total.toLocaleString('en-IN')}
+        {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} of{' '}
+        {total.toLocaleString('en-IN')}
       </span>
       <div className="flex gap-2">
         <button className="btn-secondary" disabled={page <= 1} onClick={() => onChange(page - 1)}>
@@ -231,10 +240,16 @@ export function Modal({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-      <div className={`card w-full ${wide ? 'max-w-4xl' : 'max-w-lg'} max-h-[90vh] overflow-y-auto`}>
+      <div
+        className={`card w-full ${wide ? 'max-w-4xl' : 'max-w-lg'} max-h-[90vh] overflow-y-auto`}
+      >
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
           <h2 className="text-lg font-semibold">{title}</h2>
-          <button className="text-slate-400 hover:text-slate-700" onClick={onClose} aria-label="Close">
+          <button
+            className="text-slate-400 hover:text-slate-700"
+            onClick={onClose}
+            aria-label="Close"
+          >
             ✕
           </button>
         </div>
@@ -282,7 +297,9 @@ export function ConfirmWithReason({
       onClose={onClose}
       footer={
         <>
-          <button className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn-secondary" onClick={onClose}>
+            Cancel
+          </button>
           <button
             className="btn-danger"
             disabled={tooShort || pending}
@@ -305,7 +322,11 @@ export function ConfirmWithReason({
         onChange={(event) => setReason(event.target.value)}
         placeholder="Recorded in the audit trail"
       />
-      {error ? <div className="mt-3"><ErrorState error={error} /></div> : null}
+      {error ? (
+        <div className="mt-3">
+          <ErrorState error={error} />
+        </div>
+      ) : null}
     </Modal>
   );
 }
@@ -314,8 +335,10 @@ export function ConfirmWithReason({
 export function ConfidenceBadge({ value }: { value: number }) {
   const percent = value <= 1 ? Math.round(value * 100) : Math.round(value);
   const tone =
-    percent >= 90 ? 'bg-emerald-100 text-emerald-800'
-    : percent >= 75 ? 'bg-amber-100 text-amber-800'
-    : 'bg-red-100 text-red-800';
+    percent >= 90
+      ? 'bg-emerald-100 text-emerald-800'
+      : percent >= 75
+        ? 'bg-amber-100 text-amber-800'
+        : 'bg-red-100 text-red-800';
   return <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${tone}`}>{percent}%</span>;
 }

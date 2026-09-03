@@ -1,5 +1,12 @@
 import { Schema, Types, model } from 'mongoose';
-import { ROLE_KEYS, type ApprovalStatus, type ApprovalStepStatus, type ApprovalSubjectType, type ApproverType, type RoleKey } from '@fpc/shared';
+import {
+  ROLE_KEYS,
+  type ApprovalStatus,
+  type ApprovalStepStatus,
+  type ApprovalSubjectType,
+  type ApproverType,
+  type RoleKey,
+} from '@fpc/shared';
 import { baseSchemaOptions, scopedFields } from './base.js';
 
 export interface ApprovalStepDoc {
@@ -62,7 +69,12 @@ const stepSchema = new Schema<ApprovalStepDoc>(
 const schema = new Schema<ApprovalRequestDoc>(
   {
     ...scopedFields(),
-    subjectType: { type: String, enum: ['VENDOR_INVOICE', 'PAYROLL_BATCH'], required: true, index: true },
+    subjectType: {
+      type: String,
+      enum: ['VENDOR_INVOICE', 'PAYROLL_BATCH'],
+      required: true,
+      index: true,
+    },
     subjectId: { type: Schema.Types.ObjectId, required: true, index: true },
     subjectLabel: { type: String, required: true },
     amount: { type: Number, required: true },

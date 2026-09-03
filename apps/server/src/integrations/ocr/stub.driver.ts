@@ -80,17 +80,19 @@ type Fields = Record<string, ExtractedField<string | number>>;
 const PATTERNS: Array<{ field: string; pattern: RegExp; confidence: number }> = [
   {
     field: 'invoiceNumber',
-    pattern: /invoice\s*(?:no\.?|number|#)\s*[:\-]?\s*([A-Z0-9][A-Z0-9\-/]{2,30})/i,
+    pattern: /invoice\s*(?:no\.?|number|#)\s*[:-]?\s*([A-Z0-9][A-Z0-9/-]{2,30})/i,
     confidence: 0.9,
   },
   {
     field: 'invoiceDate',
-    pattern: /invoice\s*date\s*[:\-]?\s*([0-9]{1,2}[-/][A-Za-z0-9]{2,9}[-/][0-9]{2,4}|[0-9]{4}-[0-9]{2}-[0-9]{2})/i,
+    pattern:
+      /invoice\s*date\s*[:-]?\s*([0-9]{1,2}[/-][A-Za-z0-9]{2,9}[/-][0-9]{2,4}|[0-9]{4}-[0-9]{2}-[0-9]{2})/i,
     confidence: 0.85,
   },
   {
     field: 'dueDate',
-    pattern: /due\s*date\s*[:\-]?\s*([0-9]{1,2}[-/][A-Za-z0-9]{2,9}[-/][0-9]{2,4}|[0-9]{4}-[0-9]{2}-[0-9]{2})/i,
+    pattern:
+      /due\s*date\s*[:-]?\s*([0-9]{1,2}[/-][A-Za-z0-9]{2,9}[/-][0-9]{2,4}|[0-9]{4}-[0-9]{2}-[0-9]{2})/i,
     confidence: 0.82,
   },
   {
@@ -101,17 +103,19 @@ const PATTERNS: Array<{ field: string; pattern: RegExp; confidence: number }> = 
   { field: 'ifsc', pattern: /\b([A-Z]{4}0[A-Z0-9]{6})\b/, confidence: 0.9 },
   {
     field: 'subtotal',
-    pattern: /(?:sub\s*total|taxable\s*value)\s*[:\-]?\s*(?:₹|INR|Rs\.?)?\s*([\d,]+(?:\.\d{1,2})?)/i,
+    pattern: /(?:sub\s*total|taxable\s*value)\s*[:-]?\s*(?:₹|INR|Rs\.?)?\s*([\d,]+(?:\.\d{1,2})?)/i,
     confidence: 0.8,
   },
   {
     field: 'taxAmount',
-    pattern: /(?:total\s*tax|tax\s*amount|gst)\s*[:\-]?\s*(?:₹|INR|Rs\.?)?\s*([\d,]+(?:\.\d{1,2})?)/i,
+    pattern:
+      /(?:total\s*tax|tax\s*amount|gst)\s*[:-]?\s*(?:₹|INR|Rs\.?)?\s*([\d,]+(?:\.\d{1,2})?)/i,
     confidence: 0.78,
   },
   {
     field: 'totalAmount',
-    pattern: /(?:grand\s*total|total\s*amount|amount\s*payable|total)\s*[:\-]?\s*(?:₹|INR|Rs\.?)?\s*([\d,]+(?:\.\d{1,2})?)/i,
+    pattern:
+      /(?:grand\s*total|total\s*amount|amount\s*payable|total)\s*[:-]?\s*(?:₹|INR|Rs\.?)?\s*([\d,]+(?:\.\d{1,2})?)/i,
     confidence: 0.85,
   },
 ];
@@ -133,7 +137,11 @@ function extractFromText(text: string, knownVendorNames: string[]): Fields {
   });
   if (vendor) fields.vendorName = { value: vendor, confidence: 0.93, source: 'OCR' };
 
-  fields.currency = { value: /₹|INR|Rs\.?/i.test(text) ? 'INR' : 'INR', confidence: 0.99, source: 'OCR' };
+  fields.currency = {
+    value: /₹|INR|Rs\.?/i.test(text) ? 'INR' : 'INR',
+    confidence: 0.99,
+    source: 'OCR',
+  };
   return fields;
 }
 

@@ -56,7 +56,8 @@ export function PaymentQueuePage() {
       }),
   });
 
-  const rows = data?.items ?? [];
+  // A fresh [] each render would defeat the useMemo below it.
+  const rows = useMemo(() => data?.items ?? [], [data]);
   const selectable = rows.filter((row) => !(row as { aggregate?: boolean }).aggregate);
 
   const selectedTotal = useMemo(
@@ -99,7 +100,11 @@ export function PaymentQueuePage() {
 
       <div className="card">
         <div className="flex flex-wrap items-center gap-3 border-b border-slate-200 px-4 py-3">
-          <select className="input w-auto" value={type} onChange={(event) => setType(event.target.value)}>
+          <select
+            className="input w-auto"
+            value={type}
+            onChange={(event) => setType(event.target.value)}
+          >
             <option value="">All payment types</option>
             <option value="VENDOR">Vendor</option>
             <option value="PAYROLL">Payroll</option>
@@ -107,7 +112,10 @@ export function PaymentQueuePage() {
           <select
             className="input w-auto"
             value={status}
-            onChange={(event) => { setStatus(event.target.value); setPage(1); }}
+            onChange={(event) => {
+              setStatus(event.target.value);
+              setPage(1);
+            }}
           >
             <option value="">Ready to pay</option>
             <option value="ON_HOLD">On hold</option>
@@ -124,9 +132,14 @@ export function PaymentQueuePage() {
         {isLoading ? (
           <Spinner />
         ) : error ? (
-          <div className="p-4"><ErrorState error={error} /></div>
+          <div className="p-4">
+            <ErrorState error={error} />
+          </div>
         ) : !rows.length ? (
-          <EmptyState title="Nothing waiting to be paid" hint="Approved invoices and payroll appear here." />
+          <EmptyState
+            title="Nothing waiting to be paid"
+            hint="Approved invoices and payroll appear here."
+          />
         ) : (
           <>
             <Table>
@@ -136,10 +149,14 @@ export function PaymentQueuePage() {
                     <input
                       type="checkbox"
                       aria-label="Select all"
-                      checked={selectable.length > 0 && selectable.every((row) => selected.has(row.id))}
+                      checked={
+                        selectable.length > 0 && selectable.every((row) => selected.has(row.id))
+                      }
                       onChange={(event) =>
                         setSelected(
-                          event.target.checked ? new Set(selectable.map((row) => row.id)) : new Set(),
+                          event.target.checked
+                            ? new Set(selectable.map((row) => row.id))
+                            : new Set(),
                         )
                       }
                     />
@@ -160,7 +177,9 @@ export function PaymentQueuePage() {
                     <tr key={row.id} className="hover:bg-slate-50">
                       <td className="td">
                         {aggregate ? (
-                          <span title="Payroll totals cannot be batched without payroll access">—</span>
+                          <span title="Payroll totals cannot be batched without payroll access">
+                            —
+                          </span>
                         ) : (
                           <input
                             type="checkbox"
@@ -181,7 +200,9 @@ export function PaymentQueuePage() {
                       <td className="td text-xs text-slate-500">{humanize(row.type)}</td>
                       <td className="td font-mono text-xs">{row.reference}</td>
                       <td className="td">{formatDate(row.dueDate)}</td>
-                      <td className="td text-right"><Money minor={row.amount} /></td>
+                      <td className="td text-right">
+                        <Money minor={row.amount} />
+                      </td>
                       <td className="td">
                         <StatusBadge status={row.paymentStatus} />
                         {row.holdReason ? (
@@ -229,8 +250,8 @@ export function PaymentQueuePage() {
           actionLabel="Hold payment"
           description={
             <p>
-              {holding.payee} will stay approved but will be excluded from payment batches until
-              it is released.
+              {holding.payee} will stay approved but will be excluded from payment batches until it
+              is released.
             </p>
           }
           pending={setHold.isPending}
@@ -298,8 +319,14 @@ function CreateBatchModal({
       onClose={onClose}
       footer={
         <>
-          <button className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn-primary" disabled={create.isPending} onClick={() => create.mutate()}>
+          <button className="btn-secondary" onClick={onClose}>
+            Cancel
+          </button>
+          <button
+            className="btn-primary"
+            disabled={create.isPending}
+            onClick={() => create.mutate()}
+          >
             {create.isPending ? 'Creating…' : 'Create batch'}
           </button>
         </>
@@ -311,7 +338,9 @@ function CreateBatchModal({
 
       <div className="space-y-4">
         <div>
-          <label className="label" htmlFor="paymentDate">Payment date</label>
+          <label className="label" htmlFor="paymentDate">
+            Payment date
+          </label>
           <input
             id="paymentDate"
             type="date"
@@ -321,7 +350,9 @@ function CreateBatchModal({
           />
         </div>
         <div>
-          <label className="label" htmlFor="account">Debit account</label>
+          <label className="label" htmlFor="account">
+            Debit account
+          </label>
           <select
             id="account"
             className="input"
@@ -340,12 +371,23 @@ function CreateBatchModal({
           </p>
         </div>
         <div>
-          <label className="label" htmlFor="notes">Notes</label>
-          <input id="notes" className="input" value={notes} onChange={(event) => setNotes(event.target.value)} />
+          <label className="label" htmlFor="notes">
+            Notes
+          </label>
+          <input
+            id="notes"
+            className="input"
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+          />
         </div>
       </div>
 
-      {create.error ? <div className="mt-4"><ErrorState error={create.error} /></div> : null}
+      {create.error ? (
+        <div className="mt-4">
+          <ErrorState error={create.error} />
+        </div>
+      ) : null}
     </Modal>
   );
 }
@@ -368,9 +410,14 @@ export function PaymentBatchesPage() {
         {isLoading ? (
           <Spinner />
         ) : error ? (
-          <div className="p-4"><ErrorState error={error} /></div>
+          <div className="p-4">
+            <ErrorState error={error} />
+          </div>
         ) : !data?.items.length ? (
-          <EmptyState title="No payment batches yet" hint="Select payments in the queue to create one." />
+          <EmptyState
+            title="No payment batches yet"
+            hint="Select payments in the queue to create one."
+          />
         ) : (
           <>
             <Table>
@@ -390,7 +437,10 @@ export function PaymentBatchesPage() {
                 {data.items.map((batch) => (
                   <tr key={batch.id} className="hover:bg-slate-50">
                     <td className="td">
-                      <Link className="font-mono font-medium text-brand-700" to={`/payments/batches/${batch.id}`}>
+                      <Link
+                        className="font-mono font-medium text-brand-700"
+                        to={`/payments/batches/${batch.id}`}
+                      >
                         {batch.reference}
                       </Link>
                     </td>
@@ -398,16 +448,25 @@ export function PaymentBatchesPage() {
                     <td className="td text-right tabular">{batch.itemCount}</td>
                     <td className="td text-right">{formatCompactINR(batch.vendorAmount)}</td>
                     <td className="td text-right">{formatCompactINR(batch.payrollAmount)}</td>
-                    <td className="td text-right font-medium"><Money minor={batch.totalAmount} /></td>
+                    <td className="td text-right font-medium">
+                      <Money minor={batch.totalAmount} />
+                    </td>
                     <td className="td text-right text-slate-500">
                       {batch.itemCount ? `${batch.reconciledCount}/${batch.itemCount}` : '—'}
                     </td>
-                    <td className="td"><StatusBadge status={batch.status} /></td>
+                    <td className="td">
+                      <StatusBadge status={batch.status} />
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </Table>
-            <Pagination page={data.page} pageSize={data.pageSize} total={data.total} onChange={setPage} />
+            <Pagination
+              page={data.page}
+              pageSize={data.pageSize}
+              total={data.total}
+              onChange={setPage}
+            />
           </>
         )}
       </div>
@@ -423,7 +482,11 @@ export function PaymentBatchDetailPage() {
 
   const [removing, setRemoving] = useState<{ id: string; name: string } | null>(null);
 
-  const { data: batch, isLoading, error } = useQuery({
+  const {
+    data: batch,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['payment-batch', id],
     queryFn: () => api.payments.batch(id),
   });
@@ -509,22 +572,32 @@ export function PaymentBatchDetailPage() {
         }
       />
 
-      {exportBatch.error ? <div className="mb-4"><ErrorState error={exportBatch.error} /></div> : null}
+      {exportBatch.error ? (
+        <div className="mb-4">
+          <ErrorState error={exportBatch.error} />
+        </div>
+      ) : null}
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card className="p-4">
           <p className="text-xs uppercase tracking-wide text-slate-500">Vendor payments</p>
-          <p className="mt-1 text-xl font-semibold tabular"><Money minor={batch.vendorAmount} /></p>
+          <p className="mt-1 text-xl font-semibold tabular">
+            <Money minor={batch.vendorAmount} />
+          </p>
           <p className="text-xs text-slate-500">{batch.vendorCount} payments</p>
         </Card>
         <Card className="p-4">
           <p className="text-xs uppercase tracking-wide text-slate-500">Payroll</p>
-          <p className="mt-1 text-xl font-semibold tabular"><Money minor={batch.payrollAmount} /></p>
+          <p className="mt-1 text-xl font-semibold tabular">
+            <Money minor={batch.payrollAmount} />
+          </p>
           <p className="text-xs text-slate-500">{batch.payrollCount} payments</p>
         </Card>
         <Card className="bg-slate-900 p-4 text-white">
           <p className="text-xs uppercase tracking-wide text-slate-300">Batch total</p>
-          <p className="mt-1 text-xl font-semibold tabular"><Money minor={batch.totalAmount} /></p>
+          <p className="mt-1 text-xl font-semibold tabular">
+            <Money minor={batch.totalAmount} />
+          </p>
           <p className="text-xs text-slate-300">{batch.itemCount} payments</p>
         </Card>
         <Card className="p-4">
@@ -532,14 +605,16 @@ export function PaymentBatchDetailPage() {
           <p className="mt-1 text-xl font-semibold tabular text-emerald-700">
             <Money minor={batch.reconciledAmount} />
           </p>
-          <p className="text-xs text-slate-500">{batch.reconciledCount} of {batch.itemCount}</p>
+          <p className="text-xs text-slate-500">
+            {batch.reconciledCount} of {batch.itemCount}
+          </p>
         </Card>
       </div>
 
       {batch.status === 'EXPORTED' || batch.status === 'PROCESSING' ? (
         <div className="mb-6 rounded-md border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
-          The bank file has been generated. Upload it to the corporate banking portal, then import the
-          resulting bank statement to reconcile these payments.
+          The bank file has been generated. Upload it to the corporate banking portal, then import
+          the resulting bank statement to reconcile these payments.
         </div>
       ) : null}
 
@@ -580,13 +655,19 @@ export function PaymentBatchDetailPage() {
                 <td className="td font-mono text-xs">{item.ifsc}</td>
                 <td className="td text-xs text-slate-500">{humanize(item.type)}</td>
                 <td className="td font-mono text-xs">{item.reference}</td>
-                <td className="td text-right"><Money minor={item.amount} /></td>
-                <td className="td"><StatusBadge status={item.reconciliationStatus} /></td>
+                <td className="td text-right">
+                  <Money minor={item.amount} />
+                </td>
+                <td className="td">
+                  <StatusBadge status={item.reconciliationStatus} />
+                </td>
                 <td className="td text-right">
                   {isDraft && can('payment_batch:update') ? (
                     <button
                       className="text-sm text-red-600"
-                      onClick={() => setRemoving({ id: item.obligationId, name: item.beneficiaryName })}
+                      onClick={() =>
+                        setRemoving({ id: item.obligationId, name: item.beneficiaryName })
+                      }
                     >
                       Remove
                     </button>

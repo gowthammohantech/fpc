@@ -34,7 +34,11 @@ export function InvoiceDetailPage() {
   const [resolving, setResolving] = useState<ValidationFinding | null>(null);
   const [cancelling, setCancelling] = useState(false);
 
-  const { data: invoice, isLoading, error } = useQuery({
+  const {
+    data: invoice,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['invoice', id],
     queryFn: () => api.invoices.get(id),
   });
@@ -100,7 +104,9 @@ export function InvoiceDetailPage() {
         }
         actions={
           <>
-            <button className="btn-secondary" onClick={() => navigate(-1)}>Back</button>
+            <button className="btn-secondary" onClick={() => navigate(-1)}>
+              Back
+            </button>
             {editable && can('invoice:update') ? (
               <button
                 className="btn-secondary"
@@ -111,7 +117,8 @@ export function InvoiceDetailPage() {
                 {reextract.isPending ? 'Queued…' : 'Re-run extraction'}
               </button>
             ) : null}
-            {can('invoice:cancel') && !['PAID', 'RECONCILED', 'CANCELLED'].includes(invoice.status) ? (
+            {can('invoice:cancel') &&
+            !['PAID', 'RECONCILED', 'CANCELLED'].includes(invoice.status) ? (
               <button className="btn-secondary" onClick={() => setCancelling(true)}>
                 Cancel invoice
               </button>
@@ -183,7 +190,9 @@ export function InvoiceDetailPage() {
                 <tr key={index}>
                   <td className="td whitespace-normal">{line.description}</td>
                   <td className="td text-right">{line.quantity ?? '—'}</td>
-                  <td className="td text-right"><Money minor={line.amount} /></td>
+                  <td className="td text-right">
+                    <Money minor={line.amount} />
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -199,10 +208,14 @@ export function InvoiceDetailPage() {
           <ol className="divide-y divide-slate-100">
             {audit.items.map((event) => (
               <li key={event.id} className="flex gap-4 px-5 py-3 text-sm">
-                <span className="w-40 shrink-0 text-slate-500">{formatDateTime(event.timestamp)}</span>
+                <span className="w-40 shrink-0 text-slate-500">
+                  {formatDateTime(event.timestamp)}
+                </span>
                 <span className="flex-1">
                   <span className="font-medium">{humanize(event.event.split('.').pop())}</span>
-                  {event.userName ? <span className="text-slate-500"> · {event.userName}</span> : null}
+                  {event.userName ? (
+                    <span className="text-slate-500"> · {event.userName}</span>
+                  ) : null}
                   {event.metadata?.comment ? (
                     <p className="mt-1 text-slate-600">“{String(event.metadata.comment)}”</p>
                   ) : null}
@@ -257,18 +270,24 @@ function FindingBanner({
     return (
       <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-600">
         <span className="font-medium">Resolved:</span> {finding.message}
-        {finding.resolutionNote ? <span className="text-slate-500"> — “{finding.resolutionNote}”</span> : null}
+        {finding.resolutionNote ? (
+          <span className="text-slate-500"> — “{finding.resolutionNote}”</span>
+        ) : null}
       </div>
     );
   }
 
   const tone =
-    finding.severity === 'ERROR' ? 'border-red-200 bg-red-50 text-red-800'
-    : finding.severity === 'WARNING' ? 'border-amber-200 bg-amber-50 text-amber-900'
-    : 'border-blue-200 bg-blue-50 text-blue-900';
+    finding.severity === 'ERROR'
+      ? 'border-red-200 bg-red-50 text-red-800'
+      : finding.severity === 'WARNING'
+        ? 'border-amber-200 bg-amber-50 text-amber-900'
+        : 'border-blue-200 bg-blue-50 text-blue-900';
 
   return (
-    <div className={`flex items-start justify-between gap-4 rounded-md border px-4 py-3 text-sm ${tone}`}>
+    <div
+      className={`flex items-start justify-between gap-4 rounded-md border px-4 py-3 text-sm ${tone}`}
+    >
       <span>
         <span className="font-medium">{humanize(finding.code)}</span> — {finding.message}
       </span>
@@ -342,7 +361,9 @@ function InvoiceFields({
             >
               <option value="">Select a vendor…</option>
               {vendors.map((vendor) => (
-                <option key={vendor.id} value={vendor.id}>{vendor.name}</option>
+                <option key={vendor.id} value={vendor.id}>
+                  {vendor.name}
+                </option>
               ))}
             </select>
           ) : (
@@ -438,7 +459,9 @@ function InvoiceFields({
             {save.isPending ? 'Saving…' : 'Save changes'}
           </button>
           {save.isSuccess ? <span className="text-sm text-emerald-700">Saved</span> : null}
-          {save.error ? <span className="text-sm text-red-700">{(save.error as Error).message}</span> : null}
+          {save.error ? (
+            <span className="text-sm text-red-700">{(save.error as Error).message}</span>
+          ) : null}
         </div>
       ) : null}
     </Card>
@@ -533,7 +556,8 @@ function ResolveFindingModal({
   const [note, setNote] = useState('');
 
   const mutation = useMutation({
-    mutationFn: () => api.invoices.resolveFinding(invoiceId, { code: finding.code, resolution, note }),
+    mutationFn: () =>
+      api.invoices.resolveFinding(invoiceId, { code: finding.code, resolution, note }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] });
       onClose();
@@ -548,7 +572,9 @@ function ResolveFindingModal({
       onClose={onClose}
       footer={
         <>
-          <button className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn-secondary" onClick={onClose}>
+            Cancel
+          </button>
           <button
             className="btn-primary"
             disabled={note.trim().length < 3 || mutation.isPending}
@@ -584,15 +610,15 @@ function ResolveFindingModal({
             />
             <span>
               <span className="font-medium">This is a duplicate</span>
-              <span className="block text-slate-500">
-                Mark it as such so it can never be paid.
-              </span>
+              <span className="block text-slate-500">Mark it as such so it can never be paid.</span>
             </span>
           </label>
         </div>
       ) : null}
 
-      <label className="label" htmlFor="note">Reason (recorded in the audit trail)</label>
+      <label className="label" htmlFor="note">
+        Reason (recorded in the audit trail)
+      </label>
       <textarea
         id="note"
         className="input"
@@ -602,7 +628,9 @@ function ResolveFindingModal({
         placeholder="Why is this being resolved this way?"
       />
       {mutation.error ? (
-        <div className="mt-3"><ErrorState error={mutation.error} /></div>
+        <div className="mt-3">
+          <ErrorState error={mutation.error} />
+        </div>
       ) : null}
     </Modal>
   );

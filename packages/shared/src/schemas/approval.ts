@@ -38,7 +38,9 @@ export const createApprovalRuleRequest = z.object({
 });
 export type CreateApprovalRuleRequest = z.infer<typeof createApprovalRuleRequest>;
 
-export const updateApprovalRuleRequest = createApprovalRuleRequest.omit({ companyId: true }).partial();
+export const updateApprovalRuleRequest = createApprovalRuleRequest
+  .omit({ companyId: true })
+  .partial();
 
 export const approvalActionRequest = z.object({
   action: z.enum(['APPROVE', 'REJECT']),

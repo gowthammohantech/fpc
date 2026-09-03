@@ -44,13 +44,18 @@ reconciliationRouter.get(
       };
     }
 
-    const page = await paginate(BankTransaction, filter, {
-      page: q.page,
-      pageSize: q.pageSize,
-      sort: q.sort,
-      order: q.order,
-      defaultSort: { transactionDate: -1 },
-    }, toApi);
+    const page = await paginate(
+      BankTransaction,
+      filter,
+      {
+        page: q.page,
+        pageSize: q.pageSize,
+        sort: q.sort,
+        order: q.order,
+        defaultSort: { transactionDate: -1 },
+      },
+      toApi,
+    );
 
     const transactionIds = (page.items as Array<{ id: string }>).map(
       (item) => new Types.ObjectId(item.id),
@@ -109,10 +114,14 @@ reconciliationRouter.get(
     const q = query<typeof schemas.scopeQuery>(req);
     const base = { ...scopeFilter(principal, q.companyId), direction: 'DEBIT' };
 
-    const grouped = await BankTransaction.aggregate<{ _id: string; count: number; amount: number }>([
-      { $match: base },
-      { $group: { _id: '$reconciliationStatus', count: { $sum: 1 }, amount: { $sum: '$amount' } } },
-    ]);
+    const grouped = await BankTransaction.aggregate<{ _id: string; count: number; amount: number }>(
+      [
+        { $match: base },
+        {
+          $group: { _id: '$reconciliationStatus', count: { $sum: 1 }, amount: { $sum: '$amount' } },
+        },
+      ],
+    );
 
     const empty = { count: 0, amount: 0 };
     const byStatus = Object.fromEntries(
@@ -149,7 +158,9 @@ reconciliationRouter.get(
           ? {
               ...toApi(entry.obligation),
               beneficiaryAccount: maskAccount(
-                String((entry.obligation as { beneficiaryAccount?: string }).beneficiaryAccount ?? ''),
+                String(
+                  (entry.obligation as { beneficiaryAccount?: string }).beneficiaryAccount ?? '',
+                ),
               ),
             }
           : null,

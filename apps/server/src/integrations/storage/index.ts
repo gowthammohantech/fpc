@@ -16,7 +16,10 @@ export function storage(): BlobStorage {
     if (!env.AZURE_STORAGE_CONNECTION_STRING) {
       throw new Error('STORAGE_DRIVER=azure requires AZURE_STORAGE_CONNECTION_STRING');
     }
-    instance = new AzureBlobStorage(env.AZURE_STORAGE_CONNECTION_STRING, env.AZURE_STORAGE_CONTAINER);
+    instance = new AzureBlobStorage(
+      env.AZURE_STORAGE_CONNECTION_STRING,
+      env.AZURE_STORAGE_CONTAINER,
+    );
   } else {
     instance = new LocalDiskStorage(env.STORAGE_LOCAL_DIR);
   }

@@ -11,7 +11,15 @@ async function workbookOf(rows: unknown[][]): Promise<Buffer> {
   return Buffer.from(await workbook.xlsx.writeBuffer());
 }
 
-const HEADERS = ['Employee ID', 'Employee Name', 'Bank Account', 'IFSC', 'Net Salary', 'Department', 'Location'];
+const HEADERS = [
+  'Employee ID',
+  'Employee Name',
+  'Bank Account',
+  'IFSC',
+  'Net Salary',
+  'Department',
+  'Location',
+];
 const GOOD_ROWS = [
   ['EMP001', 'Arun', '50100012345678', 'HDFC0001234', 82000, 'Engineering', 'Chennai'],
   ['EMP002', 'Divya', '00110022334455', 'ICIC0000221', 91000, 'Sales', 'Bengaluru'],
@@ -20,7 +28,10 @@ const GOOD_ROWS = [
 
 describe('payroll import', () => {
   it('reads a clean payroll sheet and totals it exactly', async () => {
-    const result = await parsePayrollFile(await workbookOf([HEADERS, ...GOOD_ROWS]), 'payroll.xlsx');
+    const result = await parsePayrollFile(
+      await workbookOf([HEADERS, ...GOOD_ROWS]),
+      'payroll.xlsx',
+    );
 
     expect(result.employeeCount).toBe(3);
     expect(result.totalNetAmount).toBe(toMinor(82_000 + 91_000 + 64_000));
@@ -29,7 +40,10 @@ describe('payroll import', () => {
   });
 
   it('breaks the batch down by location, largest first', async () => {
-    const result = await parsePayrollFile(await workbookOf([HEADERS, ...GOOD_ROWS]), 'payroll.xlsx');
+    const result = await parsePayrollFile(
+      await workbookOf([HEADERS, ...GOOD_ROWS]),
+      'payroll.xlsx',
+    );
     expect(result.locationBreakdown).toEqual([
       { locationName: 'Bengaluru', count: 1, amount: toMinor(91_000) },
       { locationName: 'Chennai', count: 1, amount: toMinor(82_000) },
@@ -66,15 +80,22 @@ describe('payroll import', () => {
   it('rejects an invalid IFSC as an error, not a warning', async () => {
     const buffer = await workbookOf([HEADERS, ['EMP1', 'A', '123456', 'NOTANIFSC', 1000, '', '']]);
     const result = await parsePayrollFile(buffer, 'payroll.xlsx');
-    expect(result.rows[0]!.findings.some((f) => f.field === 'ifsc' && f.severity === 'ERROR')).toBe(true);
+    expect(result.rows[0]!.findings.some((f) => f.field === 'ifsc' && f.severity === 'ERROR')).toBe(
+      true,
+    );
     expect(result.findings.some((f) => f.severity === 'ERROR')).toBe(true);
   });
 
   it('refuses a masked account number, which cannot be paid', async () => {
-    const buffer = await workbookOf([HEADERS, ['EMP1', 'A', 'XXXX8291', 'HDFC0001234', 1000, '', '']]);
+    const buffer = await workbookOf([
+      HEADERS,
+      ['EMP1', 'A', 'XXXX8291', 'HDFC0001234', 1000, '', ''],
+    ]);
     const result = await parsePayrollFile(buffer, 'payroll.xlsx');
     expect(
-      result.rows[0]!.findings.some((f) => f.field === 'bankAccountNumber' && f.severity === 'ERROR'),
+      result.rows[0]!.findings.some(
+        (f) => f.field === 'bankAccountNumber' && f.severity === 'ERROR',
+      ),
     ).toBe(true);
   });
 
@@ -98,14 +119,20 @@ describe('payroll import', () => {
   });
 
   it('skips unreadable rows instead of importing a wrong amount', async () => {
-    const buffer = await workbookOf([HEADERS, ['EMP1', 'A', '123456', 'HDFC0001234', 'N/A', '', '']]);
+    const buffer = await workbookOf([
+      HEADERS,
+      ['EMP1', 'A', '123456', 'HDFC0001234', 'N/A', '', ''],
+    ]);
     const result = await parsePayrollFile(buffer, 'payroll.xlsx');
     expect(result.rows).toHaveLength(0);
     expect(result.rejected[0]?.reason).toContain('not a readable amount');
   });
 
   it('reports missing required columns rather than importing a partial batch', async () => {
-    const buffer = await workbookOf([['Employee ID', 'Employee Name'], ['EMP1', 'A']]);
+    const buffer = await workbookOf([
+      ['Employee ID', 'Employee Name'],
+      ['EMP1', 'A'],
+    ]);
     const result = await parsePayrollFile(buffer, 'payroll.xlsx');
     expect(result.rows).toHaveLength(0);
     expect(result.findings.map((f) => f.field)).toEqual(
@@ -114,17 +141,17 @@ describe('payroll import', () => {
   });
 
   it('reads CSV as well as XLSX', async () => {
-    const csv = [
-      HEADERS.join(','),
-      ...GOOD_ROWS.map((row) => row.join(',')),
-    ].join('\n');
+    const csv = [HEADERS.join(','), ...GOOD_ROWS.map((row) => row.join(','))].join('\n');
     const result = await parsePayrollFile(Buffer.from(csv, 'utf8'), 'payroll.csv');
     expect(result.employeeCount).toBe(3);
     expect(result.totalNetAmount).toBe(toMinor(237_000));
   });
 
   it('parses amounts with Indian grouping and currency symbols', async () => {
-    const buffer = await workbookOf([HEADERS, ['EMP1', 'A', '123456', 'HDFC0001234', '₹1,00,000.50', '', '']]);
+    const buffer = await workbookOf([
+      HEADERS,
+      ['EMP1', 'A', '123456', 'HDFC0001234', '₹1,00,000.50', '', ''],
+    ]);
     const result = await parsePayrollFile(buffer, 'payroll.xlsx');
     expect(result.rows[0]!.netAmount).toBe(toMinor(100_000.5));
   });
@@ -179,7 +206,10 @@ describe('column auto-detection', () => {
 
 describe('spreadsheet reader', () => {
   it('gives blank header cells a stable key', async () => {
-    const buffer = await workbookOf([['Name', '', 'Amount'], ['A', 'x', 1]]);
+    const buffer = await workbookOf([
+      ['Name', '', 'Amount'],
+      ['A', 'x', 1],
+    ]);
     const table = await readTable(buffer, 'file.xlsx');
     expect(table.headers).toEqual(['Name', 'Column 2', 'Amount']);
     expect(table.rows[0]).toMatchObject({ Name: 'A', 'Column 2': 'x', Amount: 1 });

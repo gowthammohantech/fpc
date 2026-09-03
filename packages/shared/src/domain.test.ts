@@ -131,7 +131,10 @@ describe('permissions', () => {
 
   it('keeps the auditor read-only', () => {
     const mutating = ROLE_PERMISSIONS[RoleKey.AUDITOR].filter(
-      (permission) => !permission.endsWith(':read') && !permission.endsWith(':read_all') && permission !== 'report:export',
+      (permission) =>
+        !permission.endsWith(':read') &&
+        !permission.endsWith(':read_all') &&
+        permission !== 'report:export',
     );
     expect(mutating).toEqual([]);
   });
@@ -149,7 +152,9 @@ describe('name matching', () => {
   });
 
   it('matches a bank narration against a beneficiary name', () => {
-    expect(nameSimilarity('TechZone Solutions Pvt Ltd', 'NEFT TECHZONE SOLUTIONS')).toBeGreaterThan(0.9);
+    expect(nameSimilarity('TechZone Solutions Pvt Ltd', 'NEFT TECHZONE SOLUTIONS')).toBeGreaterThan(
+      0.9,
+    );
     expect(nameSimilarity('TechZone Solutions', 'Zenith Metals')).toBeLessThan(0.4);
   });
 

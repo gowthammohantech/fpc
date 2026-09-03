@@ -6,14 +6,13 @@ export function StatusBadge({ status }: { status: string | null | undefined }) {
   if (!status) return null;
   const value = status.toUpperCase();
 
-  const [background, text] =
-    ['PAID', 'RECONCILED', 'APPROVED', 'MATCHED', 'ACTIVE'].includes(value)
-      ? [colors.successBg, colors.success]
-      : ['REJECTED', 'FAILED', 'CANCELLED'].includes(value)
-        ? [colors.dangerBg, colors.danger]
-        : ['PENDING_APPROVAL', 'IN_PROGRESS', 'PENDING', 'REVIEW_REQUIRED'].includes(value)
-          ? [colors.warningBg, colors.warning]
-          : [colors.brandLight, colors.brand];
+  const [background, text] = ['PAID', 'RECONCILED', 'APPROVED', 'MATCHED', 'ACTIVE'].includes(value)
+    ? [colors.successBg, colors.success]
+    : ['REJECTED', 'FAILED', 'CANCELLED'].includes(value)
+      ? [colors.dangerBg, colors.danger]
+      : ['PENDING_APPROVAL', 'IN_PROGRESS', 'PENDING', 'REVIEW_REQUIRED'].includes(value)
+        ? [colors.warningBg, colors.warning]
+        : [colors.brandLight, colors.brand];
 
   return (
     <View style={[styles.badge, { backgroundColor: background }]}>
@@ -41,9 +40,11 @@ export function Button({
   style?: ViewStyle;
 }) {
   const variantStyle =
-    variant === 'primary' ? styles.buttonPrimary
-    : variant === 'danger' ? styles.buttonDanger
-    : styles.buttonSecondary;
+    variant === 'primary'
+      ? styles.buttonPrimary
+      : variant === 'danger'
+        ? styles.buttonDanger
+        : styles.buttonSecondary;
 
   return (
     <TouchableOpacity

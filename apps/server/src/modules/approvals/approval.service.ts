@@ -10,7 +10,11 @@ import {
 import { logger } from '../../config/logger.js';
 import { ApiError } from '../../core/errors.js';
 import { eventBus } from '../../core/eventBus.js';
-import { ApprovalRequest, type ApprovalRequestDoc, type ApprovalStepDoc } from '../../models/approvalRequest.model.js';
+import {
+  ApprovalRequest,
+  type ApprovalRequestDoc,
+  type ApprovalStepDoc,
+} from '../../models/approvalRequest.model.js';
 import { ApprovalRule } from '../../models/approvalRule.model.js';
 import { Department } from '../../models/department.model.js';
 import { User } from '../../models/user.model.js';
@@ -139,7 +143,14 @@ export async function startApproval(
  * of oversight.
  */
 async function materializeSteps(
-  definitions: Array<{ order: number; approverType: string; roleKey?: string; userId?: unknown; label?: string; slaHours?: number }>,
+  definitions: Array<{
+    order: number;
+    approverType: string;
+    roleKey?: string;
+    userId?: unknown;
+    label?: string;
+    slaHours?: number;
+  }>,
   input: StartApprovalInput,
 ): Promise<ApprovalStepDoc[]> {
   const ordered = [...definitions].sort((a, b) => a.order - b.order);
@@ -194,14 +205,19 @@ async function materializeSteps(
       candidateUserIds,
       status: index === 0 ? 'ACTIVE' : 'PENDING',
       slaHours: definition.slaHours,
-      dueAt: definition.slaHours ? new Date(Date.now() + definition.slaHours * 3_600_000) : undefined,
+      dueAt: definition.slaHours
+        ? new Date(Date.now() + definition.slaHours * 3_600_000)
+        : undefined,
     });
   }
 
   return steps;
 }
 
-async function usersWithRole(input: StartApprovalInput, roleKey: RoleKey): Promise<Types.ObjectId[]> {
+async function usersWithRole(
+  input: StartApprovalInput,
+  roleKey: RoleKey,
+): Promise<Types.ObjectId[]> {
   const users = await User.find({
     tenantId: input.tenantId,
     roleKeys: roleKey,
@@ -236,7 +252,10 @@ export interface ApprovalDecision {
  * user may not approve their own submission (PRD §7 — "cannot approve own
  * payment").
  */
-export async function act(input: ActOnApprovalInput, context: AuditContext): Promise<ApprovalDecision> {
+export async function act(
+  input: ActOnApprovalInput,
+  context: AuditContext,
+): Promise<ApprovalDecision> {
   const request = await ApprovalRequest.findById(input.requestId);
   if (!request) throw ApiError.notFound('Approval request');
 
@@ -329,7 +348,11 @@ export function assertNotSelfApproval(
 }
 
 /** Cancels an in-flight chain, e.g. when the underlying invoice is cancelled. */
-export async function cancel(subjectId: Types.ObjectId, reason: string, context: AuditContext): Promise<void> {
+export async function cancel(
+  subjectId: Types.ObjectId,
+  reason: string,
+  context: AuditContext,
+): Promise<void> {
   const request = await ApprovalRequest.findOne({
     subjectId,
     status: { $in: [ApprovalStatus.PENDING, ApprovalStatus.IN_PROGRESS] },
@@ -358,7 +381,10 @@ export async function cancel(subjectId: Types.ObjectId, reason: string, context:
   );
 }
 
-function notifyActiveStep(request: ApprovalRequestDoc & { _id: Types.ObjectId }, link?: string): void {
+function notifyActiveStep(
+  request: ApprovalRequestDoc & { _id: Types.ObjectId },
+  link?: string,
+): void {
   const step = request.steps.find((entry) => entry.order === request.currentStepOrder);
   if (!step) return;
 

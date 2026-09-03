@@ -341,15 +341,14 @@ RUN()('audit trail', () => {
     // There is deliberately no route that mutates audit records.
     const { AuditEvent } = await import('./models/auditEvent.model.js');
     const record = await AuditEvent.findOne({ event: 'auth.login' });
-    await expect(
-      AuditEvent.updateOne({ _id: record!._id }, { event: 'tampered' }),
-    ).rejects.toThrow(/append-only/i);
+    await expect(AuditEvent.updateOne({ _id: record!._id }, { event: 'tampered' })).rejects.toThrow(
+      /append-only/i,
+    );
     await expect(AuditEvent.deleteOne({ _id: record!._id })).rejects.toThrow(/append-only/i);
   });
 });
 
 if (!available) {
   // Surfaces the reason once, so a skipped suite is never mistaken for a pass.
-  // eslint-disable-next-line no-console
   console.warn(`[rbac.integration] skipped — ${databaseSkipReason() ?? 'no database'}`);
 }

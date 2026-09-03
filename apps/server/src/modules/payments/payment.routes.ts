@@ -1,18 +1,17 @@
 import { Router } from 'express';
 import { Types } from 'mongoose';
-import {
-  ObligationType,
-  PAYROLL_VISIBILITY_PERMISSION,
-  PaymentStatus,
-  schemas,
-} from '@fpc/shared';
+import { ObligationType, PAYROLL_VISIBILITY_PERMISSION, PaymentStatus, schemas } from '@fpc/shared';
 import { asyncHandler } from '../../core/asyncHandler.js';
 import { ApiError } from '../../core/errors.js';
 import { paginate } from '../../core/paginate.js';
 import { query, validateBody, validateQuery } from '../../core/validate.js';
 import { requirePrincipal } from '../../middleware/authenticate.js';
 import { requirePermission } from '../../middleware/requirePermission.js';
-import { applyLocationScope, resolveWriteCompany, scopeFilter } from '../../middleware/tenantScope.js';
+import {
+  applyLocationScope,
+  resolveWriteCompany,
+  scopeFilter,
+} from '../../middleware/tenantScope.js';
 import { storage } from '../../integrations/storage/index.js';
 import { toApi } from '../../models/base.js';
 import { DocumentFile } from '../../models/documentFile.model.js';
@@ -58,13 +57,18 @@ paymentRouter.get(
 
     if (canSeePayroll) {
       res.json(
-        await paginate(PaymentObligation, filter, {
-          page: q.page,
-          pageSize: q.pageSize,
-          sort: q.sort,
-          order: q.order,
-          defaultSort: { dueDate: 1 },
-        }, presentObligation),
+        await paginate(
+          PaymentObligation,
+          filter,
+          {
+            page: q.page,
+            pageSize: q.pageSize,
+            sort: q.sort,
+            order: q.order,
+            defaultSort: { dueDate: 1 },
+          },
+          presentObligation,
+        ),
       );
       return;
     }
@@ -148,13 +152,18 @@ paymentRouter.get(
     if (q.status) filter.status = q.status;
 
     res.json(
-      await paginate(PaymentBatch, filter, {
-        page: q.page,
-        pageSize: q.pageSize,
-        sort: q.sort,
-        order: q.order,
-        defaultSort: { paymentDate: -1 },
-      }, toApi),
+      await paginate(
+        PaymentBatch,
+        filter,
+        {
+          page: q.page,
+          pageSize: q.pageSize,
+          sort: q.sort,
+          order: q.order,
+          defaultSort: { paymentDate: -1 },
+        },
+        toApi,
+      ),
     );
   }),
 );
@@ -217,7 +226,9 @@ paymentRouter.post(
         tenantId: principal.tenantId,
         companyId,
         paymentDate: new Date(payload.paymentDate),
-        bankAccountId: payload.bankAccountId ? new Types.ObjectId(payload.bankAccountId) : undefined,
+        bankAccountId: payload.bankAccountId
+          ? new Types.ObjectId(payload.bankAccountId)
+          : undefined,
         bankFileFormat: payload.bankFileFormat,
         obligationIds: payload.obligationIds.map((id) => new Types.ObjectId(id)),
         notes: payload.notes,

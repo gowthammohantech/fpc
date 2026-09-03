@@ -42,13 +42,18 @@ payableRouter.get(
     Object.assign(filter, viewFilter(q.view));
 
     res.json(
-      await paginate(Invoice, filter, {
-        page: q.page,
-        pageSize: q.pageSize,
-        sort: q.sort,
-        order: q.order,
-        defaultSort: { dueDate: 1 },
-      }, toApi),
+      await paginate(
+        Invoice,
+        filter,
+        {
+          page: q.page,
+          pageSize: q.pageSize,
+          sort: q.sort,
+          order: q.order,
+          defaultSort: { dueDate: 1 },
+        },
+        toApi,
+      ),
     );
   }),
 );
@@ -106,7 +111,10 @@ payableRouter.get(
       {
         $addFields: {
           daysOverdue: {
-            $divide: [{ $subtract: [new Date(), { $ifNull: ['$dueDate', new Date()] }] }, 86_400_000],
+            $divide: [
+              { $subtract: [new Date(), { $ifNull: ['$dueDate', new Date()] }] },
+              86_400_000,
+            ],
           },
         },
       },
@@ -129,7 +137,9 @@ payableRouter.get(
     ]);
 
     const empty = { count: 0, amount: 0 };
-    const byBucket = Object.fromEntries(buckets.map((entry) => [entry._id, { count: entry.count, amount: entry.amount }]));
+    const byBucket = Object.fromEntries(
+      buckets.map((entry) => [entry._id, { count: entry.count, amount: entry.amount }]),
+    );
 
     res.json({
       NOT_DUE: byBucket.NOT_DUE ?? empty,
@@ -165,7 +175,11 @@ function viewFilter(view: schemas.PayableListQuery['view'] | undefined): Record<
     case 'PAYMENT_PENDING':
       return {
         status: {
-          $in: [InvoiceStatus.PAYMENT_PENDING, InvoiceStatus.PAYMENT_BATCHED, InvoiceStatus.PAYMENT_PROCESSING],
+          $in: [
+            InvoiceStatus.PAYMENT_PENDING,
+            InvoiceStatus.PAYMENT_BATCHED,
+            InvoiceStatus.PAYMENT_PROCESSING,
+          ],
         },
       };
     case 'PAID':

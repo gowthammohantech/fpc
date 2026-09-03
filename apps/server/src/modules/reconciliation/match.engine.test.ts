@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { toMinor } from '@fpc/shared';
-import { SUGGESTION_THRESHOLD, bestMatch, rank, score, type MatchCandidate, type MatchTransaction } from './match.engine.js';
+import {
+  SUGGESTION_THRESHOLD,
+  bestMatch,
+  rank,
+  score,
+  type MatchCandidate,
+  type MatchTransaction,
+} from './match.engine.js';
 
 const exportedOn = new Date(Date.UTC(2026, 8, 5));
 

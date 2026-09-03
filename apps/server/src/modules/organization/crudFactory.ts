@@ -157,7 +157,9 @@ export function crudRouter<T>(config: CrudConfig<T>): Router {
           entityLabel: label(existing as Record<string, unknown>),
           tenantId: principal.tenantId,
           companyId: (existing as { companyId?: Types.ObjectId }).companyId,
-          oldValue: redact(pick(existing as Record<string, unknown>, Object.keys(req.body as object))),
+          oldValue: redact(
+            pick(existing as Record<string, unknown>, Object.keys(req.body as object)),
+          ),
           newValue: redact(req.body as Record<string, unknown>),
         },
         auditContext(req),
@@ -213,7 +215,13 @@ function pick(source: Record<string, unknown>, keys: string[]): Record<string, u
 
 /** Keeps credentials and full bank numbers out of the audit trail. */
 function redact(value: Record<string, unknown>): Record<string, unknown> {
-  const { password, passwordHash, refreshTokenHashes, ...rest } = value;
+  // Destructured only to keep credentials out of the audit trail.
+  const {
+    password: _password,
+    passwordHash: _passwordHash,
+    refreshTokenHashes: _refreshTokenHashes,
+    ...rest
+  } = value;
   if (typeof rest.bankAccountNumber === 'string') {
     rest.bankAccountNumber = maskAccount(rest.bankAccountNumber);
   }

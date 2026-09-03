@@ -221,8 +221,8 @@ RUN()('vendor invoice journey (PRD §37)', () => {
     // ── The vendor is told, and the trail is complete ─────
     await new Promise((resolve) => setTimeout(resolve, 200));
     await dispatchPendingEmails();
-    const confirmation = mailer.sent.find((mail) =>
-      mail.to.includes('techzone') && mail.subject.includes('INV-9821'),
+    const confirmation = mailer.sent.find(
+      (mail) => mail.to.includes('techzone') && mail.subject.includes('INV-9821'),
     );
     expect(confirmation, 'the vendor should receive a payment confirmation').toBeTruthy();
     expect(confirmation!.text).toContain('35,40,000');
@@ -314,6 +314,5 @@ RUN()('payroll journey (PRD §38)', () => {
 });
 
 if (!available) {
-  // eslint-disable-next-line no-console
   console.warn(`[journeys.integration] skipped — ${databaseSkipReason() ?? 'no database'}`);
 }

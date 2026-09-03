@@ -42,7 +42,9 @@ export function LoginPage() {
         ) : null}
 
         <div className="mt-5">
-          <label className="label" htmlFor="email">Email</label>
+          <label className="label" htmlFor="email">
+            Email
+          </label>
           <input
             id="email"
             className="input"
@@ -55,7 +57,9 @@ export function LoginPage() {
         </div>
 
         <div className="mt-4">
-          <label className="label" htmlFor="password">Password</label>
+          <label className="label" htmlFor="password">
+            Password
+          </label>
           <input
             id="password"
             className="input"

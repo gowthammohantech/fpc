@@ -30,11 +30,22 @@ export const LOCATIONS = [
   { company: 'engineering', name: 'Chennai', code: 'MAA', city: 'Chennai', state: 'Tamil Nadu' },
   { company: 'engineering', name: 'Bengaluru', code: 'BLR', city: 'Bengaluru', state: 'Karnataka' },
   { company: 'engineering', name: 'Pune', code: 'PNQ', city: 'Pune', state: 'Maharashtra' },
-  { company: 'technologies', name: 'Hyderabad', code: 'HYD', city: 'Hyderabad', state: 'Telangana' },
+  {
+    company: 'technologies',
+    name: 'Hyderabad',
+    code: 'HYD',
+    city: 'Hyderabad',
+    state: 'Telangana',
+  },
 ];
 
 export const DEPARTMENTS = [
-  { company: 'engineering', name: 'Information Technology', code: 'IT', head: 'ithead@nova.example.com' },
+  {
+    company: 'engineering',
+    name: 'Information Technology',
+    code: 'IT',
+    head: 'ithead@nova.example.com',
+  },
   { company: 'engineering', name: 'Operations', code: 'OPS' },
   { company: 'engineering', name: 'Finance', code: 'FIN' },
   { company: 'technologies', name: 'Engineering', code: 'ENG' },
@@ -207,7 +218,12 @@ export const APPROVAL_RULES = [
     conditions: [{ field: 'amount', operator: 'gt', value: toMinor(10_00_000) }],
     steps: [
       { order: 1, approverType: 'DEPARTMENT_HEAD' as const, label: 'Department Head' },
-      { order: 2, approverType: 'ROLE' as const, roleKey: RoleKey.FINANCE_MANAGER, label: 'Finance Head' },
+      {
+        order: 2,
+        approverType: 'ROLE' as const,
+        roleKey: RoleKey.FINANCE_MANAGER,
+        label: 'Finance Head',
+      },
       { order: 3, approverType: 'ROLE' as const, roleKey: RoleKey.CFO },
     ],
   },
@@ -219,7 +235,12 @@ export const APPROVAL_RULES = [
     priority: 10,
     conditions: [],
     steps: [
-      { order: 1, approverType: 'ROLE' as const, roleKey: RoleKey.FINANCE_MANAGER, label: 'Finance Head' },
+      {
+        order: 1,
+        approverType: 'ROLE' as const,
+        roleKey: RoleKey.FINANCE_MANAGER,
+        label: 'Finance Head',
+      },
       { order: 2, approverType: 'ROLE' as const, roleKey: RoleKey.CFO },
     ],
   },
@@ -310,13 +331,49 @@ export const PAYROLL = {
 };
 
 export const FIRST_NAMES = [
-  'Arun', 'Divya', 'Kumar', 'Meera', 'Rahul', 'Sneha', 'Vikram', 'Anita', 'Suresh', 'Kavya',
-  'Rajesh', 'Deepa', 'Manoj', 'Priya', 'Sanjay', 'Lakshmi', 'Ganesh', 'Nisha', 'Ravi', 'Pooja',
+  'Arun',
+  'Divya',
+  'Kumar',
+  'Meera',
+  'Rahul',
+  'Sneha',
+  'Vikram',
+  'Anita',
+  'Suresh',
+  'Kavya',
+  'Rajesh',
+  'Deepa',
+  'Manoj',
+  'Priya',
+  'Sanjay',
+  'Lakshmi',
+  'Ganesh',
+  'Nisha',
+  'Ravi',
+  'Pooja',
 ];
 
 export const LAST_NAMES = [
-  'Sharma', 'Nair', 'Reddy', 'Iyer', 'Menon', 'Patel', 'Kulkarni', 'Rao', 'Pillai', 'Krishnan',
-  'Desai', 'Joshi', 'Bhat', 'Chandra', 'Varma', 'Mehta', 'Gupta', 'Singh', 'Das', 'Bose',
+  'Sharma',
+  'Nair',
+  'Reddy',
+  'Iyer',
+  'Menon',
+  'Patel',
+  'Kulkarni',
+  'Rao',
+  'Pillai',
+  'Krishnan',
+  'Desai',
+  'Joshi',
+  'Bhat',
+  'Chandra',
+  'Varma',
+  'Mehta',
+  'Gupta',
+  'Singh',
+  'Das',
+  'Bose',
 ];
 
 export const IFSC_CODES = ['HDFC0001234', 'ICIC0000221', 'SBIN0004567', 'HDFC0004321'];

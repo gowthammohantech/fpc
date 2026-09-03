@@ -4,7 +4,9 @@
 
 @layer base {
   html {
-    font-feature-settings: 'tnum' on, 'lnum' on;
+    font-feature-settings:
+      'tnum' on,
+      'lnum' on;
   }
   body {
     @apply bg-slate-50 text-slate-900 antialiased;

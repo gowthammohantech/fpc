@@ -158,12 +158,14 @@ export class ApiClient {
       if (token) headers.authorization = `Bearer ${token}`;
     }
     // Never set Content-Type for FormData — the browser must add the boundary.
-    if (options.body !== undefined && !options.formData) headers['content-type'] = 'application/json';
+    if (options.body !== undefined && !options.formData)
+      headers['content-type'] = 'application/json';
 
     return fetch(url.toString(), {
       method: options.method ?? 'GET',
       headers,
-      body: options.formData ?? (options.body !== undefined ? JSON.stringify(options.body) : undefined),
+      body:
+        options.formData ?? (options.body !== undefined ? JSON.stringify(options.body) : undefined),
       signal: options.signal,
     });
   }

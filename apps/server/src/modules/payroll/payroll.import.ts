@@ -28,7 +28,14 @@ export type PayrollField =
 const COLUMN_ALIASES: Record<PayrollField, string[]> = {
   employeeCode: ['employee id', 'employee code', 'emp id', 'emp code', 'empno', 'employee number'],
   employeeName: ['employee name', 'name', 'emp name', 'full name'],
-  bankAccountNumber: ['bank account', 'account number', 'bank a/c', 'account no', 'ac no', 'bank account number'],
+  bankAccountNumber: [
+    'bank account',
+    'account number',
+    'bank a/c',
+    'account no',
+    'ac no',
+    'bank account number',
+  ],
   ifsc: ['ifsc', 'ifsc code', 'bank ifsc'],
   netAmount: ['net salary', 'net pay', 'net amount', 'net', 'amount', 'salary', 'take home'],
   department: ['department', 'dept', 'division'],
@@ -79,10 +86,19 @@ export function buildResult(
   table: SheetTable,
   overrides?: Partial<Record<PayrollField, string>>,
 ): PayrollImportResult {
-  const mapping = { ...autoDetectColumns<PayrollField>(table.headers, COLUMN_ALIASES), ...overrides };
+  const mapping = {
+    ...autoDetectColumns<PayrollField>(table.headers, COLUMN_ALIASES),
+    ...overrides,
+  };
 
   const findings: ValidationFinding[] = [];
-  const required: PayrollField[] = ['employeeCode', 'employeeName', 'bankAccountNumber', 'ifsc', 'netAmount'];
+  const required: PayrollField[] = [
+    'employeeCode',
+    'employeeName',
+    'bankAccountNumber',
+    'ifsc',
+    'netAmount',
+  ];
   for (const field of required) {
     if (!mapping[field]) {
       findings.push({
@@ -113,8 +129,7 @@ export function buildResult(
 
   table.rows.forEach((record, index) => {
     const rowNumber = table.rowNumbers[index] ?? index + 1;
-    const read = (field: PayrollField): string =>
-      String(record[mapping[field] ?? ''] ?? '').trim();
+    const read = (field: PayrollField): string => String(record[mapping[field] ?? ''] ?? '').trim();
 
     const employeeCode = read('employeeCode');
     const employeeName = read('employeeName');
@@ -137,24 +152,66 @@ export function buildResult(
     const rowFindings: ValidationFinding[] = [];
 
     if (netAmount <= 0) {
-      rowFindings.push(finding(ValidationCode.NEGATIVE_AMOUNT, ValidationSeverity.ERROR, 'Net salary must be greater than zero', 'netAmount'));
+      rowFindings.push(
+        finding(
+          ValidationCode.NEGATIVE_AMOUNT,
+          ValidationSeverity.ERROR,
+          'Net salary must be greater than zero',
+          'netAmount',
+        ),
+      );
     }
     if (!bankAccountNumber) {
-      rowFindings.push(finding(ValidationCode.MISSING_VENDOR_BANK_DETAILS, ValidationSeverity.ERROR, 'Bank account number is missing', 'bankAccountNumber'));
+      rowFindings.push(
+        finding(
+          ValidationCode.MISSING_VENDOR_BANK_DETAILS,
+          ValidationSeverity.ERROR,
+          'Bank account number is missing',
+          'bankAccountNumber',
+        ),
+      );
     } else if (!/^[A-Za-z0-9]+$/.test(bankAccountNumber)) {
-      rowFindings.push(finding(ValidationCode.MISSING_VENDOR_BANK_DETAILS, ValidationSeverity.ERROR, `Bank account "${bankAccountNumber}" contains invalid characters`, 'bankAccountNumber'));
+      rowFindings.push(
+        finding(
+          ValidationCode.MISSING_VENDOR_BANK_DETAILS,
+          ValidationSeverity.ERROR,
+          `Bank account "${bankAccountNumber}" contains invalid characters`,
+          'bankAccountNumber',
+        ),
+      );
     } else if (/^X+\d{0,4}$/i.test(bankAccountNumber)) {
       // A masked number cannot be paid; this is a common copy-paste mistake
       // when payroll is exported from an HR system for review.
-      rowFindings.push(finding(ValidationCode.MISSING_VENDOR_BANK_DETAILS, ValidationSeverity.ERROR, 'Bank account number appears to be masked and cannot be paid', 'bankAccountNumber'));
+      rowFindings.push(
+        finding(
+          ValidationCode.MISSING_VENDOR_BANK_DETAILS,
+          ValidationSeverity.ERROR,
+          'Bank account number appears to be masked and cannot be paid',
+          'bankAccountNumber',
+        ),
+      );
     }
     if (!IFSC_PATTERN.test(ifsc)) {
-      rowFindings.push(finding(ValidationCode.MISSING_VENDOR_BANK_DETAILS, ValidationSeverity.ERROR, `"${ifsc}" is not a valid IFSC code`, 'ifsc'));
+      rowFindings.push(
+        finding(
+          ValidationCode.MISSING_VENDOR_BANK_DETAILS,
+          ValidationSeverity.ERROR,
+          `"${ifsc}" is not a valid IFSC code`,
+          'ifsc',
+        ),
+      );
     }
 
     const previousRow = seenCodes.get(employeeCode);
     if (previousRow) {
-      rowFindings.push(finding(ValidationCode.EXACT_DUPLICATE, ValidationSeverity.ERROR, `Employee ${employeeCode} already appears on row ${previousRow}`, 'employeeCode'));
+      rowFindings.push(
+        finding(
+          ValidationCode.EXACT_DUPLICATE,
+          ValidationSeverity.ERROR,
+          `Employee ${employeeCode} already appears on row ${previousRow}`,
+          'employeeCode',
+        ),
+      );
     } else {
       seenCodes.set(employeeCode, rowNumber);
     }
@@ -164,7 +221,14 @@ export function buildResult(
     if (bankAccountNumber) {
       const owner = seenAccounts.get(bankAccountNumber);
       if (owner && owner !== employeeCode) {
-        rowFindings.push(finding(ValidationCode.POSSIBLE_DUPLICATE, ValidationSeverity.WARNING, `This bank account is also used by employee ${owner}`, 'bankAccountNumber'));
+        rowFindings.push(
+          finding(
+            ValidationCode.POSSIBLE_DUPLICATE,
+            ValidationSeverity.WARNING,
+            `This bank account is also used by employee ${owner}`,
+            'bankAccountNumber',
+          ),
+        );
       } else {
         seenAccounts.set(bankAccountNumber, employeeCode);
       }

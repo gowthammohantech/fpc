@@ -64,7 +64,8 @@ export function applyLocationScope(
   requestedLocationId?: string | undefined,
 ): FilterQuery<Record<string, unknown>> {
   if (requestedLocationId) {
-    if (!Types.ObjectId.isValid(requestedLocationId)) throw ApiError.badRequest('Invalid locationId');
+    if (!Types.ObjectId.isValid(requestedLocationId))
+      throw ApiError.badRequest('Invalid locationId');
     filter.locationId = new Types.ObjectId(requestedLocationId);
   } else if (principal.locationIds.length > 0) {
     filter.locationId = { $in: principal.locationIds };

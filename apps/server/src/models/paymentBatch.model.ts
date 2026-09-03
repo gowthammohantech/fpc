@@ -90,7 +90,12 @@ export interface PaymentBatchItemDoc {
 const itemSchema = new Schema<PaymentBatchItemDoc>(
   {
     ...scopedFields(),
-    paymentBatchId: { type: Schema.Types.ObjectId, ref: 'PaymentBatch', required: true, index: true },
+    paymentBatchId: {
+      type: Schema.Types.ObjectId,
+      ref: 'PaymentBatch',
+      required: true,
+      index: true,
+    },
     obligationId: { type: Schema.Types.ObjectId, ref: 'PaymentObligation', required: true },
     type: { type: String, enum: ['VENDOR', 'PAYROLL'], required: true },
     beneficiaryName: { type: String, required: true },

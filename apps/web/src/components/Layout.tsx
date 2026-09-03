@@ -38,7 +38,11 @@ const NAV_GROUPS: Array<{ title: string | null; items: NavItem[] }> = [
       { to: '/payments', label: 'Payment Queue', permissions: ['obligation:read'] },
       { to: '/payments/batches', label: 'Payment Batches', permissions: ['payment_batch:read'] },
       { to: '/banking/statements', label: 'Bank Statements', permissions: ['bank_statement:read'] },
-      { to: '/banking/transactions', label: 'Bank Transactions', permissions: ['bank_transaction:read'] },
+      {
+        to: '/banking/transactions',
+        label: 'Bank Transactions',
+        permissions: ['bank_transaction:read'],
+      },
       { to: '/reconciliation', label: 'Reconciliation', permissions: ['reconciliation:read'] },
     ],
   },
@@ -91,7 +95,9 @@ export function Layout() {
     <div className="flex min-h-screen">
       <aside className="hidden w-60 shrink-0 flex-col border-r border-slate-200 bg-white lg:flex">
         <div className="border-b border-slate-200 px-5 py-4">
-          <p className="text-sm font-semibold uppercase tracking-wider text-brand-700">Finance Ops</p>
+          <p className="text-sm font-semibold uppercase tracking-wider text-brand-700">
+            Finance Ops
+          </p>
         </div>
 
         <nav className="flex-1 overflow-y-auto px-3 py-4">

@@ -1,19 +1,18 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { Types } from 'mongoose';
-import {
-  InvoiceStatus,
-  ValidationCode,
-  ValidationSeverity,
-  schemas,
-} from '@fpc/shared';
+import { InvoiceStatus, ValidationCode, ValidationSeverity, schemas } from '@fpc/shared';
 import { asyncHandler } from '../../core/asyncHandler.js';
 import { ApiError } from '../../core/errors.js';
 import { paginate } from '../../core/paginate.js';
 import { query, validateBody, validateQuery } from '../../core/validate.js';
 import { requirePrincipal } from '../../middleware/authenticate.js';
 import { requirePermission } from '../../middleware/requirePermission.js';
-import { applyLocationScope, resolveWriteCompany, scopeFilter } from '../../middleware/tenantScope.js';
+import {
+  applyLocationScope,
+  resolveWriteCompany,
+  scopeFilter,
+} from '../../middleware/tenantScope.js';
 import { toApi } from '../../models/base.js';
 import { DocumentFile } from '../../models/documentFile.model.js';
 import { Invoice } from '../../models/invoice.model.js';
@@ -70,17 +69,26 @@ invoiceRouter.get(
     }
     if (q.q) {
       const pattern = { $regex: escapeRegex(q.q), $options: 'i' };
-      filter.$or = [{ invoiceNumber: pattern }, { vendorName: pattern }, { documentFileName: pattern }];
+      filter.$or = [
+        { invoiceNumber: pattern },
+        { vendorName: pattern },
+        { documentFileName: pattern },
+      ];
     }
 
     res.json(
-      await paginate(Invoice, filter, {
-        page: q.page,
-        pageSize: q.pageSize,
-        sort: q.sort,
-        order: q.order,
-        defaultSort: { receivedAt: -1 },
-      }, toApi),
+      await paginate(
+        Invoice,
+        filter,
+        {
+          page: q.page,
+          pageSize: q.pageSize,
+          sort: q.sort,
+          order: q.order,
+          defaultSort: { receivedAt: -1 },
+        },
+        toApi,
+      ),
     );
   }),
 );
@@ -99,7 +107,9 @@ invoiceRouter.get(
   requirePermission('invoice:read'),
   asyncHandler(async (req, res) => {
     const invoice = await findScoped(req);
-    const file = invoice.documentFileId ? await DocumentFile.findById(invoice.documentFileId).lean() : null;
+    const file = invoice.documentFileId
+      ? await DocumentFile.findById(invoice.documentFileId).lean()
+      : null;
     if (!file) throw ApiError.notFound('Invoice document');
 
     // Prefer a direct link when the driver can issue one; otherwise proxy.
@@ -124,7 +134,10 @@ invoiceRouter.post(
     const principal = requirePrincipal(req);
     if (!req.file) throw ApiError.badRequest('A file is required');
 
-    const companyId = resolveWriteCompany(principal, (req.body as { companyId?: string }).companyId);
+    const companyId = resolveWriteCompany(
+      principal,
+      (req.body as { companyId?: string }).companyId,
+    );
     const invoice = await invoiceService.intake(
       {
         tenantId: principal.tenantId,
@@ -195,7 +208,9 @@ invoiceRouter.patch(
       invoice.locationId = payload.locationId ? new Types.ObjectId(payload.locationId) : undefined;
     }
     if (payload.departmentId !== undefined) {
-      invoice.departmentId = payload.departmentId ? new Types.ObjectId(payload.departmentId) : undefined;
+      invoice.departmentId = payload.departmentId
+        ? new Types.ObjectId(payload.departmentId)
+        : undefined;
     }
     if (payload.lines) invoice.lines = payload.lines;
 
@@ -280,7 +295,10 @@ invoiceRouter.post(
   requirePermission('invoice:update'),
   asyncHandler(async (req, res) => {
     const invoice = await findScopedDoc(req);
-    if (invoice.status !== InvoiceStatus.REVIEW_REQUIRED && invoice.status !== InvoiceStatus.FAILED) {
+    if (
+      invoice.status !== InvoiceStatus.REVIEW_REQUIRED &&
+      invoice.status !== InvoiceStatus.FAILED
+    ) {
       throw ApiError.conflict('Extraction can only be re-run before the invoice is submitted');
     }
     invoice.status = InvoiceStatus.RECEIVED;
@@ -304,7 +322,10 @@ invoiceRouter.post(
     const principal = requirePrincipal(req);
     const invoice = await findScopedDoc(req);
 
-    if (invoice.status !== InvoiceStatus.REVIEW_REQUIRED && invoice.status !== InvoiceStatus.VALIDATED) {
+    if (
+      invoice.status !== InvoiceStatus.REVIEW_REQUIRED &&
+      invoice.status !== InvoiceStatus.VALIDATED
+    ) {
       throw ApiError.conflict(`An invoice in ${invoice.status} cannot be submitted`);
     }
 
@@ -422,14 +443,28 @@ function viewFilter(view: string | undefined): Record<string, unknown> {
       return { status: InvoiceStatus.APPROVED };
     case 'PAYMENT_PENDING':
       return {
-        status: { $in: [InvoiceStatus.PAYMENT_PENDING, InvoiceStatus.PAYMENT_BATCHED, InvoiceStatus.PAYMENT_PROCESSING] },
+        status: {
+          $in: [
+            InvoiceStatus.PAYMENT_PENDING,
+            InvoiceStatus.PAYMENT_BATCHED,
+            InvoiceStatus.PAYMENT_PROCESSING,
+          ],
+        },
       };
     case 'PAID':
       return { status: { $in: [InvoiceStatus.PAID, InvoiceStatus.RECONCILED] } };
     case 'OVERDUE':
       return {
         dueDate: { $lt: new Date() },
-        status: { $nin: [InvoiceStatus.PAID, InvoiceStatus.RECONCILED, InvoiceStatus.CANCELLED, InvoiceStatus.REJECTED, InvoiceStatus.DUPLICATE] },
+        status: {
+          $nin: [
+            InvoiceStatus.PAID,
+            InvoiceStatus.RECONCILED,
+            InvoiceStatus.CANCELLED,
+            InvoiceStatus.REJECTED,
+            InvoiceStatus.DUPLICATE,
+          ],
+        },
       };
     default:
       return {};

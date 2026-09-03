@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import { hasPermission, type Permission, type Principal } from '@fpc/shared';
 import { api, apiClient, hasStoredSession, setSessionLostHandler } from './api';
 

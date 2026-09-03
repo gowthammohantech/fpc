@@ -38,12 +38,21 @@ export function ApprovalsPage() {
       <PageHeader title="Approvals" subtitle="Items awaiting a decision" />
 
       <div className="card">
-        <Tabs tabs={tabs} active={scope} onChange={(key) => { setScope(key); setPage(1); }} />
+        <Tabs
+          tabs={tabs}
+          active={scope}
+          onChange={(key) => {
+            setScope(key);
+            setPage(1);
+          }}
+        />
 
         {isLoading ? (
           <Spinner />
         ) : error ? (
-          <div className="p-4"><ErrorState error={error} /></div>
+          <div className="p-4">
+            <ErrorState error={error} />
+          </div>
         ) : !data?.items.length ? (
           <EmptyState
             title={scope === 'MINE' ? 'Nothing is waiting on you' : 'No approval requests'}
@@ -64,16 +73,23 @@ export function ApprovalsPage() {
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
                 {data.items.map((request) => {
-                  const step = request.steps.find((entry) => entry.order === request.currentStepOrder);
+                  const step = request.steps.find(
+                    (entry) => entry.order === request.currentStepOrder,
+                  );
                   return (
                     <tr key={request.id} className="hover:bg-slate-50">
                       <td className="td">
-                        <Link className="font-medium text-brand-700" to={`/approvals/${request.id}`}>
+                        <Link
+                          className="font-medium text-brand-700"
+                          to={`/approvals/${request.id}`}
+                        >
                           {request.subjectLabel}
                         </Link>
                       </td>
                       <td className="td text-xs text-slate-500">{humanize(request.subjectType)}</td>
-                      <td className="td text-right"><Money minor={request.amount} /></td>
+                      <td className="td text-right">
+                        <Money minor={request.amount} />
+                      </td>
                       <td className="td">{step?.label ?? '—'}</td>
                       <td className="td">
                         <span title={formatDateTime(request.requestedAt)}>
@@ -90,13 +106,20 @@ export function ApprovalsPage() {
                           </span>
                         ) : null}
                       </td>
-                      <td className="td"><StatusBadge status={request.status} /></td>
+                      <td className="td">
+                        <StatusBadge status={request.status} />
+                      </td>
                     </tr>
                   );
                 })}
               </tbody>
             </Table>
-            <Pagination page={data.page} pageSize={data.pageSize} total={data.total} onChange={setPage} />
+            <Pagination
+              page={data.page}
+              pageSize={data.pageSize}
+              total={data.total}
+              onChange={setPage}
+            />
           </>
         )}
       </div>
@@ -116,13 +139,18 @@ export function ApprovalDetailPage() {
   const queryClient = useQueryClient();
   const [comment, setComment] = useState('');
 
-  const { data: request, isLoading, error } = useQuery({
+  const {
+    data: request,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['approval', id],
     queryFn: () => api.approvals.get(id),
   });
 
   const act = useMutation({
-    mutationFn: (action: 'APPROVE' | 'REJECT') => api.approvals.act(id, action, comment || undefined),
+    mutationFn: (action: 'APPROVE' | 'REJECT') =>
+      api.approvals.act(id, action, comment || undefined),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['approval', id] });
       void queryClient.invalidateQueries({ queryKey: ['approvals'] });
@@ -152,8 +180,12 @@ export function ApprovalDetailPage() {
         }
         actions={
           <>
-            <button className="btn-secondary" onClick={() => navigate(-1)}>Back</button>
-            <Link className="btn-secondary" to={subjectLink}>Open item</Link>
+            <button className="btn-secondary" onClick={() => navigate(-1)}>
+              Back
+            </button>
+            <Link className="btn-secondary" to={subjectLink}>
+              Open item
+            </Link>
           </>
         }
       />
@@ -168,10 +200,13 @@ export function ApprovalDetailPage() {
               <li key={step.order} className="flex items-start gap-4 px-5 py-4">
                 <span
                   className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
-                    step.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700'
-                    : step.status === 'REJECTED' ? 'bg-red-100 text-red-700'
-                    : step.status === 'ACTIVE' ? 'bg-amber-100 text-amber-800'
-                    : 'bg-slate-100 text-slate-500'
+                    step.status === 'APPROVED'
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : step.status === 'REJECTED'
+                        ? 'bg-red-100 text-red-700'
+                        : step.status === 'ACTIVE'
+                          ? 'bg-amber-100 text-amber-800'
+                          : 'bg-slate-100 text-slate-500'
                   }`}
                 >
                   {step.status === 'APPROVED' ? '✓' : step.status === 'REJECTED' ? '✕' : step.order}
@@ -233,7 +268,11 @@ export function ApprovalDetailPage() {
                   Reject
                 </button>
               </div>
-              {act.error ? <div className="mt-3"><ErrorState error={act.error} /></div> : null}
+              {act.error ? (
+                <div className="mt-3">
+                  <ErrorState error={act.error} />
+                </div>
+              ) : null}
             </Card>
           ) : request.status === 'IN_PROGRESS' ? (
             <div className="rounded-md border border-slate-200 bg-white p-4 text-sm text-slate-600">

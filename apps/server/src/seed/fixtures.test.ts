@@ -6,7 +6,12 @@ import { toMinor } from '@fpc/shared';
 import { StubExtractor } from '../integrations/ocr/stub.driver.js';
 import { parseStatement } from '../modules/banking/statement.import.js';
 import { parsePayrollFile } from '../modules/payroll/payroll.import.js';
-import { buildPdf, writeInvoicePdf, writePayrollWorkbook, writeStatementWorkbook } from './fixtures.js';
+import {
+  buildPdf,
+  writeInvoicePdf,
+  writePayrollWorkbook,
+  writeStatementWorkbook,
+} from './fixtures.js';
 import { readFile } from 'node:fs/promises';
 
 /**

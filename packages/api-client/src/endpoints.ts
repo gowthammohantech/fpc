@@ -55,8 +55,10 @@ export const endpoints = (api: ApiClient) => ({
       return api.upload<Invoice>('/invoices/upload', form);
     },
     update: (id: string, body: Query) => api.patch<Invoice>(`/invoices/${id}`, body),
-    resolveFinding: (id: string, body: { code: string; resolution: 'KEEP' | 'DUPLICATE'; note: string }) =>
-      api.post<Invoice>(`/invoices/${id}/findings/resolve`, body),
+    resolveFinding: (
+      id: string,
+      body: { code: string; resolution: 'KEEP' | 'DUPLICATE'; note: string },
+    ) => api.post<Invoice>(`/invoices/${id}/findings/resolve`, body),
     submit: (id: string) =>
       api.post<{ invoice: Invoice; approvalRequestId: string | null; autoApprovedReason?: string }>(
         `/invoices/${id}/submit`,
@@ -85,7 +87,11 @@ export const endpoints = (api: ApiClient) => ({
     get: (id: string) =>
       api.get<
         PayrollBatch & {
-          comparison: { previousTotalNetAmount: number | null; difference: number | null; percentChange: number | null };
+          comparison: {
+            previousTotalNetAmount: number | null;
+            difference: number | null;
+            percentChange: number | null;
+          };
         }
       >(`/payroll/${id}`),
     employees: (id: string, query?: Query) =>
@@ -124,7 +130,10 @@ export const endpoints = (api: ApiClient) => ({
 
   payments: {
     queue: (query?: Query) =>
-      api.get<Paginated<PaymentObligation> & { payrollAggregated?: boolean }>('/payments/queue', query),
+      api.get<Paginated<PaymentObligation> & { payrollAggregated?: boolean }>(
+        '/payments/queue',
+        query,
+      ),
     hold: (id: string, hold: boolean, reason?: string) =>
       api.post<PaymentObligation>(`/payments/queue/${id}/hold`, { hold, reason }),
     batches: (query?: Query) => api.get<Paginated<PaymentBatch>>('/payments/batches', query),
@@ -133,11 +142,14 @@ export const endpoints = (api: ApiClient) => ({
         `/payments/batches/${id}`,
       ),
     createBatch: (body: Query) => api.post<PaymentBatch>('/payments/batches', body),
-    updateBatch: (id: string, body: Query) => api.patch<PaymentBatch>(`/payments/batches/${id}`, body),
+    updateBatch: (id: string, body: Query) =>
+      api.patch<PaymentBatch>(`/payments/batches/${id}`, body),
     exportBatch: (id: string) =>
-      api.post<{ batch: PaymentBatch; file: { id: string; fileName: string }; downloadUrl: string }>(
-        `/payments/batches/${id}/export`,
-      ),
+      api.post<{
+        batch: PaymentBatch;
+        file: { id: string; fileName: string };
+        downloadUrl: string;
+      }>(`/payments/batches/${id}/export`),
     downloadFile: (id: string) => api.download(`/payments/batches/${id}/file`),
   },
 
@@ -185,7 +197,8 @@ export const endpoints = (api: ApiClient) => ({
   reports: {
     catalogue: () => api.get<{ items: ReportDescriptor[] }>('/reports'),
     run: (key: string, query?: Query) => api.get<ReportResult>(`/reports/${key}`, query),
-    download: (key: string, query?: Query) => api.download(`/reports/${key}`, { ...query, format: 'xlsx' }),
+    download: (key: string, query?: Query) =>
+      api.download(`/reports/${key}`, { ...query, format: 'xlsx' }),
   },
 
   audit: {
@@ -204,12 +217,14 @@ export const endpoints = (api: ApiClient) => ({
   settings: {
     companies: (query?: Query) => api.get<Paginated<Company>>('/settings/companies', query),
     createCompany: (body: Query) => api.post<Company>('/settings/companies', body),
-    updateCompany: (id: string, body: Query) => api.patch<Company>(`/settings/companies/${id}`, body),
+    updateCompany: (id: string, body: Query) =>
+      api.patch<Company>(`/settings/companies/${id}`, body),
     deleteCompany: (id: string) => api.delete<void>(`/settings/companies/${id}`),
 
     locations: (query?: Query) => api.get<Paginated<Location>>('/settings/locations', query),
     createLocation: (body: Query) => api.post<Location>('/settings/locations', body),
-    updateLocation: (id: string, body: Query) => api.patch<Location>(`/settings/locations/${id}`, body),
+    updateLocation: (id: string, body: Query) =>
+      api.patch<Location>(`/settings/locations/${id}`, body),
     deleteLocation: (id: string) => api.delete<void>(`/settings/locations/${id}`),
 
     departments: (query?: Query) => api.get<Paginated<Department>>('/settings/departments', query),
@@ -233,14 +248,17 @@ export const endpoints = (api: ApiClient) => ({
 
     roles: () => api.get<{ items: RoleDescriptor[] }>('/settings/roles'),
 
-    bankAccounts: (query?: Query) => api.get<Paginated<BankAccount>>('/settings/bank-accounts', query),
+    bankAccounts: (query?: Query) =>
+      api.get<Paginated<BankAccount>>('/settings/bank-accounts', query),
     createBankAccount: (body: Query) => api.post<BankAccount>('/settings/bank-accounts', body),
     updateBankAccount: (id: string, body: Query) =>
       api.patch<BankAccount>(`/settings/bank-accounts/${id}`, body),
     deleteBankAccount: (id: string) => api.delete<void>(`/settings/bank-accounts/${id}`),
 
-    approvalRules: (query?: Query) => api.get<Paginated<ApprovalRuleView>>('/settings/approval-rules', query),
-    createApprovalRule: (body: Query) => api.post<ApprovalRuleView>('/settings/approval-rules', body),
+    approvalRules: (query?: Query) =>
+      api.get<Paginated<ApprovalRuleView>>('/settings/approval-rules', query),
+    createApprovalRule: (body: Query) =>
+      api.post<ApprovalRuleView>('/settings/approval-rules', body),
     updateApprovalRule: (id: string, body: Query) =>
       api.patch<ApprovalRuleView>(`/settings/approval-rules/${id}`, body),
     deleteApprovalRule: (id: string) => api.delete<void>(`/settings/approval-rules/${id}`),
@@ -360,5 +378,11 @@ export interface ApprovalRuleView {
   priority: number;
   active: boolean;
   conditions: Array<{ field: string; operator: string; value: unknown }>;
-  steps: Array<{ order: number; approverType: string; roleKey?: string; userId?: string; label?: string }>;
+  steps: Array<{
+    order: number;
+    approverType: string;
+    roleKey?: string;
+    userId?: string;
+    label?: string;
+  }>;
 }

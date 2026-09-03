@@ -24,12 +24,19 @@ export function CompaniesPage() {
       columns={[
         { header: 'Name', render: (row) => <span className="font-medium">{row.name}</span> },
         { header: 'Legal name', render: (row) => row.legalName ?? '—' },
-        { header: 'GSTIN', render: (row) => <span className="font-mono text-xs">{row.gstin ?? '—'}</span> },
+        {
+          header: 'GSTIN',
+          render: (row) => <span className="font-mono text-xs">{row.gstin ?? '—'}</span>,
+        },
         {
           header: 'Invoice inbox',
-          render: (row) => row.invoiceInboxAddress ?? <span className="text-slate-400">Not configured</span>,
+          render: (row) =>
+            row.invoiceInboxAddress ?? <span className="text-slate-400">Not configured</span>,
         },
-        { header: 'Status', render: (row) => <StatusBadge status={row.active ? 'ACTIVE' : 'INACTIVE'} /> },
+        {
+          header: 'Status',
+          render: (row) => <StatusBadge status={row.active ? 'ACTIVE' : 'INACTIVE'} />,
+        },
       ]}
       fields={[
         { name: 'name', label: 'Name', required: true },
@@ -68,7 +75,10 @@ export function LocationsPage() {
         { header: 'Code', render: (row) => <span className="font-mono text-xs">{row.code}</span> },
         { header: 'City', render: (row) => row.city ?? '—' },
         { header: 'State', render: (row) => row.state ?? '—' },
-        { header: 'Status', render: (row) => <StatusBadge status={row.active ? 'ACTIVE' : 'INACTIVE'} /> },
+        {
+          header: 'Status',
+          render: (row) => <StatusBadge status={row.active ? 'ACTIVE' : 'INACTIVE'} />,
+        },
       ]}
       fields={[
         { name: 'name', label: 'Name', required: true },
@@ -95,8 +105,7 @@ export function DepartmentsPage() {
     queryFn: () => api.settings.users({ companyId, pageSize: 200 }),
   });
 
-  const userName = (id: string | undefined) =>
-    users?.items.find((user) => user.id === id)?.name;
+  const userName = (id: string | undefined) => users?.items.find((user) => user.id === id)?.name;
 
   return (
     <CrudPage
@@ -125,7 +134,10 @@ export function DepartmentsPage() {
               <span className="text-amber-700">Not set — approvals fall back to any approver</span>
             ),
         },
-        { header: 'Status', render: (row) => <StatusBadge status={row.active ? 'ACTIVE' : 'INACTIVE'} /> },
+        {
+          header: 'Status',
+          render: (row) => <StatusBadge status={row.active ? 'ACTIVE' : 'INACTIVE'} />,
+        },
       ]}
       fields={[
         { name: 'name', label: 'Name', required: true },
@@ -163,7 +175,10 @@ export function VendorsPage() {
         { header: 'Name', render: (row) => <span className="font-medium">{row.name}</span> },
         { header: 'Code', render: (row) => <span className="font-mono text-xs">{row.code}</span> },
         { header: 'Email', render: (row) => row.email ?? '—' },
-        { header: 'GSTIN', render: (row) => <span className="font-mono text-xs">{row.gstin ?? '—'}</span> },
+        {
+          header: 'GSTIN',
+          render: (row) => <span className="font-mono text-xs">{row.gstin ?? '—'}</span>,
+        },
         {
           header: 'Bank details',
           render: (row) =>
@@ -181,10 +196,19 @@ export function VendorsPage() {
       fields={[
         { name: 'name', label: 'Vendor name', required: true },
         { name: 'code', label: 'Vendor code', help: 'Generated automatically if left blank.' },
-        { name: 'email', label: 'Email', type: 'email', help: 'Payment confirmations are sent here.' },
+        {
+          name: 'email',
+          label: 'Email',
+          type: 'email',
+          help: 'Payment confirmations are sent here.',
+        },
         { name: 'phone', label: 'Phone' },
         { name: 'gstin', label: 'GSTIN' },
-        { name: 'beneficiaryName', label: 'Beneficiary name', help: 'If it differs from the vendor name.' },
+        {
+          name: 'beneficiaryName',
+          label: 'Beneficiary name',
+          help: 'If it differs from the vendor name.',
+        },
         { name: 'bankAccountNumber', label: 'Bank account number' },
         { name: 'ifsc', label: 'IFSC' },
         { name: 'paymentTermsDays', label: 'Payment terms (days)', type: 'number' },
@@ -207,117 +231,120 @@ export function UsersPage() {
   return (
     <>
       {invite ? <InviteLinkModal invite={invite} onClose={() => setInvite(null)} /> : null}
-    <CrudPage
-      title="Users"
-      subtitle="Who can sign in, and what each of them may do"
-      queryKey="settings-users"
-      permissions={{
-        read: 'user:read',
-        create: 'user:create',
-        update: 'user:update',
-        delete: 'user:delete',
-      }}
-      list={(query) => api.settings.users(query)}
-      create={async (body) => {
-        const created = await api.settings.createUser(body);
-        // An account created without a password cannot sign in until this
-        // link is used, so it is surfaced immediately rather than lost.
-        if (created.inviteUrl) {
-          setInvite({ email: created.email, url: created.inviteUrl });
-        }
-        return created;
-      }}
-      update={(id, body) => api.settings.updateUser(id, body)}
-      remove={(id) => api.settings.deleteUser(id)}
-      rowActions={(row) =>
-        row.status === 'INVITED'
-          ? [
-              {
-                label: 'Resend invite',
-                run: async () => {
-                  const result = await api.settings.reinviteUser(row.id);
-                  setInvite({ email: row.email, url: result.inviteUrl });
+      <CrudPage
+        title="Users"
+        subtitle="Who can sign in, and what each of them may do"
+        queryKey="settings-users"
+        permissions={{
+          read: 'user:read',
+          create: 'user:create',
+          update: 'user:update',
+          delete: 'user:delete',
+        }}
+        list={(query) => api.settings.users(query)}
+        create={async (body) => {
+          const created = await api.settings.createUser(body);
+          // An account created without a password cannot sign in until this
+          // link is used, so it is surfaced immediately rather than lost.
+          if (created.inviteUrl) {
+            setInvite({ email: created.email, url: created.inviteUrl });
+          }
+          return created;
+        }}
+        update={(id, body) => api.settings.updateUser(id, body)}
+        remove={(id) => api.settings.deleteUser(id)}
+        rowActions={(row) =>
+          row.status === 'INVITED'
+            ? [
+                {
+                  label: 'Resend invite',
+                  run: async () => {
+                    const result = await api.settings.reinviteUser(row.id);
+                    setInvite({ email: row.email, url: result.inviteUrl });
+                  },
                 },
-              },
-            ]
-          : []
-      }
-      columns={[
-        { header: 'Name', render: (row) => <span className="font-medium">{row.name}</span> },
-        { header: 'Email', render: (row) => row.email },
-        {
-          header: 'Roles',
-          render: (row) => row.roleKeys.map((role) => ROLE_LABELS[role as RoleKey]).join(', '),
-        },
-        {
-          header: 'Companies',
-          render: (row) =>
-            row.companyIds.length === 0
-              ? 'All'
-              : row.companyIds
-                  .map((id) => companies?.items.find((company) => company.id === id)?.name ?? '—')
-                  .join(', '),
-        },
-        { header: 'Last login', render: (row) => formatDate(row.lastLoginAt) },
-        {
-          header: 'Status',
-          render: (row) => (
-            <span className="flex items-center gap-2">
-              <StatusBadge status={row.status} />
-              {row.status === 'INVITED' ? (
-                <span className="text-xs text-slate-500">has not signed in yet</span>
-              ) : null}
-            </span>
-          ),
-        },
-      ]}
-      fields={[
-        { name: 'name', label: 'Full name', required: true },
-        { name: 'email', label: 'Email', type: 'email', required: true },
-        {
-          name: 'password',
-          label: 'Password',
-          help: 'Leave blank to create the account as invited with a generated password.',
-        },
-        {
-          name: 'roleKeys',
-          label: 'Roles',
-          type: 'multiselect',
-          required: true,
-          options: ROLE_KEYS.map((role) => ({ value: role, label: ROLE_LABELS[role as RoleKey] })),
-          help: 'Permissions are the union of the selected roles.',
-        },
-        {
-          name: 'companyIds',
-          label: 'Companies',
-          type: 'multiselect',
-          options: (companies?.items ?? []).map((company) => ({
-            value: company.id,
-            label: company.name,
-          })),
-          help: 'Leave empty for access to every company in the tenant.',
-        },
-        {
-          name: 'status',
-          label: 'Status',
-          type: 'select',
-          options: [
-            { value: 'ACTIVE', label: 'Active' },
-            { value: 'INVITED', label: 'Invited — cannot sign in yet' },
-            { value: 'SUSPENDED', label: 'Suspended' },
-          ],
-          help: 'Only an active account can sign in.',
-        },
-      ]}
-      defaults={{ roleKeys: [], companyIds: companyId ? [companyId] : [] }}
-      toFormValues={(row) => ({
-        name: row.name,
-        email: row.email,
-        roleKeys: row.roleKeys,
-        companyIds: row.companyIds,
-        status: row.status,
-      })}
-    />
+              ]
+            : []
+        }
+        columns={[
+          { header: 'Name', render: (row) => <span className="font-medium">{row.name}</span> },
+          { header: 'Email', render: (row) => row.email },
+          {
+            header: 'Roles',
+            render: (row) => row.roleKeys.map((role) => ROLE_LABELS[role as RoleKey]).join(', '),
+          },
+          {
+            header: 'Companies',
+            render: (row) =>
+              row.companyIds.length === 0
+                ? 'All'
+                : row.companyIds
+                    .map((id) => companies?.items.find((company) => company.id === id)?.name ?? '—')
+                    .join(', '),
+          },
+          { header: 'Last login', render: (row) => formatDate(row.lastLoginAt) },
+          {
+            header: 'Status',
+            render: (row) => (
+              <span className="flex items-center gap-2">
+                <StatusBadge status={row.status} />
+                {row.status === 'INVITED' ? (
+                  <span className="text-xs text-slate-500">has not signed in yet</span>
+                ) : null}
+              </span>
+            ),
+          },
+        ]}
+        fields={[
+          { name: 'name', label: 'Full name', required: true },
+          { name: 'email', label: 'Email', type: 'email', required: true },
+          {
+            name: 'password',
+            label: 'Password',
+            help: 'Leave blank to create the account as invited with a generated password.',
+          },
+          {
+            name: 'roleKeys',
+            label: 'Roles',
+            type: 'multiselect',
+            required: true,
+            options: ROLE_KEYS.map((role) => ({
+              value: role,
+              label: ROLE_LABELS[role as RoleKey],
+            })),
+            help: 'Permissions are the union of the selected roles.',
+          },
+          {
+            name: 'companyIds',
+            label: 'Companies',
+            type: 'multiselect',
+            options: (companies?.items ?? []).map((company) => ({
+              value: company.id,
+              label: company.name,
+            })),
+            help: 'Leave empty for access to every company in the tenant.',
+          },
+          {
+            name: 'status',
+            label: 'Status',
+            type: 'select',
+            options: [
+              { value: 'ACTIVE', label: 'Active' },
+              { value: 'INVITED', label: 'Invited — cannot sign in yet' },
+              { value: 'SUSPENDED', label: 'Suspended' },
+            ],
+            help: 'Only an active account can sign in.',
+          },
+        ]}
+        defaults={{ roleKeys: [], companyIds: companyId ? [companyId] : [] }}
+        toFormValues={(row) => ({
+          name: row.name,
+          email: row.email,
+          roleKeys: row.roleKeys,
+          companyIds: row.companyIds,
+          status: row.status,
+        })}
+      />
     </>
   );
 }
@@ -342,7 +369,11 @@ function InviteLinkModal({
     <Modal
       title="Invitation created"
       onClose={onClose}
-      footer={<button className="btn-primary" onClick={onClose}>Done</button>}
+      footer={
+        <button className="btn-primary" onClick={onClose}>
+          Done
+        </button>
+      }
     >
       <p className="text-sm text-slate-600">
         Send this link to <span className="font-medium">{invite.email}</span>. They will set their
@@ -441,7 +472,9 @@ export function BankAccountsPage() {
         { header: 'Bank', render: (row) => row.bankName },
         {
           header: 'Account',
-          render: (row) => <span className="font-mono text-xs">…{row.accountNumber.slice(-4)}</span>,
+          render: (row) => (
+            <span className="font-mono text-xs">…{row.accountNumber.slice(-4)}</span>
+          ),
         },
         { header: 'IFSC', render: (row) => <span className="font-mono text-xs">{row.ifsc}</span> },
         { header: 'File format', render: (row) => humanize(row.bankFileFormat) },

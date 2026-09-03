@@ -95,15 +95,24 @@ function textFromContentStream(content: string): string {
 function unescapePdfString(value: string): string {
   return value.replace(/\\(n|r|t|b|f|\(|\)|\\|[0-7]{1,3})/g, (_match, escape: string) => {
     switch (escape) {
-      case 'n': return '\n';
-      case 'r': return '\r';
-      case 't': return '\t';
-      case 'b': return '\b';
-      case 'f': return '\f';
-      case '(': return '(';
-      case ')': return ')';
-      case '\\': return '\\';
-      default: return String.fromCharCode(parseInt(escape, 8));
+      case 'n':
+        return '\n';
+      case 'r':
+        return '\r';
+      case 't':
+        return '\t';
+      case 'b':
+        return '\b';
+      case 'f':
+        return '\f';
+      case '(':
+        return '(';
+      case ')':
+        return ')';
+      case '\\':
+        return '\\';
+      default:
+        return String.fromCharCode(parseInt(escape, 8));
     }
   });
 }

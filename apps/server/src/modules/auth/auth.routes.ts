@@ -13,7 +13,9 @@ const loginLimiter = rateLimit({
   limit: 20,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: { code: 'RATE_LIMITED', message: 'Too many login attempts. Try again later.' } },
+  message: {
+    error: { code: 'RATE_LIMITED', message: 'Too many login attempts. Try again later.' },
+  },
 });
 
 export const authRouter: Router = Router();
@@ -55,7 +57,10 @@ authRouter.post(
   authenticate,
   asyncHandler(async (req, res) => {
     const principal = requirePrincipal(req);
-    await authService.logout(principal.userId, (req.body as { refreshToken?: string })?.refreshToken);
+    await authService.logout(
+      principal.userId,
+      (req.body as { refreshToken?: string })?.refreshToken,
+    );
     res.status(204).send();
   }),
 );
@@ -87,7 +92,12 @@ authRouter.post(
   asyncHandler(async (req, res) => {
     const principal = requirePrincipal(req);
     const { currentPassword, newPassword } = req.body as schemas.ChangePasswordRequest;
-    await authService.changePassword(principal.userId, currentPassword, newPassword, auditContext(req));
+    await authService.changePassword(
+      principal.userId,
+      currentPassword,
+      newPassword,
+      auditContext(req),
+    );
     res.status(204).send();
   }),
 );

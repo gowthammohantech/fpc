@@ -59,7 +59,10 @@ export async function record(input: AuditInput, context: AuditContext = {}): Pro
       requestId: context.requestId,
     });
   } catch (error) {
-    logger.error({ err: error, event: input.event, entityId: String(input.entityId) }, 'failed to write audit event');
+    logger.error(
+      { err: error, event: input.event, entityId: String(input.entityId) },
+      'failed to write audit event',
+    );
   }
 }
 

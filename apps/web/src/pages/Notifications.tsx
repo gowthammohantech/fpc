@@ -46,7 +46,9 @@ export function NotificationsPage() {
         {isLoading ? (
           <Spinner />
         ) : error ? (
-          <div className="p-4"><ErrorState error={error} /></div>
+          <div className="p-4">
+            <ErrorState error={error} />
+          </div>
         ) : !data?.items.length ? (
           <EmptyState title="Nothing to catch up on" />
         ) : (
@@ -59,7 +61,9 @@ export function NotificationsPage() {
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <p className="font-medium">{notification.title}</p>
-                    <p className="mt-1 whitespace-pre-line text-sm text-slate-600">{notification.body}</p>
+                    <p className="mt-1 whitespace-pre-line text-sm text-slate-600">
+                      {notification.body}
+                    </p>
                     <p className="mt-1 text-xs text-slate-400">
                       {formatDateTime(notification.createdAt)}
                     </p>

@@ -143,7 +143,9 @@ export async function generateBankFile(
   if (definition.extension === 'csv') {
     const lines = [
       definition.columns.map((column) => csvCell(column.header)).join(','),
-      ...rows.map((row) => definition.columns.map((column) => csvCell(column.value(row))).join(',')),
+      ...rows.map((row) =>
+        definition.columns.map((column) => csvCell(column.value(row))).join(','),
+      ),
     ];
     return {
       buffer: Buffer.from(`${lines.join('\r\n')}\r\n`, 'utf8'),

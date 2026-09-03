@@ -186,5 +186,7 @@ export async function createObligationsForPayroll(
 
 /** Links an obligation's employee/invoice rows back for display. */
 export function maskAccount(value: string): string {
-  return value.length <= 4 ? value : `${'X'.repeat(Math.min(6, value.length - 4))}${value.slice(-4)}`;
+  return value.length <= 4
+    ? value
+    : `${'X'.repeat(Math.min(6, value.length - 4))}${value.slice(-4)}`;
 }

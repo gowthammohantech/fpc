@@ -94,7 +94,13 @@ export async function writePayrollWorkbook(path: string): Promise<void> {
   sheet.addRow(['Payroll register']);
   sheet.addRow([]);
   sheet.addRow([
-    'Employee ID', 'Employee Name', 'Bank Account', 'IFSC', 'Net Salary', 'Department', 'Location',
+    'Employee ID',
+    'Employee Name',
+    'Bank Account',
+    'IFSC',
+    'Net Salary',
+    'Department',
+    'Location',
   ]);
 
   const locations = [
@@ -144,7 +150,14 @@ export async function writeStatementWorkbook(path: string): Promise<void> {
   sheet.addRow(['HDFC Bank — Statement of Account']);
   sheet.addRow(['Account: 00600350001234']);
   sheet.addRow([]);
-  sheet.addRow(['Transaction Date', 'Narration', 'Reference', 'Withdrawal', 'Deposit', 'Closing Balance']);
+  sheet.addRow([
+    'Transaction Date',
+    'Narration',
+    'Reference',
+    'Withdrawal',
+    'Deposit',
+    'Closing Balance',
+  ]);
 
   const today = new Date();
   const stamp = (offset: number) => {
@@ -165,10 +178,10 @@ export async function writeStatementWorkbook(path: string): Promise<void> {
   ];
 
   for (const [date, narration, reference, debit, credit] of rows) {
-    balance = balance - (typeof debit === 'number' ? debit : 0) + (typeof credit === 'number' ? credit : 0);
+    balance =
+      balance - (typeof debit === 'number' ? debit : 0) + (typeof credit === 'number' ? credit : 0);
     sheet.addRow([date, narration, reference, debit, credit, balance]);
   }
 
   await workbook.xlsx.writeFile(path);
 }
-

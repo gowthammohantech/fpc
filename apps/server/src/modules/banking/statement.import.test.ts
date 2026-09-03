@@ -94,13 +94,23 @@ describe('bank statement import', () => {
   });
 
   it('refuses a file with no recognisable date column', async () => {
-    const buffer = await workbookOf([['Foo', 'Bar'], ['a', 'b']]);
-    await expect(parseStatement(buffer, 'statement.xlsx', ACCOUNT)).rejects.toThrow(/transaction date/i);
+    const buffer = await workbookOf([
+      ['Foo', 'Bar'],
+      ['a', 'b'],
+    ]);
+    await expect(parseStatement(buffer, 'statement.xlsx', ACCOUNT)).rejects.toThrow(
+      /transaction date/i,
+    );
   });
 
   it('refuses a file with no amount columns', async () => {
-    const buffer = await workbookOf([['Transaction Date', 'Narration'], ['05/09/2026', 'x']]);
-    await expect(parseStatement(buffer, 'statement.xlsx', ACCOUNT)).rejects.toThrow(/debit\/credit or amount/i);
+    const buffer = await workbookOf([
+      ['Transaction Date', 'Narration'],
+      ['05/09/2026', 'x'],
+    ]);
+    await expect(parseStatement(buffer, 'statement.xlsx', ACCOUNT)).rejects.toThrow(
+      /debit\/credit or amount/i,
+    );
   });
 
   it('reads CSV statements', async () => {
@@ -128,7 +138,9 @@ describe('transaction dedupe hash', () => {
 
   it('differs when the amount, date or account differs', () => {
     expect(dedupeHash({ ...base, amount: base.amount + 1 })).not.toBe(dedupeHash(base));
-    expect(dedupeHash({ ...base, transactionDate: new Date(Date.UTC(2026, 8, 6)) })).not.toBe(dedupeHash(base));
+    expect(dedupeHash({ ...base, transactionDate: new Date(Date.UTC(2026, 8, 6)) })).not.toBe(
+      dedupeHash(base),
+    );
     expect(dedupeHash({ ...base, bankAccountId: 'other' })).not.toBe(dedupeHash(base));
   });
 

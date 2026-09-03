@@ -18,7 +18,8 @@ import {
   Tabs,
 } from '@/components/ui';
 
-type View = 'ALL' | 'REVIEW' | 'PENDING_APPROVAL' | 'APPROVED' | 'PAYMENT_PENDING' | 'PAID' | 'OVERDUE';
+type View =
+  'ALL' | 'REVIEW' | 'PENDING_APPROVAL' | 'APPROVED' | 'PAYMENT_PENDING' | 'PAID' | 'OVERDUE';
 
 const VIEWS: Array<{ key: View; label: string }> = [
   { key: 'ALL', label: 'All' },
@@ -140,7 +141,9 @@ export function InvoicesPage({ initialView = 'ALL' }: { initialView?: View }) {
                       <Link className="font-medium text-brand-700" to={`/invoices/${invoice.id}`}>
                         {invoice.invoiceNumber ?? invoice.documentFileName ?? 'Untitled'}
                       </Link>
-                      {invoice.findings?.some((finding) => !finding.resolved && finding.severity !== 'INFO') ? (
+                      {invoice.findings?.some(
+                        (finding) => !finding.resolved && finding.severity !== 'INFO',
+                      ) ? (
                         <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800">
                           Needs attention
                         </span>
@@ -196,7 +199,9 @@ function UploadInvoiceModal({ onClose }: { onClose(): void }) {
       onClose={onClose}
       footer={
         <>
-          <button className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn-secondary" onClick={onClose}>
+            Cancel
+          </button>
           <button
             className="btn-primary"
             disabled={!file || !companyId || mutation.isPending}

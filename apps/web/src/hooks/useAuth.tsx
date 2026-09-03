@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import { hasPermission, type Permission, type Principal, type RoleKey } from '@fpc/shared';
 import { api, apiClient, hasStoredSession } from '@/lib/api';
 
@@ -66,7 +74,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       logout,
       can: (permission) => hasPermission(user?.permissions, permission),
-      canAny: (...permissions) => permissions.some((entry) => hasPermission(user?.permissions, entry)),
+      canAny: (...permissions) =>
+        permissions.some((entry) => hasPermission(user?.permissions, entry)),
       hasRole: (role) => !!user?.roleKeys.includes(role),
       companyId,
       setCompanyId,

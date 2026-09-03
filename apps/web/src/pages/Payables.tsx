@@ -17,7 +17,8 @@ import {
   Tabs,
 } from '@/components/ui';
 
-type View = 'ALL' | 'DUE_TODAY' | 'DUE_THIS_WEEK' | 'OVERDUE' | 'APPROVED' | 'PAYMENT_PENDING' | 'PAID';
+type View =
+  'ALL' | 'DUE_TODAY' | 'DUE_THIS_WEEK' | 'OVERDUE' | 'APPROVED' | 'PAYMENT_PENDING' | 'PAID';
 
 const VIEWS: Array<{ key: View; label: string }> = [
   { key: 'ALL', label: 'All' },
@@ -59,9 +60,13 @@ export function PayablesPage() {
           {(['NOT_DUE', '1_30', '31_60', '61_90', '90_PLUS'] as const).map((bucket) => (
             <Card key={bucket} className="p-4">
               <p className="text-xs uppercase tracking-wide text-slate-500">
-                {bucket === 'NOT_DUE' ? 'Not due' : `${bucket.replace('_', '–').replace('PLUS', '+')} days`}
+                {bucket === 'NOT_DUE'
+                  ? 'Not due'
+                  : `${bucket.replace('_', '–').replace('PLUS', '+')} days`}
               </p>
-              <p className={`mt-1 text-xl font-semibold tabular ${bucket === '90_PLUS' ? 'text-red-700' : ''}`}>
+              <p
+                className={`mt-1 text-xl font-semibold tabular ${bucket === '90_PLUS' ? 'text-red-700' : ''}`}
+              >
                 {formatCompactINR(ageing[bucket]?.amount ?? 0)}
               </p>
               <p className="text-xs text-slate-500">{ageing[bucket]?.count ?? 0} invoices</p>
@@ -81,13 +86,18 @@ export function PayablesPage() {
         <Tabs
           tabs={VIEWS.map((entry) => ({ ...entry, count: summary?.[entry.key]?.count }))}
           active={view}
-          onChange={(key) => { setView(key); setPage(1); }}
+          onChange={(key) => {
+            setView(key);
+            setPage(1);
+          }}
         />
 
         {isLoading ? (
           <Spinner />
         ) : error ? (
-          <div className="p-4"><ErrorState error={error} /></div>
+          <div className="p-4">
+            <ErrorState error={error} />
+          </div>
         ) : !data?.items.length ? (
           <EmptyState title="Nothing in this view" />
         ) : (
@@ -111,16 +121,27 @@ export function PayablesPage() {
                         {invoice.invoiceNumber ?? '—'}
                       </Link>
                     </td>
-                    <td className={`td ${isOverdue(invoice.dueDate) && invoice.status !== 'PAID' ? 'text-red-600' : ''}`}>
+                    <td
+                      className={`td ${isOverdue(invoice.dueDate) && invoice.status !== 'PAID' ? 'text-red-600' : ''}`}
+                    >
                       {formatDate(invoice.dueDate)}
                     </td>
-                    <td className="td text-right"><Money minor={invoice.totalAmount} /></td>
-                    <td className="td"><StatusBadge status={invoice.status} /></td>
+                    <td className="td text-right">
+                      <Money minor={invoice.totalAmount} />
+                    </td>
+                    <td className="td">
+                      <StatusBadge status={invoice.status} />
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </Table>
-            <Pagination page={data.page} pageSize={data.pageSize} total={data.total} onChange={setPage} />
+            <Pagination
+              page={data.page}
+              pageSize={data.pageSize}
+              total={data.total}
+              onChange={setPage}
+            />
           </>
         )}
       </div>

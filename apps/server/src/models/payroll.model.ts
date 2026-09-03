@@ -128,7 +128,12 @@ export interface PayrollEmployeeDoc {
 const employeeSchema = new Schema<PayrollEmployeeDoc>(
   {
     ...scopedFields(),
-    payrollBatchId: { type: Schema.Types.ObjectId, ref: 'PayrollBatch', required: true, index: true },
+    payrollBatchId: {
+      type: Schema.Types.ObjectId,
+      ref: 'PayrollBatch',
+      required: true,
+      index: true,
+    },
     employeeCode: { type: String, required: true },
     employeeName: { type: String, required: true },
     bankAccountNumber: { type: String, required: true },

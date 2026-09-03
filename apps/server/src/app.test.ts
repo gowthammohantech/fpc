@@ -44,7 +44,9 @@ describe('app wiring', () => {
   });
 
   it('validates the login payload before touching the database', async () => {
-    const response = await request(app).post('/api/auth/login').send({ email: 'nope', password: '1' });
+    const response = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'nope', password: '1' });
     expect(response.status).toBe(422);
     expect(response.body.error.details).toEqual(
       expect.arrayContaining([expect.objectContaining({ path: 'email' })]),

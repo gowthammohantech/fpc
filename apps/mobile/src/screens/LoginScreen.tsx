@@ -35,7 +35,9 @@ export function LoginScreen() {
         </View>
 
         {error ? (
-          <View style={[styles.card, { backgroundColor: colors.dangerBg, borderColor: colors.danger }]}>
+          <View
+            style={[styles.card, { backgroundColor: colors.dangerBg, borderColor: colors.danger }]}
+          >
             <Text style={{ color: colors.danger }}>{error}</Text>
           </View>
         ) : null}

@@ -64,7 +64,9 @@ export function CrudPage<T extends { id: string }>({
   fields: FieldDefinition[];
   permissions: { read: Permission; create?: Permission; update?: Permission; delete?: Permission };
   queryKey: string;
-  list(query: Record<string, unknown>): Promise<{ items: T[]; page: number; pageSize: number; total: number }>;
+  list(
+    query: Record<string, unknown>,
+  ): Promise<{ items: T[]; page: number; pageSize: number; total: number }>;
   create?(body: Record<string, unknown>): Promise<unknown>;
   update?(id: string, body: Record<string, unknown>): Promise<unknown>;
   remove?(id: string): Promise<unknown>;
@@ -117,7 +119,9 @@ export function CrudPage<T extends { id: string }>({
         {isLoading ? (
           <Spinner />
         ) : error ? (
-          <div className="p-4"><ErrorState error={error} /></div>
+          <div className="p-4">
+            <ErrorState error={error} />
+          </div>
         ) : !data?.items.length ? (
           <EmptyState title={`No ${title.toLowerCase()} yet`} />
         ) : (
@@ -126,7 +130,10 @@ export function CrudPage<T extends { id: string }>({
               <thead className="bg-slate-50">
                 <tr>
                   {columns.map((column) => (
-                    <th key={column.header} className={`th ${column.align === 'right' ? 'text-right' : ''}`}>
+                    <th
+                      key={column.header}
+                      className={`th ${column.align === 'right' ? 'text-right' : ''}`}
+                    >
                       {column.header}
                     </th>
                   ))}
@@ -156,7 +163,10 @@ export function CrudPage<T extends { id: string }>({
                           </button>
                         ))}
                         {update && permissions.update && can(permissions.update) ? (
-                          <button className="text-sm text-brand-600" onClick={() => setEditing(row)}>
+                          <button
+                            className="text-sm text-brand-600"
+                            onClick={() => setEditing(row)}
+                          >
                             Edit
                           </button>
                         ) : null}
@@ -166,14 +176,21 @@ export function CrudPage<T extends { id: string }>({
                 ))}
               </tbody>
             </Table>
-            <Pagination page={data.page} pageSize={data.pageSize} total={data.total} onChange={setPage} />
+            <Pagination
+              page={data.page}
+              pageSize={data.pageSize}
+              total={data.total}
+              onChange={setPage}
+            />
           </>
         )}
       </div>
 
       {editing ? (
         <RecordForm
-          title={editing === 'new' ? `Add ${title.replace(/s$/, '')}` : `Edit ${title.replace(/s$/, '')}`}
+          title={
+            editing === 'new' ? `Add ${title.replace(/s$/, '')}` : `Edit ${title.replace(/s$/, '')}`
+          }
           fields={fields.filter((field) => editing === 'new' || !field.createOnly)}
           initial={
             editing === 'new'
@@ -251,7 +268,9 @@ function RecordForm({
               Deactivate
             </button>
           ) : null}
-          <button className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn-secondary" onClick={onClose}>
+            Cancel
+          </button>
           <button className="btn-primary" disabled={save.isPending} onClick={() => save.mutate()}>
             {save.isPending ? 'Saving…' : 'Save'}
           </button>
@@ -275,7 +294,9 @@ function RecordForm({
               >
                 <option value="">Select…</option>
                 {field.options?.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
                 ))}
               </select>
             ) : field.type === 'multiselect' ? (
@@ -323,8 +344,16 @@ function RecordForm({
         ))}
       </div>
 
-      {save.error ? <div className="mt-4"><ErrorState error={save.error} /></div> : null}
-      {del.error ? <div className="mt-4"><ErrorState error={del.error} /></div> : null}
+      {save.error ? (
+        <div className="mt-4">
+          <ErrorState error={save.error} />
+        </div>
+      ) : null}
+      {del.error ? (
+        <div className="mt-4">
+          <ErrorState error={del.error} />
+        </div>
+      ) : null}
     </Modal>
   );
 }

@@ -97,7 +97,9 @@ export function ApprovalRulesPage() {
                       .map((step, index) => (
                         <span key={step.order} className="flex items-center gap-2">
                           {index > 0 ? <span className="text-slate-300">→</span> : null}
-                          <span className="rounded bg-slate-100 px-2 py-1">{describeStep(step)}</span>
+                          <span className="rounded bg-slate-100 px-2 py-1">
+                            {describeStep(step)}
+                          </span>
                         </span>
                       ))}
                   </div>
@@ -122,9 +124,17 @@ export function ApprovalRulesPage() {
 
 function describeCondition(condition: Condition): string {
   const operator =
-    { eq: 'is', ne: 'is not', gt: 'is above', gte: 'is at least', lt: 'is below', lte: 'is at most', in: 'is one of', nin: 'is not one of', between: 'is between' }[
-      condition.operator
-    ] ?? condition.operator;
+    {
+      eq: 'is',
+      ne: 'is not',
+      gt: 'is above',
+      gte: 'is at least',
+      lt: 'is below',
+      lte: 'is at most',
+      in: 'is one of',
+      nin: 'is not one of',
+      between: 'is between',
+    }[condition.operator] ?? condition.operator;
 
   const value = AMOUNT_FIELDS.has(condition.field)
     ? Array.isArray(condition.value)
@@ -168,7 +178,9 @@ function RuleEditor({ rule, onClose }: { rule: ApprovalRuleView | 'new'; onClose
         conditions,
         steps: steps.map((step, index) => ({ ...step, order: index + 1 })),
       };
-      return isNew ? api.settings.createApprovalRule(body) : api.settings.updateApprovalRule(rule.id, body);
+      return isNew
+        ? api.settings.createApprovalRule(body)
+        : api.settings.updateApprovalRule(rule.id, body);
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['approval-rules'] });
@@ -196,7 +208,9 @@ function RuleEditor({ rule, onClose }: { rule: ApprovalRuleView | 'new'; onClose
               Deactivate
             </button>
           ) : null}
-          <button className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn-secondary" onClick={onClose}>
+            Cancel
+          </button>
           <button
             className="btn-primary"
             disabled={!name || steps.length === 0 || save.isPending}
@@ -209,7 +223,9 @@ function RuleEditor({ rule, onClose }: { rule: ApprovalRuleView | 'new'; onClose
     >
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
-          <label className="label" htmlFor="name">Rule name</label>
+          <label className="label" htmlFor="name">
+            Rule name
+          </label>
           <input
             id="name"
             className="input"
@@ -219,7 +235,9 @@ function RuleEditor({ rule, onClose }: { rule: ApprovalRuleView | 'new'; onClose
           />
         </div>
         <div className="sm:col-span-2">
-          <label className="label" htmlFor="description">Description</label>
+          <label className="label" htmlFor="description">
+            Description
+          </label>
           <input
             id="description"
             className="input"
@@ -228,7 +246,9 @@ function RuleEditor({ rule, onClose }: { rule: ApprovalRuleView | 'new'; onClose
           />
         </div>
         <div>
-          <label className="label" htmlFor="appliesTo">Applies to</label>
+          <label className="label" htmlFor="appliesTo">
+            Applies to
+          </label>
           <select
             id="appliesTo"
             className="input"
@@ -240,7 +260,9 @@ function RuleEditor({ rule, onClose }: { rule: ApprovalRuleView | 'new'; onClose
           </select>
         </div>
         <div>
-          <label className="label" htmlFor="priority">Priority</label>
+          <label className="label" htmlFor="priority">
+            Priority
+          </label>
           <input
             id="priority"
             type="number"
@@ -257,7 +279,9 @@ function RuleEditor({ rule, onClose }: { rule: ApprovalRuleView | 'new'; onClose
           <h3 className="font-semibold">Conditions</h3>
           <button
             className="btn-secondary"
-            onClick={() => setConditions([...conditions, { field: 'amount', operator: 'gte', value: 0 }])}
+            onClick={() =>
+              setConditions([...conditions, { field: 'amount', operator: 'gte', value: 0 }])
+            }
           >
             Add condition
           </button>
@@ -312,7 +336,9 @@ function RuleEditor({ rule, onClose }: { rule: ApprovalRuleView | 'new'; onClose
                 />
                 <button
                   className="text-sm text-red-600"
-                  onClick={() => setConditions(conditions.filter((_, position) => position !== index))}
+                  onClick={() =>
+                    setConditions(conditions.filter((_, position) => position !== index))
+                  }
                 >
                   Remove
                 </button>
@@ -328,7 +354,10 @@ function RuleEditor({ rule, onClose }: { rule: ApprovalRuleView | 'new'; onClose
           <button
             className="btn-secondary"
             onClick={() =>
-              setSteps([...steps, { order: steps.length + 1, approverType: 'ROLE', roleKey: 'CFO' }])
+              setSteps([
+                ...steps,
+                { order: steps.length + 1, approverType: 'ROLE', roleKey: 'CFO' },
+              ])
             }
           >
             Add step
@@ -353,7 +382,9 @@ function RuleEditor({ rule, onClose }: { rule: ApprovalRuleView | 'new'; onClose
                   onChange={(event) => updateStep(index, { roleKey: event.target.value })}
                 >
                   {ROLE_KEYS.map((role) => (
-                    <option key={role} value={role}>{ROLE_LABELS[role as RoleKey]}</option>
+                    <option key={role} value={role}>
+                      {ROLE_LABELS[role as RoleKey]}
+                    </option>
                   ))}
                 </select>
               ) : (
@@ -382,16 +413,26 @@ function RuleEditor({ rule, onClose }: { rule: ApprovalRuleView | 'new'; onClose
       </section>
 
       <label className="mt-6 flex items-center gap-2 text-sm">
-        <input type="checkbox" checked={active} onChange={(event) => setActive(event.target.checked)} />
+        <input
+          type="checkbox"
+          checked={active}
+          onChange={(event) => setActive(event.target.checked)}
+        />
         Rule is active
       </label>
 
-      {save.error ? <div className="mt-4"><ErrorState error={save.error} /></div> : null}
+      {save.error ? (
+        <div className="mt-4">
+          <ErrorState error={save.error} />
+        </div>
+      ) : null}
     </Modal>
   );
 
   function updateCondition(index: number, patch: Partial<Condition>) {
-    setConditions(conditions.map((entry, position) => (position === index ? { ...entry, ...patch } : entry)));
+    setConditions(
+      conditions.map((entry, position) => (position === index ? { ...entry, ...patch } : entry)),
+    );
   }
   function updateStep(index: number, patch: Partial<Step>) {
     setSteps(steps.map((entry, position) => (position === index ? { ...entry, ...patch } : entry)));
@@ -419,14 +460,20 @@ function SimulatorModal({ onClose }: { onClose(): void }) {
       onClose={onClose}
       footer={
         <>
-          <button className="btn-secondary" onClick={onClose}>Close</button>
-          <button className="btn-primary" onClick={() => simulate.mutate()}>Evaluate</button>
+          <button className="btn-secondary" onClick={onClose}>
+            Close
+          </button>
+          <button className="btn-primary" onClick={() => simulate.mutate()}>
+            Evaluate
+          </button>
         </>
       }
     >
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label className="label" htmlFor="simType">Type</label>
+          <label className="label" htmlFor="simType">
+            Type
+          </label>
           <select
             id="simType"
             className="input"
@@ -438,7 +485,9 @@ function SimulatorModal({ onClose }: { onClose(): void }) {
           </select>
         </div>
         <div>
-          <label className="label" htmlFor="simAmount">Amount (₹)</label>
+          <label className="label" htmlFor="simAmount">
+            Amount (₹)
+          </label>
           <input
             id="simAmount"
             className="input tabular"
@@ -472,7 +521,11 @@ function SimulatorModal({ onClose }: { onClose(): void }) {
         </div>
       ) : null}
 
-      {simulate.error ? <div className="mt-4"><ErrorState error={simulate.error} /></div> : null}
+      {simulate.error ? (
+        <div className="mt-4">
+          <ErrorState error={simulate.error} />
+        </div>
+      ) : null}
     </Modal>
   );
 }

@@ -72,13 +72,17 @@ describe('approval rule engine', () => {
   });
 
   it('never leaves an amount unrouted across the whole ladder', () => {
-    for (const amount of [1, 99_999, 100_000, 100_001, 999_999, 1_000_000, 1_000_001, 100_000_000]) {
+    for (const amount of [
+      1, 99_999, 100_000, 100_001, 999_999, 1_000_000, 1_000_001, 100_000_000,
+    ]) {
       expect(evaluate(invoice(toMinor(amount)), LADDER), `₹${amount}`).not.toBeNull();
     }
   });
 
   it('ignores rules for a different subject type', () => {
-    expect(evaluate({ ...invoice(toMinor(50_000)), appliesTo: 'PAYROLL_BATCH' }, LADDER)).toBeNull();
+    expect(
+      evaluate({ ...invoice(toMinor(50_000)), appliesTo: 'PAYROLL_BATCH' }, LADDER),
+    ).toBeNull();
   });
 
   it('ignores deactivated rules', () => {
@@ -117,8 +121,12 @@ describe('approval rule engine', () => {
       conditions: [{ field: 'vendorId', operator: 'in', value: ['v1', 'v2'] }],
       steps: [{ order: 1, approverType: 'ROLE', roleKey: 'CFO' }],
     };
-    expect(evaluate(invoice(toMinor(1_000), { vendorId: 'v1' }), [...LADDER, vendorRule])?.id).toBe('vendor');
-    expect(evaluate(invoice(toMinor(1_000), { vendorId: 'v9' }), [...LADDER, vendorRule])?.id).toBe('r1');
+    expect(evaluate(invoice(toMinor(1_000), { vendorId: 'v1' }), [...LADDER, vendorRule])?.id).toBe(
+      'vendor',
+    );
+    expect(evaluate(invoice(toMinor(1_000), { vendorId: 'v9' }), [...LADDER, vendorRule])?.id).toBe(
+      'r1',
+    );
   });
 });
 
@@ -126,22 +134,36 @@ describe('condition operators', () => {
   const context = invoice(toMinor(500_000), { vendorId: 'v1', locationId: 'chennai' });
 
   it('evaluates comparison operators against minor units', () => {
-    expect(matches({ field: 'amount', operator: 'gte', value: toMinor(500_000) }, context)).toBe(true);
-    expect(matches({ field: 'amount', operator: 'lt', value: toMinor(500_000) }, context)).toBe(false);
+    expect(matches({ field: 'amount', operator: 'gte', value: toMinor(500_000) }, context)).toBe(
+      true,
+    );
+    expect(matches({ field: 'amount', operator: 'lt', value: toMinor(500_000) }, context)).toBe(
+      false,
+    );
   });
 
   it('treats between as lower-inclusive and upper-exclusive', () => {
     expect(
-      matches({ field: 'amount', operator: 'between', value: [toMinor(500_000), toMinor(1_000_000)] }, context),
+      matches(
+        { field: 'amount', operator: 'between', value: [toMinor(500_000), toMinor(1_000_000)] },
+        context,
+      ),
     ).toBe(true);
     expect(
-      matches({ field: 'amount', operator: 'between', value: [toMinor(100_000), toMinor(500_000)] }, context),
+      matches(
+        { field: 'amount', operator: 'between', value: [toMinor(100_000), toMinor(500_000)] },
+        context,
+      ),
     ).toBe(false);
   });
 
   it('handles membership tests', () => {
-    expect(matches({ field: 'locationId', operator: 'in', value: ['chennai', 'pune'] }, context)).toBe(true);
-    expect(matches({ field: 'locationId', operator: 'nin', value: ['chennai'] }, context)).toBe(false);
+    expect(
+      matches({ field: 'locationId', operator: 'in', value: ['chennai', 'pune'] }, context),
+    ).toBe(true);
+    expect(matches({ field: 'locationId', operator: 'nin', value: ['chennai'] }, context)).toBe(
+      false,
+    );
   });
 
   it('does not match a comparison against a missing field', () => {

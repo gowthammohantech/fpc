@@ -55,13 +55,18 @@ auditRouter.get(
     }
 
     res.json(
-      await paginate(AuditEvent, filter, {
-        page: q.page,
-        pageSize: q.pageSize,
-        sort: q.sort ?? 'timestamp',
-        order: q.order,
-        defaultSort: { timestamp: -1 },
-      }, (doc) => toApi(doc)),
+      await paginate(
+        AuditEvent,
+        filter,
+        {
+          page: q.page,
+          pageSize: q.pageSize,
+          sort: q.sort ?? 'timestamp',
+          order: q.order,
+          defaultSort: { timestamp: -1 },
+        },
+        (doc) => toApi(doc),
+      ),
     );
   }),
 );

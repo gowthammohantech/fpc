@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { PayrollPreview } from '@fpc/api-client';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
-import { formatCompactINR, formatDate, humanize } from '@/lib/format';
+import { formatCompactINR, humanize } from '@/lib/format';
 import {
   Card,
   ConfirmWithReason,
@@ -19,8 +19,18 @@ import {
 } from '@/components/ui';
 
 const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
 ];
 
 /** Payroll batches — PRD §36 `/payroll`. */
@@ -40,7 +50,9 @@ export function PayrollPage() {
         subtitle="Finalised payroll received from HR"
         actions={
           can('payroll:create') ? (
-            <Link className="btn-primary" to="/payroll/import">Import payroll</Link>
+            <Link className="btn-primary" to="/payroll/import">
+              Import payroll
+            </Link>
           ) : null
         }
       />
@@ -49,9 +61,14 @@ export function PayrollPage() {
         {isLoading ? (
           <Spinner />
         ) : error ? (
-          <div className="p-4"><ErrorState error={error} /></div>
+          <div className="p-4">
+            <ErrorState error={error} />
+          </div>
         ) : !data?.items.length ? (
-          <EmptyState title="No payroll batches yet" hint="Import a finalised payroll file to begin." />
+          <EmptyState
+            title="No payroll batches yet"
+            hint="Import a finalised payroll file to begin."
+          />
         ) : (
           <>
             <Table>
@@ -67,7 +84,8 @@ export function PayrollPage() {
               <tbody className="divide-y divide-slate-100 bg-white">
                 {data.items.map((batch) => {
                   const difference =
-                    batch.previousTotalNetAmount !== undefined && batch.previousTotalNetAmount !== null
+                    batch.previousTotalNetAmount !== undefined &&
+                    batch.previousTotalNetAmount !== null
                       ? batch.totalNetAmount - batch.previousTotalNetAmount
                       : null;
                   return (
@@ -80,7 +98,9 @@ export function PayrollPage() {
                       <td className="td text-right tabular">
                         {batch.employeeCount.toLocaleString('en-IN')}
                       </td>
-                      <td className="td text-right"><Money minor={batch.totalNetAmount} /></td>
+                      <td className="td text-right">
+                        <Money minor={batch.totalNetAmount} />
+                      </td>
                       <td className="td text-right tabular">
                         {difference === null ? (
                           <span className="text-slate-400">—</span>
@@ -91,13 +111,20 @@ export function PayrollPage() {
                           </span>
                         )}
                       </td>
-                      <td className="td"><StatusBadge status={batch.status} /></td>
+                      <td className="td">
+                        <StatusBadge status={batch.status} />
+                      </td>
                     </tr>
                   );
                 })}
               </tbody>
             </Table>
-            <Pagination page={data.page} pageSize={data.pageSize} total={data.total} onChange={setPage} />
+            <Pagination
+              page={data.page}
+              pageSize={data.pageSize}
+              total={data.total}
+              onChange={setPage}
+            />
           </>
         )}
       </div>
@@ -125,7 +152,8 @@ export function PayrollImportPage() {
   const [periodYear, setPeriodYear] = useState(now.getFullYear());
 
   const runPreview = useMutation({
-    mutationFn: () => api.payroll.preview(file!, Object.keys(mapping).length ? mapping : undefined, file!.name),
+    mutationFn: () =>
+      api.payroll.preview(file!, Object.keys(mapping).length ? mapping : undefined, file!.name),
     onSuccess: (result) => {
       setPreview(result);
       setMapping(result.mapping);
@@ -171,7 +199,9 @@ export function PayrollImportPage() {
 
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div>
-              <label className="label" htmlFor="month">Month</label>
+              <label className="label" htmlFor="month">
+                Month
+              </label>
               <select
                 id="month"
                 className="input"
@@ -179,12 +209,16 @@ export function PayrollImportPage() {
                 onChange={(event) => setPeriodMonth(Number(event.target.value))}
               >
                 {MONTHS.map((name, index) => (
-                  <option key={name} value={index + 1}>{name}</option>
+                  <option key={name} value={index + 1}>
+                    {name}
+                  </option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="label" htmlFor="year">Year</label>
+              <label className="label" htmlFor="year">
+                Year
+              </label>
               <input
                 id="year"
                 type="number"
@@ -203,7 +237,11 @@ export function PayrollImportPage() {
             {runPreview.isPending ? 'Reading…' : 'Validate file'}
           </button>
 
-          {runPreview.error ? <div className="mt-3"><ErrorState error={runPreview.error} /></div> : null}
+          {runPreview.error ? (
+            <div className="mt-3">
+              <ErrorState error={runPreview.error} />
+            </div>
+          ) : null}
         </Card>
 
         <div className="lg:col-span-2">
@@ -232,7 +270,9 @@ export function PayrollImportPage() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-slate-500">Rows with errors</p>
+                    <p className="text-xs uppercase tracking-wide text-slate-500">
+                      Rows with errors
+                    </p>
                     <p
                       className={`mt-1 text-2xl font-semibold tabular ${
                         preview.rowsWithErrors > 0 ? 'text-red-700' : 'text-emerald-700'
@@ -245,10 +285,15 @@ export function PayrollImportPage() {
 
                 {preview.locationBreakdown.length ? (
                   <div className="mt-5">
-                    <p className="mb-2 text-xs uppercase tracking-wide text-slate-500">By location</p>
+                    <p className="mb-2 text-xs uppercase tracking-wide text-slate-500">
+                      By location
+                    </p>
                     <ul className="divide-y divide-slate-100 rounded-md border border-slate-200">
                       {preview.locationBreakdown.map((entry) => (
-                        <li key={entry.locationName} className="flex justify-between px-3 py-2 text-sm">
+                        <li
+                          key={entry.locationName}
+                          className="flex justify-between px-3 py-2 text-sm"
+                        >
                           <span>{entry.locationName}</span>
                           <span className="tabular text-slate-600">
                             {entry.count} · {formatCompactINR(entry.amount)}
@@ -279,7 +324,9 @@ export function PayrollImportPage() {
                     </summary>
                     <ul className="mt-2 space-y-1 text-slate-500">
                       {preview.rejected.map((entry) => (
-                        <li key={entry.rowNumber}>Row {entry.rowNumber}: {entry.reason}</li>
+                        <li key={entry.rowNumber}>
+                          Row {entry.rowNumber}: {entry.reason}
+                        </li>
                       ))}
                     </ul>
                   </details>
@@ -294,23 +341,36 @@ export function PayrollImportPage() {
                   </p>
                 </div>
                 <div className="grid gap-4 p-5 sm:grid-cols-2">
-                  {(['employeeCode', 'employeeName', 'bankAccountNumber', 'ifsc', 'netAmount', 'department', 'location', 'email'] as const).map(
-                    (field) => (
-                      <div key={field}>
-                        <label className="label">{humanize(field)}</label>
-                        <select
-                          className="input"
-                          value={mapping[field] ?? ''}
-                          onChange={(event) => setMapping({ ...mapping, [field]: event.target.value })}
-                        >
-                          <option value="">Not mapped</option>
-                          {preview.headers.map((header) => (
-                            <option key={header} value={header}>{header}</option>
-                          ))}
-                        </select>
-                      </div>
-                    ),
-                  )}
+                  {(
+                    [
+                      'employeeCode',
+                      'employeeName',
+                      'bankAccountNumber',
+                      'ifsc',
+                      'netAmount',
+                      'department',
+                      'location',
+                      'email',
+                    ] as const
+                  ).map((field) => (
+                    <div key={field}>
+                      <label className="label">{humanize(field)}</label>
+                      <select
+                        className="input"
+                        value={mapping[field] ?? ''}
+                        onChange={(event) =>
+                          setMapping({ ...mapping, [field]: event.target.value })
+                        }
+                      >
+                        <option value="">Not mapped</option>
+                        {preview.headers.map((header) => (
+                          <option key={header} value={header}>
+                            {header}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
                 </div>
                 <div className="border-t border-slate-200 px-5 py-3">
                   <button
@@ -343,11 +403,15 @@ export function PayrollImportPage() {
                         <td className="td text-slate-400">{String(row.rowNumber)}</td>
                         <td className="td">
                           {String(row.employeeName)}
-                          <span className="ml-2 text-xs text-slate-500">{String(row.employeeCode)}</span>
+                          <span className="ml-2 text-xs text-slate-500">
+                            {String(row.employeeCode)}
+                          </span>
                         </td>
                         <td className="td font-mono text-xs">{String(row.bankAccountNumber)}</td>
                         <td className="td font-mono text-xs">{String(row.ifsc)}</td>
-                        <td className="td text-right"><Money minor={Number(row.netAmount)} /></td>
+                        <td className="td text-right">
+                          <Money minor={Number(row.netAmount)} />
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -358,7 +422,11 @@ export function PayrollImportPage() {
                 <button
                   className="btn-primary"
                   disabled={preview.rowsWithErrors > 0 || commit.isPending || !companyId}
-                  title={preview.rowsWithErrors > 0 ? 'Fix the errors in the source file first' : undefined}
+                  title={
+                    preview.rowsWithErrors > 0
+                      ? 'Fix the errors in the source file first'
+                      : undefined
+                  }
                   onClick={() => commit.mutate()}
                 >
                   {commit.isPending ? 'Importing…' : `Import ${preview.employeeCount} employees`}
@@ -387,7 +455,11 @@ export function PayrollDetailPage() {
   const [page, setPage] = useState(1);
   const [cancelling, setCancelling] = useState(false);
 
-  const { data: batch, isLoading, error } = useQuery({
+  const {
+    data: batch,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['payroll-batch', id],
     queryFn: () => api.payroll.get(id),
   });
@@ -420,7 +492,12 @@ export function PayrollDetailPage() {
   const submittable = ['VALIDATED', 'IMPORTED', 'REVIEW_REQUIRED'].includes(batch.status);
   // Once obligations exist the money is in flight; the server refuses too.
   const cancellable = [
-    'DRAFT', 'IMPORTED', 'REVIEW_REQUIRED', 'VALIDATED', 'PENDING_APPROVAL', 'REJECTED',
+    'DRAFT',
+    'IMPORTED',
+    'REVIEW_REQUIRED',
+    'VALIDATED',
+    'PENDING_APPROVAL',
+    'REJECTED',
   ].includes(batch.status);
 
   return (
@@ -442,7 +519,11 @@ export function PayrollDetailPage() {
               </button>
             ) : null}
             {submittable && can('payroll:submit') ? (
-              <button className="btn-primary" disabled={submit.isPending} onClick={() => submit.mutate()}>
+              <button
+                className="btn-primary"
+                disabled={submit.isPending}
+                onClick={() => submit.mutate()}
+              >
                 {submit.isPending ? 'Submitting…' : 'Submit for approval'}
               </button>
             ) : null}
@@ -461,9 +542,7 @@ export function PayrollDetailPage() {
                 {batch.label} and its {batch.employeeCount.toLocaleString('en-IN')} employee rows
                 will be cancelled, and any approval in progress withdrawn.
               </p>
-              <p className="mt-2">
-                Re-import the corrected payroll file afterwards to replace it.
-              </p>
+              <p className="mt-2">Re-import the corrected payroll file afterwards to replace it.</p>
             </>
           }
           pending={cancel.isPending}
@@ -473,7 +552,11 @@ export function PayrollDetailPage() {
         />
       ) : null}
 
-      {submit.error ? <div className="mb-4"><ErrorState error={submit.error} /></div> : null}
+      {submit.error ? (
+        <div className="mb-4">
+          <ErrorState error={submit.error} />
+        </div>
+      ) : null}
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card className="p-4">
@@ -484,7 +567,9 @@ export function PayrollDetailPage() {
         </Card>
         <Card className="p-4">
           <p className="text-xs uppercase tracking-wide text-slate-500">Total net payroll</p>
-          <p className="mt-1 text-2xl font-semibold tabular"><Money minor={batch.totalNetAmount} /></p>
+          <p className="mt-1 text-2xl font-semibold tabular">
+            <Money minor={batch.totalNetAmount} />
+          </p>
         </Card>
         <Card className="p-4">
           <p className="text-xs uppercase tracking-wide text-slate-500">Previous month</p>
@@ -567,7 +652,9 @@ export function PayrollDetailPage() {
                     <td className="td font-mono text-xs">{employee.bankAccountNumber}</td>
                     <td className="td font-mono text-xs">{employee.ifsc}</td>
                     <td className="td">{employee.locationName ?? '—'}</td>
-                    <td className="td text-right"><Money minor={employee.netAmount} /></td>
+                    <td className="td text-right">
+                      <Money minor={employee.netAmount} />
+                    </td>
                   </tr>
                 ))}
               </tbody>

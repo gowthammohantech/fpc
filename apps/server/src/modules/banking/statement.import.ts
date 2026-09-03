@@ -26,7 +26,14 @@ export type StatementField =
 const COLUMN_ALIASES: Record<StatementField, string[]> = {
   transactionDate: ['transaction date', 'txn date', 'date', 'posting date', 'tran date'],
   valueDate: ['value date', 'value dt'],
-  description: ['description', 'narration', 'particulars', 'transaction remarks', 'remarks', 'details'],
+  description: [
+    'description',
+    'narration',
+    'particulars',
+    'transaction remarks',
+    'remarks',
+    'details',
+  ],
   reference: ['reference', 'ref no', 'cheque no', 'chq no', 'reference number', 'transaction id'],
   utr: ['utr', 'utr number', 'rrn', 'transaction reference'],
   debit: ['debit', 'withdrawal', 'withdrawal amt', 'dr', 'debit amount', 'paid out'],
@@ -69,7 +76,10 @@ export async function parseStatement(
   overrides?: Partial<Record<StatementField, string>>,
 ): Promise<StatementParseResult> {
   const table = await readTable(content, fileName);
-  const mapping = { ...autoDetectColumns<StatementField>(table.headers, COLUMN_ALIASES), ...overrides };
+  const mapping = {
+    ...autoDetectColumns<StatementField>(table.headers, COLUMN_ALIASES),
+    ...overrides,
+  };
 
   if (!mapping.transactionDate) {
     throw new Error('Could not find a transaction date column in this statement');
@@ -113,8 +123,11 @@ export async function parseStatement(
       return;
     }
 
-    const description = String(record[mapping.description ?? ''] ?? '').trim() || 'Bank transaction';
-    const reference = mapping.reference ? String(record[mapping.reference] ?? '').trim() : undefined;
+    const description =
+      String(record[mapping.description ?? ''] ?? '').trim() || 'Bank transaction';
+    const reference = mapping.reference
+      ? String(record[mapping.reference] ?? '').trim()
+      : undefined;
     const utr = mapping.utr ? String(record[mapping.utr] ?? '').trim() : undefined;
 
     transactions.push({
@@ -125,7 +138,9 @@ export async function parseStatement(
       utr: utr || undefined,
       direction,
       amount,
-      balance: mapping.balance ? (parseAmountToMinor(record[mapping.balance]) ?? undefined) : undefined,
+      balance: mapping.balance
+        ? (parseAmountToMinor(record[mapping.balance]) ?? undefined)
+        : undefined,
       dedupeHash: dedupeHash({
         bankAccountId,
         transactionDate,

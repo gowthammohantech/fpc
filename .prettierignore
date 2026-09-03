@@ -1,0 +1,8 @@
+dist/
+node_modules/
+coverage/
+.expo/
+pnpm-lock.yaml
+apps/server/fixtures/
+apps/web/dist/
+*.md

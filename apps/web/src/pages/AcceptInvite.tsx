@@ -32,10 +32,11 @@ export function AcceptInvitePage() {
     try {
       // The response is a normal login, so the user lands signed in rather
       // than being bounced to a login screen straight afterwards.
-      const result = await apiClient.request<{ accessToken: string; refreshToken: string; expiresIn: number }>(
-        '/auth/accept-invite',
-        { method: 'POST', body: { token, password }, anonymous: true },
-      );
+      const result = await apiClient.request<{
+        accessToken: string;
+        refreshToken: string;
+        expiresIn: number;
+      }>('/auth/accept-invite', { method: 'POST', body: { token, password }, anonymous: true });
       await apiClient.adoptSession(result);
       window.location.assign('/dashboard');
     } catch (caught) {
@@ -75,7 +76,9 @@ export function AcceptInvitePage() {
         ) : null}
 
         <div className="mt-5">
-          <label className="label" htmlFor="password">New password</label>
+          <label className="label" htmlFor="password">
+            New password
+          </label>
           <input
             id="password"
             className="input"
@@ -92,7 +95,9 @@ export function AcceptInvitePage() {
         </div>
 
         <div className="mt-4">
-          <label className="label" htmlFor="confirm">Confirm password</label>
+          <label className="label" htmlFor="confirm">
+            Confirm password
+          </label>
           <input
             id="confirm"
             className="input"

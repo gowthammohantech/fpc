@@ -5,7 +5,6 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDate } from '@/lib/format';
 import {
-  Card,
   ConfidenceBadge,
   EmptyState,
   ErrorState,
@@ -14,7 +13,6 @@ import {
   PageHeader,
   Pagination,
   Spinner,
-  Table,
   Tabs,
 } from '@/components/ui';
 
@@ -78,21 +76,35 @@ export function ReconciliationPage() {
       />
 
       <div className="card">
-        <Tabs tabs={tabs} active={tab} onChange={(key) => { setTab(key); setPage(1); }} />
+        <Tabs
+          tabs={tabs}
+          active={tab}
+          onChange={(key) => {
+            setTab(key);
+            setPage(1);
+          }}
+        />
 
         {isLoading ? (
           <Spinner />
         ) : error ? (
-          <div className="p-4"><ErrorState error={error} /></div>
+          <div className="p-4">
+            <ErrorState error={error} />
+          </div>
         ) : !data?.items.length ? (
           <EmptyState
             title={
-              tab === 'SUGGESTED' ? 'No suggestions waiting'
-              : tab === 'UNMATCHED' ? 'Everything is accounted for'
-              : tab === 'MATCHED' ? 'Nothing reconciled yet'
-              : 'Nothing ignored'
+              tab === 'SUGGESTED'
+                ? 'No suggestions waiting'
+                : tab === 'UNMATCHED'
+                  ? 'Everything is accounted for'
+                  : tab === 'MATCHED'
+                    ? 'Nothing reconciled yet'
+                    : 'Nothing ignored'
             }
-            hint={tab === 'SUGGESTED' ? 'Import a bank statement to generate suggestions.' : undefined}
+            hint={
+              tab === 'SUGGESTED' ? 'Import a bank statement to generate suggestions.' : undefined
+            }
           />
         ) : (
           <>
@@ -101,7 +113,9 @@ export function ReconciliationPage() {
                 <li key={row.id} className="p-5">
                   <div className="grid gap-4 lg:grid-cols-[1fr_auto_1fr] lg:items-center">
                     <div>
-                      <p className="text-xs uppercase tracking-wide text-slate-500">Bank transaction</p>
+                      <p className="text-xs uppercase tracking-wide text-slate-500">
+                        Bank transaction
+                      </p>
                       <p className="mt-1 font-medium">{row.description}</p>
                       <p className="mt-1 text-sm text-slate-500">
                         {formatDate(row.transactionDate)}
@@ -176,18 +190,30 @@ export function ReconciliationPage() {
                 </li>
               ))}
             </ul>
-            <Pagination page={data.page} pageSize={data.pageSize} total={data.total} onChange={setPage} />
+            <Pagination
+              page={data.page}
+              pageSize={data.pageSize}
+              total={data.total}
+              onChange={setPage}
+            />
           </>
         )}
       </div>
 
-      {confirm.error ? <div className="mt-4"><ErrorState error={confirm.error} /></div> : null}
+      {confirm.error ? (
+        <div className="mt-4">
+          <ErrorState error={confirm.error} />
+        </div>
+      ) : null}
 
       {matching ? (
         <ManualMatchModal
           row={matching}
           onClose={() => setMatching(null)}
-          onMatched={() => { setMatching(null); invalidate(); }}
+          onMatched={() => {
+            setMatching(null);
+            invalidate();
+          }}
         />
       ) : null}
 
@@ -195,7 +221,10 @@ export function ReconciliationPage() {
         <IgnoreModal
           row={ignoring}
           onClose={() => setIgnoring(null)}
-          onIgnored={() => { setIgnoring(null); invalidate(); }}
+          onIgnored={() => {
+            setIgnoring(null);
+            invalidate();
+          }}
         />
       ) : null}
     </>
@@ -205,10 +234,31 @@ export function ReconciliationPage() {
 /** Why the engine proposed this match — PRD §25's matching signals. */
 function Signals({ signals }: { signals: MatchSignalsView }) {
   const entries = [
-    { label: 'Amount', ok: signals.amountScore > 0, detail: signals.amountExact ? 'Exact' : signals.amountScore ? 'Within tolerance' : 'No match' },
-    { label: 'Beneficiary', ok: signals.nameSimilarity > 0.6, detail: `${Math.round(signals.nameSimilarity * 100)}% similar` },
-    { label: 'Date', ok: signals.dateScore > 0, detail: signals.dayGap < 0 ? 'Unknown' : signals.dayGap === 0 ? 'Same day' : `${signals.dayGap} days apart` },
-    { label: 'Reference', ok: signals.referenceHit, detail: signals.referenceHit ? 'Found in narration' : 'Not present' },
+    {
+      label: 'Amount',
+      ok: signals.amountScore > 0,
+      detail: signals.amountExact ? 'Exact' : signals.amountScore ? 'Within tolerance' : 'No match',
+    },
+    {
+      label: 'Beneficiary',
+      ok: signals.nameSimilarity > 0.6,
+      detail: `${Math.round(signals.nameSimilarity * 100)}% similar`,
+    },
+    {
+      label: 'Date',
+      ok: signals.dateScore > 0,
+      detail:
+        signals.dayGap < 0
+          ? 'Unknown'
+          : signals.dayGap === 0
+            ? 'Same day'
+            : `${signals.dayGap} days apart`,
+    },
+    {
+      label: 'Reference',
+      ok: signals.referenceHit,
+      detail: signals.referenceHit ? 'Found in narration' : 'Not present',
+    },
   ];
 
   return (
@@ -255,7 +305,9 @@ function ManualMatchModal({
       onClose={onClose}
       footer={
         <>
-          <button className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn-secondary" onClick={onClose}>
+            Cancel
+          </button>
           <button
             className="btn-primary"
             disabled={!selected || confirm.isPending}
@@ -308,10 +360,21 @@ function ManualMatchModal({
         </ul>
       )}
 
-      <label className="label mt-4" htmlFor="note">Note (optional)</label>
-      <input id="note" className="input" value={note} onChange={(event) => setNote(event.target.value)} />
+      <label className="label mt-4" htmlFor="note">
+        Note (optional)
+      </label>
+      <input
+        id="note"
+        className="input"
+        value={note}
+        onChange={(event) => setNote(event.target.value)}
+      />
 
-      {confirm.error ? <div className="mt-3"><ErrorState error={confirm.error} /></div> : null}
+      {confirm.error ? (
+        <div className="mt-3">
+          <ErrorState error={confirm.error} />
+        </div>
+      ) : null}
     </Modal>
   );
 }
@@ -337,7 +400,9 @@ function IgnoreModal({
       onClose={onClose}
       footer={
         <>
-          <button className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn-secondary" onClick={onClose}>
+            Cancel
+          </button>
           <button
             className="btn-primary"
             disabled={note.trim().length < 3 || mutation.isPending}
@@ -355,9 +420,20 @@ function IgnoreModal({
       <p className="mb-4 rounded-md bg-slate-50 p-3 text-sm">
         {row.description} · <Money minor={row.amount} />
       </p>
-      <label className="label" htmlFor="reason">Reason</label>
-      <input id="reason" className="input" value={note} onChange={(event) => setNote(event.target.value)} />
-      {mutation.error ? <div className="mt-3"><ErrorState error={mutation.error} /></div> : null}
+      <label className="label" htmlFor="reason">
+        Reason
+      </label>
+      <input
+        id="reason"
+        className="input"
+        value={note}
+        onChange={(event) => setNote(event.target.value)}
+      />
+      {mutation.error ? (
+        <div className="mt-3">
+          <ErrorState error={mutation.error} />
+        </div>
+      ) : null}
     </Modal>
   );
 }

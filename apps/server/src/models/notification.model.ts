@@ -29,7 +29,12 @@ const schema = new Schema<NotificationDoc>(
     toEmail: String,
     type: { type: String, required: true },
     channel: { type: String, enum: ['IN_APP', 'EMAIL'], required: true },
-    status: { type: String, enum: ['PENDING', 'SENT', 'READ', 'FAILED'], default: 'PENDING', index: true },
+    status: {
+      type: String,
+      enum: ['PENDING', 'SENT', 'READ', 'FAILED'],
+      default: 'PENDING',
+      index: true,
+    },
     title: { type: String, required: true },
     body: { type: String, required: true },
     link: String,

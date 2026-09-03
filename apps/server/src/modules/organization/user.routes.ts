@@ -38,13 +38,18 @@ userRouter.get(
     }
 
     res.json(
-      await paginate(User, filter, {
-        page: q.page,
-        pageSize: q.pageSize,
-        sort: q.sort,
-        order: q.order,
-        defaultSort: { name: 1 },
-      }, (doc) => toApi(doc)),
+      await paginate(
+        User,
+        filter,
+        {
+          page: q.page,
+          pageSize: q.pageSize,
+          sort: q.sort,
+          order: q.order,
+          defaultSort: { name: 1 },
+        },
+        (doc) => toApi(doc),
+      ),
     );
   }),
 );
@@ -192,7 +197,8 @@ userRouter.delete(
   asyncHandler(async (req, res) => {
     const principal = requirePrincipal(req);
     const id = new Types.ObjectId(req.params.id);
-    if (id.equals(principal.userId)) throw ApiError.badRequest('You cannot suspend your own account');
+    if (id.equals(principal.userId))
+      throw ApiError.badRequest('You cannot suspend your own account');
 
     const user = await User.findOneAndUpdate(
       { _id: id, tenantId: principal.tenantId },

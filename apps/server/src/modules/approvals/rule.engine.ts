@@ -37,7 +37,8 @@ export type EvaluableRule = Pick<
  */
 export function evaluate<T extends EvaluableRule>(context: RuleContext, rules: T[]): T | null {
   const matches = rules.filter(
-    (rule) => rule.active && rule.appliesTo === context.appliesTo && matchesAll(rule.conditions, context),
+    (rule) =>
+      rule.active && rule.appliesTo === context.appliesTo && matchesAll(rule.conditions, context),
   );
   if (!matches.length) return null;
 
@@ -79,7 +80,9 @@ export function matches(condition: RuleCondition, context: RuleContext): boolean
       // bands like [0, 1L) and [1L, 10L) cannot both claim ₹1,00,000.
       const [low, high] = toList(condition.value).map(Number);
       const value = numeric(actual);
-      return value >= (low ?? Number.NEGATIVE_INFINITY) && value < (high ?? Number.POSITIVE_INFINITY);
+      return (
+        value >= (low ?? Number.NEGATIVE_INFINITY) && value < (high ?? Number.POSITIVE_INFINITY)
+      );
     }
     default:
       return false;

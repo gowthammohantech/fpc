@@ -50,13 +50,18 @@ approvalRouter.get(
       throw ApiError.forbidden('Viewing all approvals requires approval:read_all');
     }
 
-    const page = await paginate(ApprovalRequest, filter, {
-      page: q.page,
-      pageSize: q.pageSize,
-      sort: q.sort,
-      order: q.order,
-      defaultSort: { requestedAt: -1 },
-    }, decorate);
+    const page = await paginate(
+      ApprovalRequest,
+      filter,
+      {
+        page: q.page,
+        pageSize: q.pageSize,
+        sort: q.sort,
+        order: q.order,
+        defaultSort: { requestedAt: -1 },
+      },
+      decorate,
+    );
 
     res.json(page);
   }),

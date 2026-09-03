@@ -171,7 +171,11 @@ export async function seed(options: { reset?: boolean } = {}): Promise<SeedResul
 
   for (const definition of INVOICES) {
     const companyId = companyIds[definition.company]!;
-    const existing = await Invoice.findOne({ tenantId, companyId, invoiceNumber: definition.invoiceNumber });
+    const existing = await Invoice.findOne({
+      tenantId,
+      companyId,
+      invoiceNumber: definition.invoiceNumber,
+    });
     if (existing) continue;
 
     const invoiceDate = daysFromNow(-definition.daysAgo);
@@ -200,9 +204,17 @@ export async function seed(options: { reset?: boolean } = {}): Promise<SeedResul
       extraction: {
         fields: {
           invoiceNumber: { value: definition.invoiceNumber, confidence: 0.99, source: 'OCR' },
-          vendorName: { value: VENDORS.find((entry) => entry.code === definition.vendor)!.name, confidence: 0.98, source: 'OCR' },
+          vendorName: {
+            value: VENDORS.find((entry) => entry.code === definition.vendor)!.name,
+            confidence: 0.98,
+            source: 'OCR',
+          },
           totalAmount: { value: String(definition.total), confidence: 0.99, source: 'OCR' },
-          invoiceDate: { value: invoiceDate.toISOString().slice(0, 10), confidence: 0.94, source: 'OCR' },
+          invoiceDate: {
+            value: invoiceDate.toISOString().slice(0, 10),
+            confidence: 0.94,
+            source: 'OCR',
+          },
           taxAmount: { value: String(definition.tax), confidence: 0.81, source: 'OCR' },
         },
         lineItems: [],
@@ -535,7 +547,8 @@ function buildPayrollEmployees() {
         bankAccountNumber: `501000${String(1000000 + index).slice(-7)}`,
         ifsc: IFSC_CODES[index % IFSC_CODES.length]!,
         netAmount: mean + offset,
-        departmentName: index % 3 === 0 ? 'Engineering' : index % 3 === 1 ? 'Operations' : 'Finance',
+        departmentName:
+          index % 3 === 0 ? 'Engineering' : index % 3 === 1 ? 'Operations' : 'Finance',
         locationName: location.name,
       });
       index += 1;
@@ -566,8 +579,18 @@ function previousMonth(): { month: number; year: number; name: string } {
   const month = now.getUTCMonth() === 0 ? 12 : now.getUTCMonth();
   const year = now.getUTCMonth() === 0 ? now.getUTCFullYear() - 1 : now.getUTCFullYear();
   const name = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
   ][month - 1]!;
   return { month, year, name };
 }

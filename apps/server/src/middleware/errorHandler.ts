@@ -101,14 +101,16 @@ function isDuplicateKeyError(
   error: unknown,
 ): error is { code: number; keyValue?: Record<string, unknown> } {
   return (
-    typeof error === 'object' &&
-    error !== null &&
-    (error as { code?: unknown }).code === 11000
+    typeof error === 'object' && error !== null && (error as { code?: unknown }).code === 11000
   );
 }
 
 export function notFoundHandler(req: Request, res: Response): void {
   res.status(404).json({
-    error: { code: 'NOT_FOUND', message: `No route for ${req.method} ${req.path}`, requestId: req.requestId },
+    error: {
+      code: 'NOT_FOUND',
+      message: `No route for ${req.method} ${req.path}`,
+      requestId: req.requestId,
+    },
   });
 }

@@ -136,7 +136,9 @@ function Row({ label, value, tone }: { label: string; value: string; tone?: stri
   return (
     <View style={styles.row}>
       <Text style={styles.muted}>{label}</Text>
-      <Text style={[styles.body, { fontWeight: '600' }, tone ? { color: tone } : null]}>{value}</Text>
+      <Text style={[styles.body, { fontWeight: '600' }, tone ? { color: tone } : null]}>
+        {value}
+      </Text>
     </View>
   );
 }

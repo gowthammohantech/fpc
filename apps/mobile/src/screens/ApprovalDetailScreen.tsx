@@ -3,7 +3,15 @@ import { Alert, ScrollView, Text, TextInput, View } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { api } from '../lib/api';
-import { Button, ErrorMessage, Loading, Money, StatusBadge, formatDate, humanize } from '../components/ui';
+import {
+  Button,
+  ErrorMessage,
+  Loading,
+  Money,
+  StatusBadge,
+  formatDate,
+  humanize,
+} from '../components/ui';
 import { colors, styles } from '../lib/theme';
 import type { RootStackParamList } from '../navigation';
 
@@ -20,13 +28,18 @@ export function ApprovalDetailScreen({ route, navigation }: Props) {
   const queryClient = useQueryClient();
   const [comment, setComment] = useState('');
 
-  const { data: request, isLoading, error } = useQuery({
+  const {
+    data: request,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['approval', id],
     queryFn: () => api.approvals.get(id),
   });
 
   const act = useMutation({
-    mutationFn: (action: 'APPROVE' | 'REJECT') => api.approvals.act(id, action, comment || undefined),
+    mutationFn: (action: 'APPROVE' | 'REJECT') =>
+      api.approvals.act(id, action, comment || undefined),
     onSuccess: (_result, action) => {
       void queryClient.invalidateQueries({ queryKey: ['approvals'] });
       void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
@@ -86,10 +99,13 @@ export function ApprovalDetailScreen({ route, navigation }: Props) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 backgroundColor:
-                  step.status === 'APPROVED' ? colors.successBg
-                  : step.status === 'REJECTED' ? colors.dangerBg
-                  : step.status === 'ACTIVE' ? colors.warningBg
-                  : colors.border,
+                  step.status === 'APPROVED'
+                    ? colors.successBg
+                    : step.status === 'REJECTED'
+                      ? colors.dangerBg
+                      : step.status === 'ACTIVE'
+                        ? colors.warningBg
+                        : colors.border,
               }}
             >
               <Text style={{ fontSize: 12, fontWeight: '700', color: colors.text }}>

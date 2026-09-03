@@ -25,14 +25,16 @@ export async function startTestDatabase(): Promise<string | null> {
     await mongoose.connect(uri);
     return uri;
   } catch (error) {
-    skipReason = `in-memory MongoDB unavailable (${(error as Error).message.split('\n')[0]}). ` +
+    skipReason =
+      `in-memory MongoDB unavailable (${(error as Error).message.split('\n')[0]}). ` +
       'Set MONGO_TEST_URI to run database integration tests.';
     return null;
   }
 }
 
 export async function stopTestDatabase(): Promise<void> {
-  if (mongoose.connection.readyState !== 0) await mongoose.connection.dropDatabase().catch(() => {});
+  if (mongoose.connection.readyState !== 0)
+    await mongoose.connection.dropDatabase().catch(() => {});
   await mongoose.disconnect().catch(() => {});
   await memoryServer?.stop();
   memoryServer = null;

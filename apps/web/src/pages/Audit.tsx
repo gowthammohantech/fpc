@@ -3,18 +3,19 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDateTime, humanize } from '@/lib/format';
-import {
-  EmptyState,
-  ErrorState,
-  PageHeader,
-  Pagination,
-  Spinner,
-  Table,
-} from '@/components/ui';
+import { EmptyState, ErrorState, PageHeader, Pagination, Spinner, Table } from '@/components/ui';
 
 const ENTITY_TYPES = [
-  'INVOICE', 'PAYROLL_BATCH', 'PAYMENT_OBLIGATION', 'PAYMENT_BATCH',
-  'APPROVAL_REQUEST', 'BANK_STATEMENT', 'RECONCILIATION', 'USER', 'VENDOR', 'AUTH',
+  'INVOICE',
+  'PAYROLL_BATCH',
+  'PAYMENT_OBLIGATION',
+  'PAYMENT_BATCH',
+  'APPROVAL_REQUEST',
+  'BANK_STATEMENT',
+  'RECONCILIATION',
+  'USER',
+  'VENDOR',
+  'AUTH',
 ];
 
 /** Audit trail — PRD §29. Read-only by construction: there is no write path. */
@@ -48,11 +49,16 @@ export function AuditPage() {
           <select
             className="input w-auto"
             value={entityType}
-            onChange={(event) => { setEntityType(event.target.value); setPage(1); }}
+            onChange={(event) => {
+              setEntityType(event.target.value);
+              setPage(1);
+            }}
           >
             <option value="">All entity types</option>
             {ENTITY_TYPES.map((type) => (
-              <option key={type} value={type}>{humanize(type)}</option>
+              <option key={type} value={type}>
+                {humanize(type)}
+              </option>
             ))}
           </select>
           <div>
@@ -60,7 +66,10 @@ export function AuditPage() {
               type="date"
               className="input"
               value={dateFrom}
-              onChange={(event) => { setDateFrom(event.target.value); setPage(1); }}
+              onChange={(event) => {
+                setDateFrom(event.target.value);
+                setPage(1);
+              }}
               aria-label="From date"
             />
           </div>
@@ -69,7 +78,9 @@ export function AuditPage() {
         {isLoading ? (
           <Spinner />
         ) : error ? (
-          <div className="p-4"><ErrorState error={error} /></div>
+          <div className="p-4">
+            <ErrorState error={error} />
+          </div>
         ) : !data?.items.length ? (
           <EmptyState title="No audit records for these filters" />
         ) : (
@@ -100,7 +111,12 @@ export function AuditPage() {
                 ))}
               </tbody>
             </Table>
-            <Pagination page={data.page} pageSize={data.pageSize} total={data.total} onChange={setPage} />
+            <Pagination
+              page={data.page}
+              pageSize={data.pageSize}
+              total={data.total}
+              onChange={setPage}
+            />
           </>
         )}
       </div>

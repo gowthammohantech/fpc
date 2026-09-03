@@ -60,9 +60,24 @@ export function blockingFindings(findings: ValidationFinding[]): ValidationFindi
 function requiredFieldFindings(invoice: ValidationInput['invoice']): ValidationFinding[] {
   const findings: ValidationFinding[] = [];
   const required: Array<[boolean, ValidationCode, string, string]> = [
-    [!invoice.vendorId && !invoice.vendorName, ValidationCode.MISSING_VENDOR, 'vendorId', 'Vendor is required'],
-    [!invoice.invoiceNumber, ValidationCode.MISSING_INVOICE_NUMBER, 'invoiceNumber', 'Invoice number is required'],
-    [!invoice.invoiceDate, ValidationCode.MISSING_INVOICE_DATE, 'invoiceDate', 'Invoice date is required'],
+    [
+      !invoice.vendorId && !invoice.vendorName,
+      ValidationCode.MISSING_VENDOR,
+      'vendorId',
+      'Vendor is required',
+    ],
+    [
+      !invoice.invoiceNumber,
+      ValidationCode.MISSING_INVOICE_NUMBER,
+      'invoiceNumber',
+      'Invoice number is required',
+    ],
+    [
+      !invoice.invoiceDate,
+      ValidationCode.MISSING_INVOICE_DATE,
+      'invoiceDate',
+      'Invoice date is required',
+    ],
     [
       invoice.totalAmount === undefined || invoice.totalAmount === null,
       ValidationCode.MISSING_TOTAL,

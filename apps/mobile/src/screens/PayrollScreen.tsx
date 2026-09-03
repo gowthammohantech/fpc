@@ -19,7 +19,11 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Payroll'>;
 export function PayrollScreen({ route }: Props) {
   const { id } = route.params;
 
-  const { data: batch, isLoading, error } = useQuery({
+  const {
+    data: batch,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['payroll-batch', id],
     queryFn: () => api.payroll.get(id),
   });
@@ -42,9 +46,7 @@ export function PayrollScreen({ route }: Props) {
           <StatusBadge status={batch.status} />
         </View>
         <Money minor={batch.totalNetAmount} />
-        <Text style={styles.muted}>
-          {batch.employeeCount.toLocaleString('en-IN')} employees
-        </Text>
+        <Text style={styles.muted}>{batch.employeeCount.toLocaleString('en-IN')} employees</Text>
       </View>
 
       <View style={styles.card}>

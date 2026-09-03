@@ -29,7 +29,8 @@ export function scopedFields() {
 /** Converts a lean document to the API shape (`_id` → `id`, dates → ISO). */
 export function toApi(doc: unknown): Record<string, unknown> | null {
   if (!doc || typeof doc !== 'object') return null;
-  const { _id, passwordHash, ...rest } = doc as Record<string, unknown>;
+  // Destructured only to drop them from the API shape.
+  const { _id, passwordHash: _passwordHash, ...rest } = doc as Record<string, unknown>;
   return { id: String(_id), ...serializeDates(rest) };
 }
 

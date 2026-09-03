@@ -10,7 +10,9 @@ mongoose.set('sanitizeFilter', true);
 export async function connectDatabase(uri = env.MONGO_URI): Promise<typeof mongoose> {
   if (mongoose.connection.readyState === 1) return mongoose;
 
-  mongoose.connection.on('error', (error) => logger.error({ err: error }, 'mongo connection error'));
+  mongoose.connection.on('error', (error) =>
+    logger.error({ err: error }, 'mongo connection error'),
+  );
   mongoose.connection.on('disconnected', () => logger.warn('mongo disconnected'));
 
   await mongoose.connect(uri, {

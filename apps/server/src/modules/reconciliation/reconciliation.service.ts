@@ -47,7 +47,11 @@ export async function suggestMatchesForStatement(
   let suggested = 0;
 
   for (const transaction of transactions) {
-    const candidates = await candidatesFor(transaction.tenantId, transaction.companyId, transaction.amount);
+    const candidates = await candidatesFor(
+      transaction.tenantId,
+      transaction.companyId,
+      transaction.amount,
+    );
     const match = bestMatch(
       {
         amount: transaction.amount,
@@ -120,7 +124,9 @@ export async function suggestMatchesForStatement(
 export async function candidatesForTransaction(
   transactionId: Types.ObjectId,
   limit = 10,
-): Promise<Array<{ obligationId: string; confidence: number; signals: unknown; obligation: unknown }>> {
+): Promise<
+  Array<{ obligationId: string; confidence: number; signals: unknown; obligation: unknown }>
+> {
   const transaction = await BankTransaction.findById(transactionId).lean();
   if (!transaction) throw ApiError.notFound('Bank transaction');
 
@@ -394,7 +400,13 @@ export async function unmatch(
 
 /** Moves an invoice to PAID then RECONCILED and notifies the vendor (§27, §28). */
 async function settleInvoice(
-  obligation: { sourceId: Types.ObjectId; tenantId: Types.ObjectId; companyId: Types.ObjectId; amount: number; reference: string },
+  obligation: {
+    sourceId: Types.ObjectId;
+    tenantId: Types.ObjectId;
+    companyId: Types.ObjectId;
+    amount: number;
+    reference: string;
+  },
   paidAt: Date,
   context: AuditContext,
 ): Promise<void> {
@@ -445,7 +457,10 @@ async function settleInvoice(
   // Vendor payment confirmation — PRD §28.
   const vendor = invoice.vendorId ? await Vendor.findById(invoice.vendorId).lean() : null;
   if (!vendor?.email) {
-    logger.info({ invoiceId: String(invoice._id) }, 'no vendor email; skipping payment confirmation');
+    logger.info(
+      { invoiceId: String(invoice._id) },
+      'no vendor email; skipping payment confirmation',
+    );
     return;
   }
 
@@ -479,7 +494,11 @@ async function settleInvoice(
 
 /** Rolls a payroll batch to PAID once every employee obligation is reconciled. */
 async function settlePayrollEmployee(
-  obligation: { sourceBatchId?: Types.ObjectId; tenantId: Types.ObjectId; companyId: Types.ObjectId },
+  obligation: {
+    sourceBatchId?: Types.ObjectId;
+    tenantId: Types.ObjectId;
+    companyId: Types.ObjectId;
+  },
   context: AuditContext,
 ): Promise<void> {
   if (!obligation.sourceBatchId) return;
@@ -562,7 +581,9 @@ async function candidatesFor(
   const batchById = new Map(batches.map((batch) => [String(batch._id), batch]));
 
   return obligations.map((obligation) => {
-    const batch = obligation.paymentBatchId ? batchById.get(String(obligation.paymentBatchId)) : undefined;
+    const batch = obligation.paymentBatchId
+      ? batchById.get(String(obligation.paymentBatchId))
+      : undefined;
     return {
       id: String(obligation._id),
       amount: obligation.amount,

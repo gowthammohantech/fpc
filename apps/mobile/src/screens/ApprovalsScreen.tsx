@@ -2,7 +2,15 @@ import { FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-na
 import { useQuery } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { api } from '../lib/api';
-import { Empty, ErrorMessage, Loading, Money, StatusBadge, formatDate, humanize } from '../components/ui';
+import {
+  Empty,
+  ErrorMessage,
+  Loading,
+  Money,
+  StatusBadge,
+  formatDate,
+  humanize,
+} from '../components/ui';
 import { styles } from '../lib/theme';
 import type { RootStackParamList } from '../navigation';
 
@@ -32,10 +40,7 @@ export function ApprovalsScreen({ navigation }: Props) {
       keyExtractor={(item) => item.id}
       refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
       ListEmptyComponent={
-        <Empty
-          title="Nothing is waiting on you"
-          hint="Approvals routed to you will appear here."
-        />
+        <Empty title="Nothing is waiting on you" hint="Approvals routed to you will appear here." />
       }
       renderItem={({ item }) => {
         const step = item.steps.find((entry) => entry.order === item.currentStepOrder);

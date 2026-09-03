@@ -26,7 +26,9 @@ export function RequirePermission({
   if (permissions.length && !canAny(...permissions)) {
     return (
       <div className="mx-auto max-w-lg py-16 text-center">
-        <h1 className="text-lg font-semibold text-slate-900">You do not have access to this page</h1>
+        <h1 className="text-lg font-semibold text-slate-900">
+          You do not have access to this page
+        </h1>
         <p className="mt-2 text-sm text-slate-500">
           Your role does not include the permission this screen requires. If you need it, ask a
           company administrator to update your role.

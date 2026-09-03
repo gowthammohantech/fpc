@@ -5,7 +5,7 @@ import { PayrollBatchStatus, ValidationSeverity, schemas } from '@fpc/shared';
 import { asyncHandler } from '../../core/asyncHandler.js';
 import { ApiError } from '../../core/errors.js';
 import { paginate } from '../../core/paginate.js';
-import { query, validateBody, validateQuery } from '../../core/validate.js';
+import { query, validateQuery } from '../../core/validate.js';
 import { requirePrincipal } from '../../middleware/authenticate.js';
 import { requirePermission } from '../../middleware/requirePermission.js';
 import { resolveWriteCompany, scopeFilter } from '../../middleware/tenantScope.js';
@@ -55,13 +55,18 @@ payrollRouter.get(
     if (q.periodYear) filter.periodYear = q.periodYear;
 
     res.json(
-      await paginate(PayrollBatch, filter, {
-        page: q.page,
-        pageSize: q.pageSize,
-        sort: q.sort,
-        order: q.order,
-        defaultSort: { periodYear: -1, periodMonth: -1 },
-      }, toApi),
+      await paginate(
+        PayrollBatch,
+        filter,
+        {
+          page: q.page,
+          pageSize: q.pageSize,
+          sort: q.sort,
+          order: q.order,
+          defaultSort: { periodYear: -1, periodMonth: -1 },
+        },
+        toApi,
+      ),
     );
   }),
 );
@@ -85,10 +90,9 @@ payrollRouter.get(
       comparison: {
         previousTotalNetAmount: batch.previousTotalNetAmount ?? null,
         difference,
-        percentChange:
-          batch.previousTotalNetAmount
-            ? Number(((difference! / batch.previousTotalNetAmount) * 100).toFixed(2))
-            : null,
+        percentChange: batch.previousTotalNetAmount
+          ? Number(((difference! / batch.previousTotalNetAmount) * 100).toFixed(2))
+          : null,
       },
     });
   }),
@@ -112,16 +116,23 @@ payrollRouter.get(
     }
 
     res.json(
-      await paginate(PayrollEmployee, filter, {
-        page: q.page,
-        pageSize: q.pageSize,
-        sort: q.sort,
-        order: q.order,
-        defaultSort: { rowNumber: 1 },
-      }, (doc) => {
-        const api = toApi(doc);
-        return api ? { ...api, bankAccountNumber: maskAccount(String(api.bankAccountNumber ?? '')) } : null;
-      }),
+      await paginate(
+        PayrollEmployee,
+        filter,
+        {
+          page: q.page,
+          pageSize: q.pageSize,
+          sort: q.sort,
+          order: q.order,
+          defaultSort: { rowNumber: 1 },
+        },
+        (doc) => {
+          const api = toApi(doc);
+          return api
+            ? { ...api, bankAccountNumber: maskAccount(String(api.bankAccountNumber ?? '')) }
+            : null;
+        },
+      ),
     );
   }),
 );
@@ -179,14 +190,12 @@ payrollRouter.post(
     if (!req.file) throw ApiError.badRequest('A payroll file is required');
 
     const body = req.body as Record<string, string>;
-    const parsedBody = schemas.createPayrollBatchRequest
-      .omit({ mapping: true })
-      .safeParse({
-        companyId: body.companyId,
-        label: body.label || 'Payroll',
-        periodMonth: body.periodMonth,
-        periodYear: body.periodYear,
-      });
+    const parsedBody = schemas.createPayrollBatchRequest.omit({ mapping: true }).safeParse({
+      companyId: body.companyId,
+      label: body.label || 'Payroll',
+      periodMonth: body.periodMonth,
+      periodYear: body.periodYear,
+    });
     if (!parsedBody.success) {
       throw ApiError.unprocessable('Payroll period is invalid', parsedBody.error.issues);
     }

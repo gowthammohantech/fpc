@@ -210,11 +210,15 @@ const apAgeing: ReportDefinition = {
         ...invoice,
         daysOverdue: Math.max(0, daysOverdue),
         bucket:
-          daysOverdue <= 0 ? 'Not due'
-          : daysOverdue <= 30 ? '1-30'
-          : daysOverdue <= 60 ? '31-60'
-          : daysOverdue <= 90 ? '61-90'
-          : '90+',
+          daysOverdue <= 0
+            ? 'Not due'
+            : daysOverdue <= 30
+              ? '1-30'
+              : daysOverdue <= 60
+                ? '31-60'
+                : daysOverdue <= 90
+                  ? '61-90'
+                  : '90+',
       };
     });
   },
@@ -343,14 +347,18 @@ const reconciliationReport: ReportDefinition = {
     const rows = await Reconciliation.find(query).sort({ confirmedAt: -1 }).limit(limit).lean();
 
     const [obligations, transactions] = await Promise.all([
-      PaymentObligation.find({ _id: { $in: rows.map((row) => row.obligationId).filter(Boolean) } }).lean(),
+      PaymentObligation.find({
+        _id: { $in: rows.map((row) => row.obligationId).filter(Boolean) },
+      }).lean(),
       BankTransaction.find({ _id: { $in: rows.map((row) => row.bankTransactionId) } }).lean(),
     ]);
     const obligationById = new Map(obligations.map((entry) => [String(entry._id), entry]));
     const transactionById = new Map(transactions.map((entry) => [String(entry._id), entry]));
 
     return rows.map((row) => {
-      const obligation = row.obligationId ? obligationById.get(String(row.obligationId)) : undefined;
+      const obligation = row.obligationId
+        ? obligationById.get(String(row.obligationId))
+        : undefined;
       const transaction = transactionById.get(String(row.bankTransactionId));
       return {
         ...row,
