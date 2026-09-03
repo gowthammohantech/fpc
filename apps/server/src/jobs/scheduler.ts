@@ -3,6 +3,7 @@ import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
 import { processPendingExtractions } from './extractionWorker.js';
 import { pollInvoiceMailboxes } from './mailPoller.js';
+import { dispatchPendingEmails, registerNotificationHandlers } from '../modules/notifications/notification.service.js';
 
 const tasks: ScheduledTask[] = [];
 
@@ -14,6 +15,10 @@ const tasks: ScheduledTask[] = [];
  * moving these behind a real queue.
  */
 export function startScheduler(): void {
+  // Handlers are registered even when jobs are disabled, so in-app
+  // notifications still appear; only the email sweep needs a schedule.
+  registerNotificationHandlers();
+
   if (!env.JOBS_ENABLED) {
     logger.info('background jobs disabled (JOBS_ENABLED=false)');
     return;
@@ -21,6 +26,7 @@ export function startScheduler(): void {
 
   schedule('invoice-mail-poll', env.MAIL_POLL_CRON, pollInvoiceMailboxes);
   schedule('invoice-extraction', env.EXTRACTION_POLL_CRON, processPendingExtractions);
+  schedule('notification-email', env.NOTIFICATION_POLL_CRON, () => dispatchPendingEmails());
 
   logger.info({ jobs: tasks.length }, 'background jobs scheduled');
 }

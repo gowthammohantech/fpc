@@ -14,6 +14,9 @@ import { organizationRouter } from './modules/organization/index.js';
 import { payableRouter } from './modules/payables/payable.routes.js';
 import { paymentRouter } from './modules/payments/payment.routes.js';
 import { payrollRouter } from './modules/payroll/payroll.routes.js';
+import { bankingRouter } from './modules/banking/banking.routes.js';
+import { reconciliationRouter } from './modules/reconciliation/reconciliation.routes.js';
+import { notificationRouter } from './modules/notifications/notification.routes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -57,6 +60,9 @@ export function createApp(): Express {
   api.use('/payables', payableRouter);
   api.use('/payments', paymentRouter);
   api.use('/payroll', payrollRouter);
+  api.use('/banking', bankingRouter);
+  api.use('/reconciliation', reconciliationRouter);
+  api.use('/notifications', notificationRouter);
   api.use('/audit', auditRouter);
 
   app.use('/api', api);
