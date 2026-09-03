@@ -229,20 +229,15 @@ export const APPROVAL_RULES = [
   },
   {
     company: 'engineering',
-    name: 'All payroll — Finance Head then CFO',
-    description: 'Every payroll run needs finance and the CFO.',
+    name: 'All payroll — CFO',
+    // The Finance Head is deliberately not in this chain: payroll is walled off
+    // from the rest of finance (PRD §18), so FINANCE_MANAGER holds neither
+    // `payroll:read` nor `payroll:approve` and could never action the step.
+    description: 'Every payroll run needs the CFO.',
     appliesTo: 'PAYROLL_BATCH' as const,
     priority: 10,
     conditions: [],
-    steps: [
-      {
-        order: 1,
-        approverType: 'ROLE' as const,
-        roleKey: RoleKey.FINANCE_MANAGER,
-        label: 'Finance Head',
-      },
-      { order: 2, approverType: 'ROLE' as const, roleKey: RoleKey.CFO },
-    ],
+    steps: [{ order: 1, approverType: 'ROLE' as const, roleKey: RoleKey.CFO, label: 'CFO' }],
   },
 ];
 

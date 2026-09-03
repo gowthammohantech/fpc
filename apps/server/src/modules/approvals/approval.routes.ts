@@ -126,9 +126,7 @@ approvalRouter.post(
     }).lean();
     if (!request) throw ApiError.notFound('Approval request');
 
-    // Invoice and payroll approval rights are separate permissions, because
-    // payroll must not be approvable by ordinary AP approvers (PRD §18).
-    const needed = request.subjectType === 'PAYROLL_BATCH' ? 'payroll:approve' : 'invoice:approve';
+    const needed = approvalService.permissionForSubject(request.subjectType);
     if (!principal.permissions.includes(needed)) {
       throw ApiError.forbidden(`Missing permission: ${needed}`);
     }

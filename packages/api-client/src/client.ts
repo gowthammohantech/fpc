@@ -142,15 +142,20 @@ export class ApiClient {
   }
 
   private async send(path: string, options: RequestOptions): Promise<Response> {
-    const url = new URL(`${this.options.baseUrl}${path}`);
+    // The query string is assembled by hand rather than through `new URL`,
+    // because the web app's base is the relative '/api' that the dev server
+    // proxies, and URL cannot parse a relative address without an origin.
+    const query = new URLSearchParams();
     for (const [key, value] of Object.entries(options.query ?? {})) {
       if (value === undefined || value === null || value === '') continue;
       if (Array.isArray(value)) {
-        for (const entry of value) url.searchParams.append(key, String(entry));
+        for (const entry of value) query.append(key, String(entry));
       } else {
-        url.searchParams.set(key, String(value));
+        query.set(key, String(value));
       }
     }
+    const search = query.toString();
+    const url = `${this.options.baseUrl}${path}${search ? `?${search}` : ''}`;
 
     const headers: Record<string, string> = {};
     if (!options.anonymous) {
@@ -161,7 +166,7 @@ export class ApiClient {
     if (options.body !== undefined && !options.formData)
       headers['content-type'] = 'application/json';
 
-    return fetch(url.toString(), {
+    return fetch(url, {
       method: options.method ?? 'GET',
       headers,
       body:

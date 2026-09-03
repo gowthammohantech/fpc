@@ -3,9 +3,12 @@ import { env } from './env.js';
 import { logger } from './logger.js';
 
 mongoose.set('strictQuery', true);
-// Surface a query that forgot its tenant filter as an error in development
-// rather than silently returning another tenant's documents.
-mongoose.set('sanitizeFilter', true);
+// NOTE: `sanitizeFilter` is deliberately NOT enabled globally. It rewrites
+// every `{ field: { $op: ... } }` into `{ field: { $eq: { $op: ... } } }`,
+// which breaks the operator filters this codebase writes by hand ($in, $gte,
+// $size, $elemMatch, ...). It is meant for filter values that come straight
+// from untrusted input; ours are parsed by zod schemas before they reach a
+// query, and tenant scoping is enforced by `scopeFilter` in tenantScope.ts.
 
 export async function connectDatabase(uri = env.MONGO_URI): Promise<typeof mongoose> {
   if (mongoose.connection.readyState === 1) return mongoose;

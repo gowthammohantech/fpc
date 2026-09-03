@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { permissionsForRoles, schemas, type RoleKey } from '@fpc/shared';
+import { isTest } from '../../config/env.js';
 import { asyncHandler } from '../../core/asyncHandler.js';
 import { validateBody } from '../../core/validate.js';
 import { authenticate, requirePrincipal } from '../../middleware/authenticate.js';
@@ -16,6 +17,9 @@ const loginLimiter = rateLimit({
   message: {
     error: { code: 'RATE_LIMITED', message: 'Too many login attempts. Try again later.' },
   },
+  // The integration suites sign in as every seeded role many times over from a
+  // single address, which would trip the limiter and mask real assertions.
+  skip: () => isTest,
 });
 
 export const authRouter: Router = Router();

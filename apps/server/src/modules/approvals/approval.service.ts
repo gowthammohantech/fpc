@@ -4,7 +4,9 @@ import {
   ApprovalSubjectType,
   NotificationType,
   formatINR,
+  permissionsForRoles,
   type ApprovalSubjectType as SubjectType,
+  type Permission,
   type RoleKey,
 } from '@fpc/shared';
 import { logger } from '../../config/logger.js';
@@ -190,10 +192,17 @@ async function materializeSteps(
       label ||= humanizeRole(definition.roleKey);
     }
 
+    const named = candidateUserIds.length;
+    candidateUserIds = await withApprovalPermission(candidateUserIds, input.subjectType);
+
     if (!candidateUserIds.length) {
+      const step = `Approval rule step ${definition.order} (${label || definition.approverType})`;
       throw ApiError.unprocessable(
-        `Approval rule step ${definition.order} (${label || definition.approverType}) has no eligible approver in this company. ` +
-          'Assign the role to a user, or amend the rule, before submitting.',
+        named
+          ? `${step} names approvers who do not hold ${permissionForSubject(input.subjectType)}, ` +
+              'so nobody could ever action it. Amend the rule to name a role that may approve this.'
+          : `${step} has no eligible approver in this company. ` +
+              'Assign the role to a user, or amend the rule, before submitting.',
       );
     }
 
@@ -228,6 +237,37 @@ async function usersWithRole(
     .select('_id')
     .lean();
   return users.map((user) => user._id);
+}
+
+/**
+ * The permission the act endpoint demands for a subject. Invoice and payroll
+ * approval are separate rights because payroll must not be approvable by
+ * ordinary AP approvers (PRD §18).
+ */
+export function permissionForSubject(subjectType: SubjectType): Permission {
+  return subjectType === ApprovalSubjectType.PAYROLL_BATCH ? 'payroll:approve' : 'invoice:approve';
+}
+
+/**
+ * Drops candidates who could never act on the step. A role can hold approval
+ * *duties* in a rule without holding the *permission* to approve that subject
+ * — naming the Finance Head on a payroll chain, say — and materializing such a
+ * step would strand the batch at that level forever.
+ */
+async function withApprovalPermission(
+  candidateUserIds: Types.ObjectId[],
+  subjectType: SubjectType,
+): Promise<Types.ObjectId[]> {
+  if (!candidateUserIds.length) return candidateUserIds;
+
+  const needed = permissionForSubject(subjectType);
+  const users = await User.find({ _id: { $in: candidateUserIds } })
+    .select('_id roleKeys')
+    .lean();
+
+  return users
+    .filter((user) => permissionsForRoles(user.roleKeys).includes(needed))
+    .map((user) => user._id);
 }
 
 export interface ActOnApprovalInput {

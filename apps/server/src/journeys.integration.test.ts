@@ -9,7 +9,10 @@ import { InvoiceStatus, toMinor } from '@fpc/shared';
 import { createApp } from './app.js';
 import { ConsoleMailer } from './integrations/email/console.driver.js';
 import { setMailer } from './integrations/email/index.js';
-import { dispatchPendingEmails } from './modules/notifications/notification.service.js';
+import {
+  dispatchPendingEmails,
+  registerNotificationHandlers,
+} from './modules/notifications/notification.service.js';
 import { DEMO_PASSWORD } from './seed/data.js';
 import { writePayrollWorkbook, writeStatementWorkbook } from './seed/fixtures.js';
 import { seed } from './seed/seed.js';
@@ -22,19 +25,23 @@ import { databaseSkipReason, startTestDatabase, stopTestDatabase } from './test/
  * Requires a MongoDB — see `src/test/db.ts`. Skips with a reason otherwise.
  */
 let app: Express;
-let available = false;
 let directory: string;
 let mailer: ConsoleMailer;
 let companyId: string;
 
+// Connected at module scope, not in `beforeAll`: vitest collects the suites —
+// and so evaluates `RUN()` — before any hook runs.
+const available = (await startTestDatabase()) !== null;
+
 beforeAll(async () => {
-  const uri = await startTestDatabase();
-  if (!uri) return;
-  available = true;
+  if (!available) return;
 
   directory = await mkdtemp(join(tmpdir(), 'fpc-journey-'));
   mailer = new ConsoleMailer();
   setMailer(mailer);
+  // The running server subscribes through the job scheduler, which the test
+  // does not start; without this no domain event ever becomes a notification.
+  registerNotificationHandlers();
 
   app = createApp();
   const result = await seed({ reset: true });
@@ -163,9 +170,12 @@ RUN()('vendor invoice journey (PRD §37)', () => {
     expect(exported.status, JSON.stringify(exported.body)).toBe(200);
     expect(exported.body.file.fileName).toContain(batch.body.reference);
 
+    // `responseType('blob')` is what makes superagent buffer the workbook into
+    // `body`; without it a binary content type leaves `body` an empty object.
     const bankFile = await request(app)
       .get(`/api/payments/batches/${batchId}/file`)
-      .set('authorization', `Bearer ${financeHead}`);
+      .set('authorization', `Bearer ${financeHead}`)
+      .responseType('blob');
     expect(bankFile.status).toBe(200);
     expect(bankFile.body.length).toBeGreaterThan(1000);
 
@@ -282,7 +292,7 @@ RUN()('payroll journey (PRD §38)', () => {
       .set('authorization', `Bearer ${ravi}`);
     expect(forbidden.status).toBe(403);
 
-    // ── Submit and approve: Finance Head then CFO ─────────
+    // ── Submit and approve: the CFO, and only the CFO ─────
     const submitted = await request(app)
       .post(`/api/payroll/${batchId}/submit`)
       .set('authorization', `Bearer ${payrollUser}`);
@@ -291,13 +301,18 @@ RUN()('payroll journey (PRD §38)', () => {
     const approvalId = submitted.body.approvalRequestId as string;
     expect(approvalId).toBeTruthy();
 
-    for (const approver of [financeHead, cfo]) {
-      const acted = await request(app)
-        .post(`/api/approvals/${approvalId}/act`)
-        .set('authorization', `Bearer ${approver}`)
-        .send({ action: 'APPROVE' });
-      expect(acted.status, JSON.stringify(acted.body)).toBe(200);
-    }
+    // The Finance Head has no payroll rights at all (PRD §18).
+    const financeHeadAttempt = await request(app)
+      .post(`/api/approvals/${approvalId}/act`)
+      .set('authorization', `Bearer ${financeHead}`)
+      .send({ action: 'APPROVE' });
+    expect(financeHeadAttempt.status).toBe(403);
+
+    const acted = await request(app)
+      .post(`/api/approvals/${approvalId}/act`)
+      .set('authorization', `Bearer ${cfo}`)
+      .send({ action: 'APPROVE' });
+    expect(acted.status, JSON.stringify(acted.body)).toBe(200);
 
     // ── Approval fans out into 850 payment obligations ────
     const batch = await request(app)

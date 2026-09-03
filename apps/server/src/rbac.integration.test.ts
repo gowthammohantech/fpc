@@ -16,12 +16,15 @@ import { databaseSkipReason, startTestDatabase, stopTestDatabase } from './test/
  * environmental cause.
  */
 let app: Express;
-let available = false;
+
+// Vitest decides which suites to collect before any `beforeAll` runs, so the
+// database has to be reachable at module scope. Connecting inside `beforeAll`
+// would leave `available` false at collection time and skip the whole suite
+// even when a database is there.
+const available = (await startTestDatabase()) !== null;
 
 beforeAll(async () => {
-  const uri = await startTestDatabase();
-  if (!uri) return;
-  available = true;
+  if (!available) return;
   app = createApp();
   await seed({ reset: true });
 }, 120_000);
