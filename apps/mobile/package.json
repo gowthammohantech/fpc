@@ -9,7 +9,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "echo \"no tests\" && exit 0",
+    "test": "echo \"no tests in this package\"",
     "lint": "eslint src App.tsx index.ts"
   },
   "dependencies": {
