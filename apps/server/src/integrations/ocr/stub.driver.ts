@@ -1,11 +1,9 @@
 import { readFile } from 'node:fs/promises';
-import { createRequire } from 'node:module';
 import type { ExtractedField, ExtractionResult } from '@fpc/shared';
 import { normalizeName } from '@fpc/shared';
 import { logger } from '../../config/logger.js';
+import { extractPdfText } from './pdfText.js';
 import type { DocumentExtractor, ExtractionInput } from './types.js';
-
-const require = createRequire(import.meta.url);
 
 /**
  * Credential-free extractor used by default in development and demos.
@@ -31,7 +29,7 @@ export class StubExtractor implements DocumentExtractor {
     const sidecar = await this.readSidecar(input.fileName);
     if (sidecar) return sidecar;
 
-    const text = await this.textOf(input);
+    const text = this.textOf(input);
     const fields = text ? extractFromText(text, input.knownVendorNames ?? []) : {};
 
     return {
@@ -44,15 +42,12 @@ export class StubExtractor implements DocumentExtractor {
     };
   }
 
-  private async textOf(input: ExtractionInput): Promise<string | null> {
+  private textOf(input: ExtractionInput): string | null {
     if (input.contentType === 'text/plain') return input.content.toString('utf8');
     if (input.contentType !== 'application/pdf') return null;
     try {
-      // pdf-parse is CommonJS and reads a sample file at import time under ESM,
-      // so it is required lazily and only when a PDF actually arrives.
-      const pdfParse = require('pdf-parse') as (buffer: Buffer) => Promise<{ text: string }>;
-      const parsed = await pdfParse(input.content);
-      return parsed.text;
+      const text = extractPdfText(input.content);
+      return text.trim() ? text : null;
     } catch (error) {
       logger.warn({ err: error, file: input.fileName }, 'pdf text extraction failed');
       return null;
@@ -100,7 +95,7 @@ const PATTERNS: Array<{ field: string; pattern: RegExp; confidence: number }> = 
   },
   {
     field: 'gstin',
-    pattern: /\b(\d{2}[A-Z]{5}\d{4}[A-Z]\d[A-Z\d]Z[A-Z\d])\b/,
+    pattern: /\b(\d{2}[A-Z]{5}\d{4}[A-Z]\dZ[A-Z\d])\b/,
     confidence: 0.95,
   },
   { field: 'ifsc', pattern: /\b([A-Z]{4}0[A-Z0-9]{6})\b/, confidence: 0.9 },

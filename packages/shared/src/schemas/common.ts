@@ -26,7 +26,7 @@ export const gstin = z
   .string()
   .trim()
   .toUpperCase()
-  .regex(/^\d{2}[A-Z]{5}\d{4}[A-Z]\d[A-Z\d]Z[A-Z\d]$/, 'Invalid GSTIN');
+  .regex(/^\d{2}[A-Z]{5}\d{4}[A-Z]\dZ[A-Z\d]$/, 'Invalid GSTIN');
 
 export const bankAccountNumber = z
   .string()
