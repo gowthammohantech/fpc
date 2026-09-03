@@ -1,10 +1,5 @@
 import { Types } from 'mongoose';
-import {
-  InvoiceStatus,
-  ObligationType,
-  fromMinor,
-  type Permission,
-} from '@fpc/shared';
+import { InvoiceStatus, fromMinor, type Permission } from '@fpc/shared';
 import { ApprovalRequest } from '../../models/approvalRequest.model.js';
 import { AuditEvent } from '../../models/auditEvent.model.js';
 import { BankTransaction, Reconciliation } from '../../models/banking.model.js';
@@ -451,5 +446,3 @@ export function formatCell(value: unknown, format: ColumnFormat | undefined): un
       return typeof value === 'object' ? String(value) : value;
   }
 }
-
-export const OBLIGATION_TYPES = ObligationType;

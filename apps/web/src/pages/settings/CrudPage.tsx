@@ -29,6 +29,12 @@ export interface CrudColumn<T> {
   align?: 'left' | 'right';
 }
 
+/** An extra per-row action, beyond edit — e.g. resending an invitation. */
+export interface CrudRowAction {
+  label: string;
+  run(): Promise<unknown>;
+}
+
 /**
  * Shared scaffolding for the administration screens.
  *
@@ -50,6 +56,7 @@ export function CrudPage<T extends { id: string }>({
   remove,
   defaults,
   toFormValues,
+  rowActions,
 }: {
   title: string;
   subtitle?: string;
@@ -63,6 +70,7 @@ export function CrudPage<T extends { id: string }>({
   remove?(id: string): Promise<unknown>;
   defaults?: Record<string, unknown>;
   toFormValues?(row: T): Record<string, unknown>;
+  rowActions?(row: T): CrudRowAction[];
 }) {
   const { companyId, can } = useAuth();
   const queryClient = useQueryClient();
@@ -137,11 +145,22 @@ export function CrudPage<T extends { id: string }>({
                       </td>
                     ))}
                     <td className="td text-right">
-                      {update && permissions.update && can(permissions.update) ? (
-                        <button className="text-sm text-brand-600" onClick={() => setEditing(row)}>
-                          Edit
-                        </button>
-                      ) : null}
+                      <span className="flex justify-end gap-3">
+                        {(rowActions?.(row) ?? []).map((action) => (
+                          <button
+                            key={action.label}
+                            className="text-sm text-brand-600"
+                            onClick={() => void action.run().then(invalidate)}
+                          >
+                            {action.label}
+                          </button>
+                        ))}
+                        {update && permissions.update && can(permissions.update) ? (
+                          <button className="text-sm text-brand-600" onClick={() => setEditing(row)}>
+                            Edit
+                          </button>
+                        ) : null}
+                      </span>
                     </td>
                   </tr>
                 ))}

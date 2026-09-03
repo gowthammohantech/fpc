@@ -45,7 +45,20 @@ export async function handleDomainEvent(event: DomainEvent): Promise<void> {
     entityId: new Types.ObjectId(event.entityId),
   };
 
-  const recipients = [...new Set(event.recipientUserIds ?? [])];
+  const recipients = [
+    ...new Set([...(event.recipientUserIds ?? []), ...(await resolveRoleRecipients(event))]),
+  ];
+
+  // A domain event with no destination is a bug — it used to be published and
+  // then silently dropped by the guards below.
+  if (!recipients.length && !event.recipientEmail) {
+    logger.warn(
+      { type: event.type, entityId: event.entityId },
+      'domain event resolved to no recipients; nothing will be notified',
+    );
+    return;
+  }
+
   if (recipients.length) {
     await Notification.insertMany(
       recipients.map((userId) => ({
@@ -87,6 +100,23 @@ export async function handleDomainEvent(event: DomainEvent): Promise<void> {
       status: 'PENDING',
     });
   }
+}
+
+/** Expands `recipientRoleKeys` into the active users holding those roles. */
+async function resolveRoleRecipients(event: DomainEvent): Promise<string[]> {
+  if (!event.recipientRoleKeys?.length || !event.companyId) return [];
+
+  const users = await User.find({
+    tenantId: new Types.ObjectId(event.tenantId),
+    status: 'ACTIVE',
+    roleKeys: { $in: event.recipientRoleKeys },
+    // A user scoped to no company is tenant-wide and eligible everywhere.
+    $or: [{ companyIds: new Types.ObjectId(event.companyId) }, { companyIds: { $size: 0 } }],
+  })
+    .select('_id')
+    .lean();
+
+  return users.map((user) => String(user._id));
 }
 
 const MAX_ATTEMPTS = 3;

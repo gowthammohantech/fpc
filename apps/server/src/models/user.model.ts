@@ -16,6 +16,12 @@ export interface UserDoc {
   lastLoginAt?: Date;
   /** SHA-256 of issued refresh tokens; rotated on every refresh. */
   refreshTokenHashes: Array<{ hash: string; expiresAt: Date; createdAt: Date }>;
+  /**
+   * Single-use invite token, hashed. An INVITED account cannot sign in, so
+   * this is the only way it becomes usable; cleared on acceptance.
+   */
+  inviteTokenHash?: string;
+  inviteTokenExpiresAt?: Date;
 }
 
 const schema = new Schema<UserDoc>(
@@ -42,6 +48,8 @@ const schema = new Schema<UserDoc>(
       default: [],
       select: false,
     },
+    inviteTokenHash: { type: String, select: false },
+    inviteTokenExpiresAt: { type: Date, select: false },
   },
   baseSchemaOptions,
 );

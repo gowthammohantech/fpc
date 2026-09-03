@@ -2,6 +2,8 @@ import { Types } from 'mongoose';
 import {
   InvoiceStatus,
   NotificationType,
+  ROLE_KEYS,
+  ROLE_PERMISSIONS,
   ObligationType,
   PayrollBatchStatus,
   PaymentStatus,
@@ -9,15 +11,17 @@ import {
   formatINR,
   invoiceMachine,
   payrollBatchMachine,
+  type RoleKey,
 } from '@fpc/shared';
 import { logger } from '../../config/logger.js';
 import { ApiError } from '../../core/errors.js';
 import { eventBus } from '../../core/eventBus.js';
-import { BankTransaction, Reconciliation } from '../../models/banking.model.js';
+import { BankStatement, BankTransaction, Reconciliation } from '../../models/banking.model.js';
 import { Invoice } from '../../models/invoice.model.js';
 import { PaymentBatch, PaymentBatchItem } from '../../models/paymentBatch.model.js';
 import { PaymentObligation } from '../../models/paymentObligation.model.js';
-import { PayrollBatch, PayrollEmployee } from '../../models/payroll.model.js';
+import { PayrollBatch } from '../../models/payroll.model.js';
+import { User } from '../../models/user.model.js';
 import { Vendor } from '../../models/vendor.model.js';
 import { audit, type AuditContext } from '../audit/audit.service.js';
 import { refreshReconciliationTotals } from '../payments/paymentBatch.service.js';
@@ -93,12 +97,16 @@ export async function suggestMatchesForStatement(
   );
 
   if (unmatched > 0 && transactions[0]) {
+    const first = transactions[0];
     eventBus.publish({
       type: NotificationType.RECONCILIATION_UNMATCHED,
-      tenantId: String(transactions[0].tenantId),
-      companyId: String(transactions[0].companyId),
+      tenantId: String(first.tenantId),
+      companyId: String(first.companyId),
       entityType: 'BANK_STATEMENT',
       entityId: String(statementId),
+      // Without recipients this event is published and then dropped, which is
+      // how it silently did nothing before.
+      recipientUserIds: await reconcilerUserIds(first.tenantId, first.companyId, statementId),
       title: `${unmatched} bank ${unmatched === 1 ? 'transaction needs' : 'transactions need'} manual reconciliation`,
       body: `The latest statement import produced ${suggested} suggested matches and ${unmatched} unmatched debits.`,
       link: '/reconciliation',
@@ -419,6 +427,21 @@ async function settleInvoice(
     context,
   );
 
+  // Tell the finance team the invoice is settled. Published before the vendor
+  // email below, because that branch returns early when a vendor has no
+  // address on file and would otherwise swallow this too.
+  eventBus.publish({
+    type: NotificationType.RECONCILIATION_COMPLETED,
+    tenantId: String(invoice.tenantId),
+    companyId: String(invoice.companyId),
+    entityType: 'INVOICE',
+    entityId: String(invoice._id),
+    recipientUserIds: invoice.submittedBy ? [String(invoice.submittedBy)] : [],
+    title: `Invoice ${invoice.invoiceNumber ?? ''} reconciled`,
+    body: `${invoice.vendorName ?? 'An invoice'} for ${formatINR(invoice.totalAmount ?? 0)} was matched to the bank statement and is now paid.`,
+    link: `/invoices/${String(invoice._id)}`,
+  });
+
   // Vendor payment confirmation — PRD §28.
   const vendor = invoice.vendorId ? await Vendor.findById(invoice.vendorId).lean() : null;
   if (!vendor?.email) {
@@ -572,9 +595,35 @@ function toCandidate(obligation: {
   };
 }
 
-/** Used by the payroll employee lookup on the reconciliation screen. */
-export async function payrollEmployeeFor(obligationId: Types.ObjectId) {
-  const obligation = await PaymentObligation.findById(obligationId).lean();
-  if (!obligation || obligation.type !== ObligationType.PAYROLL) return null;
-  return PayrollEmployee.findById(obligation.sourceId).lean();
+/**
+ * Who needs to know about unmatched bank lines: whoever uploaded the
+ * statement, plus everyone who can actually act on it.
+ */
+async function reconcilerUserIds(
+  tenantId: Types.ObjectId,
+  companyId: Types.ObjectId,
+  statementId: Types.ObjectId,
+): Promise<string[]> {
+  const statement = await BankStatement.findById(statementId).select('uploadedBy').lean();
+
+  const reconcilers = await User.find({
+    tenantId,
+    status: 'ACTIVE',
+    roleKeys: { $in: RECONCILING_ROLES },
+    $or: [{ companyIds: companyId }, { companyIds: { $size: 0 } }],
+  })
+    .select('_id')
+    .lean();
+
+  return [
+    ...new Set([
+      ...(statement?.uploadedBy ? [String(statement.uploadedBy)] : []),
+      ...reconcilers.map((user) => String(user._id)),
+    ]),
+  ];
 }
+
+/** Roles whose permission set includes reconciliation:confirm. */
+const RECONCILING_ROLES = ROLE_KEYS.filter((role) =>
+  ROLE_PERMISSIONS[role as RoleKey].includes('reconciliation:confirm'),
+);

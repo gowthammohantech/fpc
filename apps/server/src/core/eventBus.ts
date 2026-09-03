@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events';
-import type { EntityType, Id, NotificationType } from '@fpc/shared';
+import type { EntityType, Id, NotificationType, RoleKey } from '@fpc/shared';
 import { logger } from '../config/logger.js';
 
 /**
@@ -18,6 +18,12 @@ export interface DomainEvent {
   entityId: Id;
   /** Users who should be notified in-app. */
   recipientUserIds?: Id[];
+  /**
+   * Roles whose active members should be notified, resolved to users by the
+   * notification handler. Lets a publisher say "whoever reviews invoices"
+   * without querying for them itself.
+   */
+  recipientRoleKeys?: RoleKey[];
   /** External address, used for vendor payment confirmations. */
   recipientEmail?: string;
   title: string;

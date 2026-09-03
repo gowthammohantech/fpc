@@ -124,6 +124,14 @@ export class ApiClient {
     return result;
   }
 
+  /**
+   * Stores tokens obtained from an endpoint other than login — currently
+   * invitation acceptance, which returns a full session.
+   */
+  async adoptSession(tokens: AuthTokens): Promise<void> {
+    await this.options.tokens.setTokens(tokens);
+  }
+
   async logout(): Promise<void> {
     const refreshToken = await this.options.tokens.getRefreshToken();
     try {

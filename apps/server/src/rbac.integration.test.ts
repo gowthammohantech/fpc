@@ -78,6 +78,95 @@ RUN()('authentication', () => {
 });
 
 /**
+ * Invitation flow.
+ *
+ * This shipped broken: an admin-created account was given status INVITED and a
+ * temporary password, but login refuses any status other than ACTIVE and no
+ * route existed to change it — the user was permanently locked out.
+ */
+RUN()('invitations', () => {
+  const email = 'newcomer@nova.example.com';
+  let inviteUrl: string;
+
+  it('creates an invited account that cannot yet sign in', async () => {
+    const admin = await signIn('companyadmin@nova.example.com');
+
+    const created = await request(app)
+      .post('/api/settings/users')
+      .set('authorization', `Bearer ${admin}`)
+      .send({ name: 'Newcomer', email, roleKeys: [RoleKey.FINANCE_EXECUTIVE], companyIds: [] });
+
+    expect(created.status, JSON.stringify(created.body)).toBe(201);
+    expect(created.body.status).toBe('INVITED');
+    expect(created.body.inviteToken).toBeTruthy();
+    inviteUrl = created.body.inviteUrl as string;
+
+    // Confirms the account really is unusable until the invite is redeemed.
+    const attempt = await request(app)
+      .post('/api/auth/login')
+      .send({ email, password: 'AnythingAtAll1' });
+    expect(attempt.status).not.toBe(200);
+  });
+
+  it('activates the account when the invitation is accepted, and signs them in', async () => {
+    const token = new URL(inviteUrl, 'http://localhost').searchParams.get('token')!;
+
+    const accepted = await request(app)
+      .post('/api/auth/accept-invite')
+      .send({ token, password: 'BrandNewPass1' });
+
+    expect(accepted.status, JSON.stringify(accepted.body)).toBe(200);
+    expect(accepted.body.accessToken).toBeTruthy();
+    expect(accepted.body.user.email).toBe(email);
+
+    // The password now works through the normal login route.
+    const login = await request(app)
+      .post('/api/auth/login')
+      .send({ email, password: 'BrandNewPass1' });
+    expect(login.status).toBe(200);
+  });
+
+  it('refuses to let the same invitation be redeemed twice', async () => {
+    const token = new URL(inviteUrl, 'http://localhost').searchParams.get('token')!;
+    const replay = await request(app)
+      .post('/api/auth/accept-invite')
+      .send({ token, password: 'AnotherPass1' });
+    expect(replay.status).toBe(400);
+  });
+
+  it('rejects an unknown token', async () => {
+    const response = await request(app)
+      .post('/api/auth/accept-invite')
+      .send({ token: 'x'.repeat(40), password: 'BrandNewPass1' });
+    expect(response.status).toBe(400);
+  });
+
+  it('activates the account when an admin sets a password directly', async () => {
+    const admin = await signIn('companyadmin@nova.example.com');
+    const second = 'seconduser@nova.example.com';
+
+    const created = await request(app)
+      .post('/api/settings/users')
+      .set('authorization', `Bearer ${admin}`)
+      .send({ name: 'Second', email: second, roleKeys: [RoleKey.AUDITOR], companyIds: [] });
+    expect(created.status).toBe(201);
+
+    // Setting a password has to unlock the account; otherwise the admin hands
+    // over credentials that login still refuses.
+    const patched = await request(app)
+      .patch(`/api/settings/users/${created.body.id}`)
+      .set('authorization', `Bearer ${admin}`)
+      .send({ password: 'AdminChosen1' });
+    expect(patched.status).toBe(200);
+
+    const login = await request(app)
+      .post('/api/auth/login')
+      .send({ email: second, password: 'AdminChosen1' });
+    expect(login.status, JSON.stringify(login.body)).toBe(200);
+  });
+});
+
+/**
  * The role/route matrix. Each row is a real PRD requirement, not a
  * mechanical enumeration.
  */

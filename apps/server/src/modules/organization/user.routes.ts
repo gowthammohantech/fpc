@@ -11,7 +11,7 @@ import { requirePermission } from '../../middleware/requirePermission.js';
 import { User } from '../../models/user.model.js';
 import { toApi } from '../../models/base.js';
 import { audit, auditContext } from '../audit/audit.service.js';
-import { hashPassword } from '../auth/auth.service.js';
+import { hashPassword, issueInviteToken } from '../auth/auth.service.js';
 import { escapeRegex } from './crudFactory.js';
 
 export const userRouter: Router = Router();
@@ -61,8 +61,8 @@ userRouter.post(
       throw ApiError.conflict('A user with this email already exists');
     }
 
-    // A generated password means the account starts as INVITED and must be
-    // reset before it is usable; an explicit one activates it immediately.
+    // Without an explicit password the account starts INVITED and is unusable
+    // until the invitation is redeemed, so an invite token is issued below.
     const generated = !payload.password;
     const password = payload.password ?? randomBytes(18).toString('base64url');
 
@@ -90,9 +90,13 @@ userRouter.post(
       auditContext(req),
     );
 
+    // The token is the only way an INVITED account becomes usable, and it is
+    // returned exactly once — it is stored hashed.
+    const inviteToken = generated ? await issueInviteToken(user._id) : undefined;
+
     res.status(201).json({
       ...toApi(user.toObject()),
-      ...(generated ? { temporaryPassword: password } : {}),
+      ...(inviteToken ? { inviteToken, inviteUrl: `/accept-invite?token=${inviteToken}` } : {}),
     });
   }),
 );
@@ -113,6 +117,11 @@ userRouter.patch(
     if (payload.password) {
       payload.passwordHash = await hashPassword(String(payload.password));
       delete payload.password;
+      // Giving someone a password has to make the account usable; otherwise
+      // an INVITED user is handed credentials that login still refuses.
+      if (before.status === 'INVITED' && !payload.status) payload.status = 'ACTIVE';
+      payload.inviteTokenHash = undefined;
+      payload.inviteTokenExpiresAt = undefined;
     }
     for (const key of ['companyIds', 'locationIds', 'departmentIds'] as const) {
       if (Array.isArray(payload[key])) {
@@ -139,6 +148,41 @@ userRouter.patch(
     );
 
     res.json(toApi(updated));
+  }),
+);
+
+/**
+ * Reissues an invitation, for the common case of one that expired or was
+ * lost before it was redeemed.
+ */
+userRouter.post(
+  '/:id/reinvite',
+  requirePermission('user:update'),
+  asyncHandler(async (req, res) => {
+    const principal = requirePrincipal(req);
+    const user = await User.findOne({
+      _id: new Types.ObjectId(req.params.id),
+      tenantId: principal.tenantId,
+    }).lean();
+    if (!user) throw ApiError.notFound('User');
+    if (user.status === 'SUSPENDED') {
+      throw ApiError.conflict('Reactivate this account before inviting them again');
+    }
+
+    const inviteToken = await issueInviteToken(user._id);
+
+    await audit.record(
+      {
+        event: 'user.reinvited',
+        entityType: 'USER',
+        entityId: user._id,
+        entityLabel: user.email,
+        tenantId: principal.tenantId,
+      },
+      auditContext(req),
+    );
+
+    res.json({ inviteToken, inviteUrl: `/accept-invite?token=${inviteToken}` });
   }),
 );
 

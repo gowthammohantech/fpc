@@ -1,9 +1,10 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ROLE_KEYS, ROLE_LABELS, type RoleKey } from '@fpc/shared';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDate, humanize } from '@/lib/format';
-import { Card, Money, PageHeader, Spinner, StatusBadge } from '@/components/ui';
+import { Card, Modal, Money, PageHeader, Spinner, StatusBadge } from '@/components/ui';
 import { CrudPage } from './CrudPage';
 
 export function CompaniesPage() {
@@ -133,6 +134,7 @@ export function VendorsPage() {
 
 export function UsersPage() {
   const { companyId } = useAuth();
+  const [invite, setInvite] = useState<{ email: string; url: string } | null>(null);
 
   const { data: companies } = useQuery({
     queryKey: ['companies'],
@@ -140,6 +142,8 @@ export function UsersPage() {
   });
 
   return (
+    <>
+      {invite ? <InviteLinkModal invite={invite} onClose={() => setInvite(null)} /> : null}
     <CrudPage
       title="Users"
       subtitle="Who can sign in, and what each of them may do"
@@ -151,9 +155,30 @@ export function UsersPage() {
         delete: 'user:delete',
       }}
       list={(query) => api.settings.users(query)}
-      create={(body) => api.settings.createUser(body)}
+      create={async (body) => {
+        const created = await api.settings.createUser(body);
+        // An account created without a password cannot sign in until this
+        // link is used, so it is surfaced immediately rather than lost.
+        if (created.inviteUrl) {
+          setInvite({ email: created.email, url: created.inviteUrl });
+        }
+        return created;
+      }}
       update={(id, body) => api.settings.updateUser(id, body)}
       remove={(id) => api.settings.deleteUser(id)}
+      rowActions={(row) =>
+        row.status === 'INVITED'
+          ? [
+              {
+                label: 'Resend invite',
+                run: async () => {
+                  const result = await api.settings.reinviteUser(row.id);
+                  setInvite({ email: row.email, url: result.inviteUrl });
+                },
+              },
+            ]
+          : []
+      }
       columns={[
         { header: 'Name', render: (row) => <span className="font-medium">{row.name}</span> },
         { header: 'Email', render: (row) => row.email },
@@ -171,7 +196,17 @@ export function UsersPage() {
                   .join(', '),
         },
         { header: 'Last login', render: (row) => formatDate(row.lastLoginAt) },
-        { header: 'Status', render: (row) => <StatusBadge status={row.status} /> },
+        {
+          header: 'Status',
+          render: (row) => (
+            <span className="flex items-center gap-2">
+              <StatusBadge status={row.status} />
+              {row.status === 'INVITED' ? (
+                <span className="text-xs text-slate-500">has not signed in yet</span>
+              ) : null}
+            </span>
+          ),
+        },
       ]}
       fields={[
         { name: 'name', label: 'Full name', required: true },
@@ -199,6 +234,17 @@ export function UsersPage() {
           })),
           help: 'Leave empty for access to every company in the tenant.',
         },
+        {
+          name: 'status',
+          label: 'Status',
+          type: 'select',
+          options: [
+            { value: 'ACTIVE', label: 'Active' },
+            { value: 'INVITED', label: 'Invited — cannot sign in yet' },
+            { value: 'SUSPENDED', label: 'Suspended' },
+          ],
+          help: 'Only an active account can sign in.',
+        },
       ]}
       defaults={{ roleKeys: [], companyIds: companyId ? [companyId] : [] }}
       toFormValues={(row) => ({
@@ -206,8 +252,52 @@ export function UsersPage() {
         email: row.email,
         roleKeys: row.roleKeys,
         companyIds: row.companyIds,
+        status: row.status,
       })}
     />
+    </>
+  );
+}
+
+/**
+ * Shows an invitation link once, right after it is issued.
+ *
+ * The token is never retrievable again — only its hash is stored — so this is
+ * the single opportunity to hand it over.
+ */
+function InviteLinkModal({
+  invite,
+  onClose,
+}: {
+  invite: { email: string; url: string };
+  onClose(): void;
+}) {
+  const link = `${window.location.origin}${invite.url}`;
+  const [copied, setCopied] = useState(false);
+
+  return (
+    <Modal
+      title="Invitation created"
+      onClose={onClose}
+      footer={<button className="btn-primary" onClick={onClose}>Done</button>}
+    >
+      <p className="text-sm text-slate-600">
+        Send this link to <span className="font-medium">{invite.email}</span>. They will set their
+        own password and the account becomes active. It expires in seven days.
+      </p>
+      <p className="mt-3 break-all rounded-md bg-slate-50 p-3 font-mono text-xs">{link}</p>
+      <button
+        className="btn-secondary mt-3"
+        onClick={() => {
+          void navigator.clipboard?.writeText(link).then(() => setCopied(true));
+        }}
+      >
+        {copied ? 'Copied' : 'Copy link'}
+      </button>
+      <p className="mt-3 text-xs text-slate-500">
+        This link is shown only once. If it is lost, use “Resend invite” on the user row.
+      </p>
+    </Modal>
   );
 }
 

@@ -115,11 +115,3 @@ function toList(value: unknown): string[] {
   if (typeof value === 'string') return value.split(',').map((entry) => entry.trim());
   return [String(value)];
 }
-
-/** Human-readable summary of a rule's conditions, for the settings screen. */
-export function describeConditions(conditions: RuleCondition[]): string {
-  if (!conditions.length) return 'Applies to everything';
-  return conditions
-    .map((condition) => `${condition.field} ${condition.operator} ${JSON.stringify(condition.value)}`)
-    .join(' and ');
-}

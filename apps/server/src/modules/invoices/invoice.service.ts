@@ -1,15 +1,20 @@
 import { Types } from 'mongoose';
 import {
   InvoiceStatus,
+  NotificationType,
+  ROLE_KEYS,
+  ROLE_PERMISSIONS,
   ValidationCode,
   invoiceMachine,
   normalizeName,
   parseAmountToMinor,
   type ExtractionResult,
+  type RoleKey,
   type ValidationFinding,
 } from '@fpc/shared';
 import { logger } from '../../config/logger.js';
 import { ApiError } from '../../core/errors.js';
+import { eventBus } from '../../core/eventBus.js';
 import { contentTypeFor } from '../../integrations/email/index.js';
 import { extractor } from '../../integrations/ocr/index.js';
 import { storage } from '../../integrations/storage/index.js';
@@ -144,6 +149,8 @@ export async function runExtraction(invoiceId: Types.ObjectId): Promise<void> {
     await transition(invoice, InvoiceStatus.REVIEW_REQUIRED);
     await invoice.save();
 
+    notifyIfDuplicate(invoice);
+
     await audit.record({
       event: 'invoice.extracted',
       entityType: 'INVOICE',
@@ -242,6 +249,37 @@ async function applyExtraction(
     excludeInvoiceId: invoice._id,
   });
 }
+
+/**
+ * Raises the duplicate alert (PRD §34) when validation found one.
+ *
+ * Detection already blocks submission through the finding; this makes sure a
+ * reviewer is actively told rather than discovering it on the invoice.
+ */
+function notifyIfDuplicate(invoice: InvoiceDoc & { _id: Types.ObjectId }): void {
+  const duplicate = invoice.findings.find(
+    (finding) => !finding.resolved && DUPLICATE_CODES.includes(finding.code),
+  );
+  if (!duplicate) return;
+
+  eventBus.publish({
+    type: NotificationType.INVOICE_DUPLICATE_DETECTED,
+    tenantId: String(invoice.tenantId),
+    companyId: String(invoice.companyId),
+    entityType: 'INVOICE',
+    entityId: String(invoice._id),
+    recipientUserIds: [],
+    recipientRoleKeys: DUPLICATE_ALERT_ROLES,
+    title: `Possible duplicate: ${invoice.vendorName ?? 'invoice'} ${invoice.invoiceNumber ?? ''}`.trim(),
+    body: duplicate.message,
+    link: `/invoices/${String(invoice._id)}`,
+  });
+}
+
+/** Roles that review invoices, so they hear about a suspected duplicate. */
+const DUPLICATE_ALERT_ROLES: RoleKey[] = ROLE_KEYS.filter((role) =>
+  ROLE_PERMISSIONS[role as RoleKey].includes('invoice:resolve_duplicate'),
+) as RoleKey[];
 
 /** Re-runs validation after a reviewer edits fields. */
 export async function revalidate(

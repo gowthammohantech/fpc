@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { Types } from 'mongoose';
 import { permissionsForRoles, type LoginResponse, type RoleKey } from '@fpc/shared';
@@ -13,6 +14,8 @@ import {
 } from './token.service.js';
 
 const BCRYPT_ROUNDS = 12;
+/** How long an invite stays usable before an administrator must reissue it. */
+export const INVITE_TTL_MS = 7 * 86_400_000;
 /** Cap on concurrent sessions per user, so the stored hash list stays bounded. */
 const MAX_ACTIVE_REFRESH_TOKENS = 5;
 
@@ -88,6 +91,70 @@ export async function logout(userId: Types.ObjectId, refreshToken?: string): Pro
     ? user.refreshTokenHashes.filter((entry) => entry.hash !== hashToken(refreshToken))
     : [];
   await user.save();
+}
+
+/**
+ * Issues a single-use invite token for a user who cannot sign in yet.
+ *
+ * Returned in plaintext exactly once, to whoever is inviting them; only the
+ * hash is stored, so a database leak cannot be used to claim an account.
+ */
+export async function issueInviteToken(userId: Types.ObjectId): Promise<string> {
+  const token = randomBytes(32).toString('base64url');
+  await User.updateOne(
+    { _id: userId },
+    {
+      inviteTokenHash: hashToken(token),
+      inviteTokenExpiresAt: new Date(Date.now() + INVITE_TTL_MS),
+      status: 'INVITED',
+    },
+  );
+  return token;
+}
+
+/**
+ * Redeems an invite: sets the password and activates the account.
+ *
+ * Without this an INVITED user was permanently locked out — login refuses any
+ * status other than ACTIVE, and every other route requires a token they could
+ * never obtain.
+ */
+export async function acceptInvite(
+  token: string,
+  password: string,
+  context: AuditContext,
+): Promise<LoginResponse> {
+  const user = await User.findOne({ inviteTokenHash: hashToken(token) })
+    .select('+passwordHash +refreshTokenHashes +inviteTokenHash +inviteTokenExpiresAt')
+    .exec();
+
+  if (!user || !user.inviteTokenExpiresAt || user.inviteTokenExpiresAt.getTime() < Date.now()) {
+    throw ApiError.badRequest('This invitation is invalid or has expired. Ask for a new one.');
+  }
+
+  user.passwordHash = await hashPassword(password);
+  user.status = 'ACTIVE';
+  // Single use: the token cannot be replayed to seize the account later.
+  user.inviteTokenHash = undefined;
+  user.inviteTokenExpiresAt = undefined;
+  user.refreshTokenHashes = [];
+
+  const tokens = await issueTokens(user);
+  user.lastLoginAt = new Date();
+  await user.save();
+
+  await audit.record(
+    {
+      event: 'auth.invite_accepted',
+      entityType: 'AUTH',
+      entityId: user._id,
+      entityLabel: user.email,
+      tenantId: user.tenantId,
+    },
+    { ...context, principal: toPrincipalLike(user) },
+  );
+
+  return tokens;
 }
 
 export async function changePassword(

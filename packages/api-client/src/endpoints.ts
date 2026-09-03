@@ -205,6 +205,7 @@ export const endpoints = (api: ApiClient) => ({
     companies: (query?: Query) => api.get<Paginated<Company>>('/settings/companies', query),
     createCompany: (body: Query) => api.post<Company>('/settings/companies', body),
     updateCompany: (id: string, body: Query) => api.patch<Company>(`/settings/companies/${id}`, body),
+    deleteCompany: (id: string) => api.delete<void>(`/settings/companies/${id}`),
 
     locations: (query?: Query) => api.get<Paginated<Location>>('/settings/locations', query),
     createLocation: (body: Query) => api.post<Location>('/settings/locations', body),
@@ -215,6 +216,7 @@ export const endpoints = (api: ApiClient) => ({
     createDepartment: (body: Query) => api.post<Department>('/settings/departments', body),
     updateDepartment: (id: string, body: Query) =>
       api.patch<Department>(`/settings/departments/${id}`, body),
+    deleteDepartment: (id: string) => api.delete<void>(`/settings/departments/${id}`),
 
     vendors: (query?: Query) => api.get<Paginated<Vendor>>('/settings/vendors', query),
     createVendor: (body: Query) => api.post<Vendor>('/settings/vendors', body),
@@ -222,7 +224,10 @@ export const endpoints = (api: ApiClient) => ({
     deleteVendor: (id: string) => api.delete<void>(`/settings/vendors/${id}`),
 
     users: (query?: Query) => api.get<Paginated<User>>('/settings/users', query),
-    createUser: (body: Query) => api.post<User & { temporaryPassword?: string }>('/settings/users', body),
+    createUser: (body: Query) =>
+      api.post<User & { inviteToken?: string; inviteUrl?: string }>('/settings/users', body),
+    reinviteUser: (id: string) =>
+      api.post<{ inviteToken: string; inviteUrl: string }>(`/settings/users/${id}/reinvite`),
     updateUser: (id: string, body: Query) => api.patch<User>(`/settings/users/${id}`, body),
     deleteUser: (id: string) => api.delete<void>(`/settings/users/${id}`),
 
@@ -232,6 +237,7 @@ export const endpoints = (api: ApiClient) => ({
     createBankAccount: (body: Query) => api.post<BankAccount>('/settings/bank-accounts', body),
     updateBankAccount: (id: string, body: Query) =>
       api.patch<BankAccount>(`/settings/bank-accounts/${id}`, body),
+    deleteBankAccount: (id: string) => api.delete<void>(`/settings/bank-accounts/${id}`),
 
     approvalRules: (query?: Query) => api.get<Paginated<ApprovalRuleView>>('/settings/approval-rules', query),
     createApprovalRule: (body: Query) => api.post<ApprovalRuleView>('/settings/approval-rules', body),

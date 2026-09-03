@@ -28,6 +28,20 @@ authRouter.post(
   }),
 );
 
+/**
+ * Redeems an invitation. Public by necessity — the caller has no session yet —
+ * and rate-limited on the same budget as login.
+ */
+authRouter.post(
+  '/accept-invite',
+  loginLimiter,
+  validateBody(schemas.acceptInviteRequest),
+  asyncHandler(async (req, res) => {
+    const { token, password } = req.body as schemas.AcceptInviteRequest;
+    res.json(await authService.acceptInvite(token, password, auditContext(req)));
+  }),
+);
+
 authRouter.post(
   '/refresh',
   validateBody(schemas.refreshRequest),

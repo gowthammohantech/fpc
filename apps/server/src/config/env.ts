@@ -7,6 +7,30 @@ import { z } from 'zod';
  * immediately with a readable message rather than at the first request that
  * happens to need the missing value.
  */
+
+/**
+ * Boolean flag from the environment.
+ *
+ * Deliberately not `z.coerce.boolean()`: that is `Boolean(value)`, and every
+ * environment variable is a string, so `"false"` coerces to `true` and the
+ * flag can never be turned off. This reads the words people actually write in
+ * a .env file and rejects anything ambiguous rather than guessing.
+ */
+export const booleanFlag = (defaultValue: boolean) =>
+  z
+    .union([z.boolean(), z.string()])
+    .default(defaultValue)
+    .transform((value, ctx) => {
+      if (typeof value === 'boolean') return value;
+      const normalized = value.trim().toLowerCase();
+      if (['true', '1', 'yes', 'y', 'on'].includes(normalized)) return true;
+      if (['false', '0', 'no', 'n', 'off', ''].includes(normalized)) return false;
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Expected a boolean like true/false, got "${value}"`,
+      });
+      return z.NEVER;
+    });
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().default(4000),
@@ -29,7 +53,7 @@ const schema = z.object({
   MAIL_FROM: z.string().default('Finance Ops <finance-ops@example.com>'),
   SMTP_HOST: z.string().default('localhost'),
   SMTP_PORT: z.coerce.number().int().default(1025),
-  SMTP_SECURE: z.coerce.boolean().default(false),
+  SMTP_SECURE: booleanFlag(false),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
 
@@ -47,7 +71,7 @@ const schema = z.object({
   AZURE_DOC_INTEL_ENDPOINT: z.string().optional(),
   AZURE_DOC_INTEL_KEY: z.string().optional(),
 
-  JOBS_ENABLED: z.coerce.boolean().default(true),
+  JOBS_ENABLED: booleanFlag(true),
   MAIL_POLL_CRON: z.string().default('*/1 * * * *'),
   EXTRACTION_POLL_CRON: z.string().default('*/1 * * * *'),
   NOTIFICATION_POLL_CRON: z.string().default('*/1 * * * *'),

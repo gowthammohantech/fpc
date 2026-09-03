@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
 import { RequireAuth, RequirePermission } from '@/components/RequirePermission';
 import { LoginPage } from '@/pages/Login';
+import { AcceptInvitePage } from '@/pages/AcceptInvite';
 import { DashboardPage } from '@/pages/Dashboard';
 import { InvoicesPage } from '@/pages/Invoices';
 import { InvoiceDetailPage } from '@/pages/InvoiceDetail';
@@ -33,6 +34,7 @@ export function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/accept-invite" element={<AcceptInvitePage />} />
 
       <Route
         element={
