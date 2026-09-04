@@ -7,8 +7,8 @@
  *
  *   node scripts/illustrations.mjs
  *
- * Storyset artwork is free to use with attribution, which `Illustration.tsx`
- * renders alongside every image and CREDITS.md records per file.
+ * Storyset artwork is free to use with attribution, which CREDITS.md records
+ * per file.
  */
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
@@ -210,7 +210,7 @@ async function main() {
       '',
       'Artwork by [Storyset](https://storyset.com), used under its free licence,',
       'recoloured into the Apex palette by `apps/web/scripts/illustrations.mjs`.',
-      'Attribution is rendered in-app by `src/components/Illustration.tsx`.',
+      'This file is the record of that attribution; the app itself renders no credit line.',
       '',
       '| File | Source |',
       '| --- | --- |',

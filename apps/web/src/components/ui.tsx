@@ -259,11 +259,7 @@ export function ErrorState({ error, compact = false }: { error: unknown; compact
   return (
     <div className={forbidden ? 'notice-warning' : 'notice-danger'}>
       <div className="flex flex-col items-center gap-3 py-4 text-center sm:flex-row sm:text-left">
-        <Illustration
-          name={forbidden ? 'no-access' : 'broken'}
-          className="h-24 shrink-0"
-          credit={false}
-        />
+        <Illustration name={forbidden ? 'no-access' : 'broken'} className="h-24 shrink-0" />
         <p>{message}</p>
       </div>
     </div>

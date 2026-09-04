@@ -2,7 +2,7 @@
 
 Artwork by [Storyset](https://storyset.com), used under its free licence,
 recoloured into the Apex palette by `apps/web/scripts/illustrations.mjs`.
-Attribution is rendered in-app by `src/components/Illustration.tsx`.
+This file is the record of that attribution; the app itself renders no credit line.
 
 | File | Source |
 | --- | --- |

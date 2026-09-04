@@ -23,7 +23,7 @@ export function AuthLayout({
 }) {
   return (
     <div className="grid min-h-screen bg-white lg:grid-cols-2">
-      <div className="hidden flex-col justify-between bg-brand-800 p-10 text-white lg:flex">
+      <div className="hidden flex-col bg-brand-800 p-10 text-white lg:flex">
         <div className="flex items-center gap-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10">
             <Wallet className="h-5 w-5 text-peridot-400" aria-hidden="true" />
@@ -31,26 +31,14 @@ export function AuthLayout({
           <span className="font-semibold">Finance Ops</span>
         </div>
 
-        <div className="flex flex-col items-center">
-          <Illustration name={illustration} className="h-64" credit={false} eager />
+        <div className="flex flex-1 flex-col items-center justify-center">
+          <Illustration name={illustration} className="h-64" eager />
           <h2 className="mt-10 max-w-sm text-center text-2xl font-semibold tracking-tight">
             {headline}
           </h2>
           <span className="mt-5 h-1 w-12 rounded-full bg-peridot-500" />
           <p className="mt-5 max-w-sm text-center text-sm text-brand-100">{blurb}</p>
         </div>
-
-        <p className="text-xs text-brand-100">
-          Illustration by{' '}
-          <a
-            className="underline underline-offset-2"
-            href="https://storyset.com"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Storyset
-          </a>
-        </p>
       </div>
 
       <div className="flex items-center justify-center p-6 sm:p-10">
