@@ -69,13 +69,13 @@ export function AcceptInvitePage() {
   return (
     <AuthLayout
       illustration="welcome"
-      headline="Welcome to Finance Ops."
+      headline="Welcome to Elixir Finance Ops."
       blurb="Set a password and your account is ready to use."
     >
       <form onSubmit={onSubmit}>
         <h1 className="text-2xl font-semibold tracking-tight text-ink-900">Set your password</h1>
         <p className="mt-1 text-sm text-ink-500">
-          Choose a password to activate your Finance Operations account.
+          Choose a password to activate your Elixir Finance Ops account.
         </p>
 
         {error ? (

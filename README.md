@@ -1,4 +1,4 @@
-# Finance Operations Platform
+# Elixir Finance Ops
 
 A money-out workflow platform for finance teams. It owns the path an invoice
 or a payroll run takes from arrival to proven payment: intake, extraction,

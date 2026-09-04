@@ -1,5 +1,5 @@
 /**
- * Domain enumerations for the Finance Operations platform.
+ * Domain enumerations for the Elixir Finance Ops platform.
  *
  * These are the single source of truth shared by the API server, the web
  * application and the mobile application. They are declared as const objects

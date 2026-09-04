@@ -116,7 +116,7 @@ reportRouter.get(
     );
 
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'Finance Operations';
+    workbook.creator = 'Elixir Finance Ops';
     workbook.created = new Date();
     const sheet = workbook.addWorksheet(report.name.slice(0, 31));
 

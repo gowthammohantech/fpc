@@ -53,7 +53,7 @@ const schema = z.object({
   AZURE_STORAGE_CONTAINER: z.string().default('fpc-documents'),
 
   MAIL_DRIVER: z.enum(['console', 'smtp', 'graph']).default('console'),
-  MAIL_FROM: z.string().default('Finance Ops <finance-ops@example.com>'),
+  MAIL_FROM: z.string().default('Elixir Finance Ops <finance-ops@example.com>'),
   SMTP_HOST: z.string().default('localhost'),
   SMTP_PORT: z.coerce.number().int().default(1025),
   SMTP_SECURE: booleanFlag(false),

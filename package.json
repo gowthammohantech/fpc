@@ -2,7 +2,7 @@
   "name": "fpc",
   "version": "1.0.0",
   "private": true,
-  "description": "Finance Operations MVP \u2014 vendor invoice and payroll money-out workflow",
+  "description": "Elixir Finance Ops MVP \u2014 vendor invoice and payroll money-out workflow",
   "engines": {
     "node": ">=20.12"
   },

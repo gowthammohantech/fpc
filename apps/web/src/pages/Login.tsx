@@ -1,6 +1,5 @@
 import { useState, type FormEvent } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
-import { Wallet } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { AuthLayout } from '@/components/AuthLayout';
 import { Spinner } from '@/components/ui';
@@ -38,11 +37,15 @@ export function LoginPage() {
       blurb="Invoices, approvals, payroll and reconciliation in one place."
     >
       <form onSubmit={onSubmit}>
-        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-700 lg:hidden">
-          <Wallet className="h-6 w-6 text-peridot-400" aria-hidden="true" />
-        </span>
+        <img
+          src="/elixir-mark.png"
+          alt="Elixir Finance Ops"
+          width={44}
+          height={44}
+          className="h-11 w-11 lg:hidden"
+        />
         <h1 className="mt-4 text-2xl font-semibold tracking-tight text-ink-900 lg:mt-0">Sign in</h1>
-        <p className="mt-1 text-sm text-ink-500">Continue to Finance Operations.</p>
+        <p className="mt-1 text-sm text-ink-500">Continue to Elixir Finance Ops.</p>
 
         {error ? <div className="notice-danger mt-5">{error}</div> : null}
 

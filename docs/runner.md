@@ -1,6 +1,6 @@
 # Runner — install and run
 
-How to get the Finance Operations Platform running locally, from a clean
+How to get Elixir Finance Ops running locally, from a clean
 checkout to a signed-in browser session, plus the commands used day to day.
 
 ## 1. Prerequisites

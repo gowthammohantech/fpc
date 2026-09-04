@@ -201,7 +201,7 @@ function htmlBody(title: string, body: string, link?: string): string {
     // Header band. White on Sports Teal is 6.29:1, and the peridot mark is the
     // one place the accent is legible against a dark ground.
     '<tr><td style="background:#14697b;padding:20px 28px">' +
-      `<span style="${font};color:#ffffff;font-size:15px;font-weight:600">Finance Ops</span>` +
+      `<span style="${font};color:#ffffff;font-size:15px;font-weight:600">Elixir Finance Ops</span>` +
       '<span style="color:#e0ea49;font-size:15px;font-weight:700">.</span>' +
       '</td></tr>',
 
@@ -209,12 +209,12 @@ function htmlBody(title: string, body: string, link?: string): string {
     `<h2 style="font-size:19px;line-height:1.35;margin:0 0 16px;color:#0f172b">${escapeHtml(title)}</h2>`,
     paragraphs,
     link
-      ? `<p style="margin:24px 0 0"><a href="${escapeHtml(link)}" style="display:inline-block;background:#14697b;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:10px 18px;border-radius:999px">Open in Finance Operations</a></p>`
+      ? `<p style="margin:24px 0 0"><a href="${escapeHtml(link)}" style="display:inline-block;background:#14697b;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:10px 18px;border-radius:999px">Open in Elixir Finance Ops</a></p>`
       : '',
     '</td></tr>',
 
     `<tr><td style="border-top:1px solid #e2e8f0;padding:16px 28px;${font};color:#64748b;font-size:12px">`,
-    'You are receiving this because of your role in Finance Operations.',
+    'You are receiving this because of your role in Elixir Finance Ops.',
     '</td></tr>',
 
     '</table></div>',

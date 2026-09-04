@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { Wallet } from 'lucide-react';
 import { Illustration, type IllustrationName } from './Illustration';
 
 /**
@@ -24,11 +23,14 @@ export function AuthLayout({
   return (
     <div className="grid min-h-screen bg-white lg:grid-cols-2">
       <div className="hidden flex-col bg-brand-800 p-10 text-white lg:flex">
-        <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10">
-            <Wallet className="h-5 w-5 text-peridot-400" aria-hidden="true" />
-          </span>
-          <span className="font-semibold">Finance Ops</span>
+        <div className="flex items-center">
+          <img
+            src="/elixir-logo.png"
+            alt="Elixir Finance Ops"
+            width={169}
+            height={56}
+            className="h-9 w-auto"
+          />
         </div>
 
         <div className="flex flex-1 flex-col items-center justify-center">

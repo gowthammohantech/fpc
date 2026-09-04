@@ -40,7 +40,7 @@ export function Navigation() {
             name="Dashboard"
             component={DashboardScreen}
             options={({ navigation }) => ({
-              title: 'Finance Ops',
+              title: 'Elixir Finance Ops',
               headerRight: () => (
                 <TouchableOpacity onPress={() => navigation.navigate('Notifications')}>
                   <Text style={{ color: '#ffffff', fontWeight: '600' }}>Alerts</Text>

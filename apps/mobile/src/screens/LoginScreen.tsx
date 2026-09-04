@@ -30,7 +30,7 @@ export function LoginScreen() {
     >
       <View style={{ padding: 24, gap: 16 }}>
         <View>
-          <Text style={[styles.title, { color: colors.brand }]}>Finance Ops</Text>
+          <Text style={[styles.title, { color: colors.brand }]}>Elixir Finance Ops</Text>
           <Text style={styles.muted}>Approve payments on the go</Text>
         </View>
 

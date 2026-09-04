@@ -24,7 +24,6 @@ import {
   SendHorizontal,
   ShieldCheck,
   Store,
-  Upload,
   UserCog,
   Users,
   Wallet,
@@ -157,33 +156,16 @@ const NAV_GROUPS: Array<{ title: string | null; items: NavItem[] }> = [
   },
 ];
 
-/** Shortcuts to the things a role actually does, not to every screen it can see. */
-const QUICK_ACTIONS: Array<{
-  to: string;
-  label: string;
-  icon: LucideIcon;
-  permissions: Permission[];
-}> = [
-  {
-    to: '/invoices?upload=1',
-    label: 'Upload invoice',
-    icon: Upload,
-    permissions: ['invoice:create'],
-  },
-  {
-    to: '/banking/statements',
-    label: 'Import statement',
-    icon: Landmark,
-    permissions: ['bank_statement:create'],
-  },
-  { to: '/payroll/import', label: 'Import payroll', icon: Users, permissions: ['payroll:create'] },
-  {
-    to: '/reconciliation',
-    label: 'Reconcile',
-    icon: RefreshCcw,
-    permissions: ['reconciliation:read'],
-  },
-];
+/** Survives a reload so the rail is a preference, not a per-page accident. */
+const COLLAPSED_KEY = 'fpc.sidebar.collapsed';
+
+function readCollapsed(): boolean {
+  try {
+    return window.localStorage.getItem(COLLAPSED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
 
 export function Layout() {
   const { user, logout, can, canAny, companyId, setCompanyId } = useAuth();
@@ -191,6 +173,7 @@ export function Layout() {
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(readCollapsed);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const { data: companies } = useQuery({
@@ -241,92 +224,177 @@ export function Layout() {
     items: group.items.filter((item) => canAny(...item.permissions)),
   })).filter((group) => group.items.length > 0);
 
-  const quickActions = QUICK_ACTIONS.filter((action) => canAny(...action.permissions)).slice(0, 4);
+  const toggleCollapsed = () => {
+    setCollapsed((value) => {
+      const next = !value;
+      try {
+        window.localStorage.setItem(COLLAPSED_KEY, next ? '1' : '0');
+      } catch {
+        // A blocked storage quota is no reason to refuse the toggle.
+      }
+      return next;
+    });
+  };
 
-  const sidebar = (
+  const switcher = companies && companies.items.length > 1 ? companies.items : null;
+
+  /**
+   * `rail` is the collapsed, icon-only sidebar. It is a parameter rather than
+   * the state itself because the mobile drawer renders the same markup and is
+   * never a rail — a drawer you had to expand would be no drawer at all.
+   */
+  const renderSidebar = (rail: boolean) => (
     <>
-      <div className="flex items-center gap-3 px-5 py-5">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-700">
-          <Wallet className="h-5 w-5 text-peridot-400" aria-hidden="true" />
-        </span>
-        <span className="min-w-0">
-          <span className="block truncate font-semibold leading-tight text-ink-900">
-            Finance Ops
-          </span>
-          <span className="block truncate text-xs leading-tight text-ink-500">
-            Money-out operations
-          </span>
-        </span>
+      <div
+        className={`flex shrink-0 items-center gap-3 border-b border-ink-100 px-3 py-4 ${
+          rail ? 'flex-col' : ''
+        }`}
+      >
+        <NavLink to="/dashboard" className="flex min-w-0 items-center gap-3">
+          <img
+            src="/elixir-mark.png"
+            alt=""
+            width={40}
+            height={40}
+            className="h-10 w-10 shrink-0"
+            aria-hidden="true"
+          />
+          {rail ? (
+            <span className="sr-only">Elixir Finance Ops</span>
+          ) : (
+            <span className="min-w-0">
+              <span className="block truncate font-semibold leading-tight text-ink-900">
+                Elixir Finance Ops
+              </span>
+              <span className="block truncate text-xs leading-tight text-ink-500">
+                Money-out operations
+              </span>
+            </span>
+          )}
+        </NavLink>
+
+        {/* The rail only exists on `lg`, so its toggle lives there too. */}
+        <button
+          type="button"
+          className={`btn-icon hidden h-9 w-9 lg:inline-flex ${rail ? '' : 'ml-auto'}`}
+          onClick={toggleCollapsed}
+          aria-expanded={!collapsed}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          <Menu className="h-4 w-4" aria-hidden="true" />
+        </button>
       </div>
 
-      {summary ? (
-        <div className="border-b border-ink-100 px-5 pb-5">
-          <p className="nav-group-title px-0">Quick stats</p>
-          <div className="space-y-3 pt-1">
-            <Meter
-              label="Awaiting approval"
-              amount={summary.invoices.pendingApprovalAmount}
-              total={summary.totalPayables}
-              className="bg-brand-600"
-            />
-            <Meter
-              label="Ready to pay"
-              amount={summary.payments.readyForPayment}
-              total={summary.totalPayables}
-              className="bg-peridot-500"
-            />
-            <Meter
-              label="Overdue"
-              amount={summary.invoices.overdueAmount}
-              total={summary.totalPayables}
-              className="bg-amber-500"
-            />
-          </div>
-          {summary.payrollHidden ? (
-            <p className="mt-2 text-[11px] text-ink-400">Excludes payroll.</p>
-          ) : null}
-        </div>
-      ) : null}
-
-      <nav className="flex-1 overflow-y-auto px-3 pb-4">
+      <nav className={`flex-1 overflow-y-auto pb-4 ${rail ? 'px-2' : 'px-3'}`}>
         {visibleGroups.map((group) => (
           <div key={group.title ?? 'root'} className="mb-5">
-            {group.title ? <p className="nav-group-title">{group.title}</p> : null}
+            {group.title ? (
+              rail ? (
+                <hr className="mx-2 mb-2 border-ink-100" />
+              ) : (
+                <p className="nav-group-title">{group.title}</p>
+              )
+            ) : null}
             {group.items.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
                 end={item.to === '/payments'}
-                className={({ isActive }) => `nav-item ${isActive ? 'nav-item-active' : ''}`}
+                title={rail ? item.label : undefined}
+                className={({ isActive }) =>
+                  `nav-item ${rail ? 'justify-center px-0' : ''} ${
+                    isActive ? 'nav-item-active' : ''
+                  }`
+                }
               >
                 <item.icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                {item.label}
+                {rail ? <span className="sr-only">{item.label}</span> : item.label}
               </NavLink>
             ))}
           </div>
         ))}
+      </nav>
 
-        {quickActions.length ? (
-          <div className="border-t border-ink-100 pt-4">
-            <p className="nav-group-title">Quick actions</p>
-            {quickActions.map((action) => (
-              <NavLink key={action.to} to={action.to} className="nav-item">
-                <span className="chip-neutral h-7 w-7 rounded-lg">
-                  <action.icon className="h-3.5 w-3.5" aria-hidden="true" />
-                </span>
-                {action.label}
-              </NavLink>
-            ))}
+      <div className={`shrink-0 border-t border-ink-100 ${rail ? 'px-2 py-3' : 'px-5 py-4'}`}>
+        {switcher ? (
+          rail ? (
+            <button
+              type="button"
+              className="nav-item w-full justify-center px-0"
+              onClick={toggleCollapsed}
+              title={switcher.find((company) => company.id === companyId)?.name ?? 'Company'}
+            >
+              <Building2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span className="sr-only">Change company</span>
+            </button>
+          ) : (
+            <div className="relative">
+              <Building2
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400"
+                aria-hidden="true"
+              />
+              <select
+                className="input appearance-none pl-9 pr-9"
+                value={companyId ?? ''}
+                onChange={(event) => setCompanyId(event.target.value)}
+                aria-label="Company"
+              >
+                {switcher.map((company) => (
+                  <option key={company.id} value={company.id}>
+                    {company.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400"
+                aria-hidden="true"
+              />
+            </div>
+          )
+        ) : null}
+
+        {/* Quick stats sit last: they are the read-out, not the navigation. */}
+        {summary && !rail ? (
+          <div className={switcher ? 'mt-4' : ''}>
+            <p className="nav-group-title px-0">Quick stats</p>
+            <div className="space-y-3 pt-1">
+              <Meter
+                label="Awaiting approval"
+                amount={summary.invoices.pendingApprovalAmount}
+                total={summary.totalPayables}
+                className="bg-brand-600"
+              />
+              <Meter
+                label="Ready to pay"
+                amount={summary.payments.readyForPayment}
+                total={summary.totalPayables}
+                className="bg-peridot-500"
+              />
+              <Meter
+                label="Overdue"
+                amount={summary.invoices.overdueAmount}
+                total={summary.totalPayables}
+                className="bg-amber-500"
+              />
+            </div>
+            {summary.payrollHidden ? (
+              <p className="mt-2 text-[11px] text-ink-400">Excludes payroll.</p>
+            ) : null}
           </div>
         ) : null}
-      </nav>
+      </div>
     </>
   );
 
   return (
     <div className="flex min-h-screen bg-ink-50">
-      <aside className="hidden w-72 shrink-0 flex-col border-r border-ink-200 bg-white lg:flex">
-        {sidebar}
+      <aside
+        className={`hidden shrink-0 flex-col border-r border-ink-200 bg-white transition-[width] duration-200 lg:flex ${
+          collapsed ? 'w-20' : 'w-72'
+        }`}
+      >
+        {renderSidebar(collapsed)}
       </aside>
 
       {/* Below `lg` the sidebar is the only navigation there is, so it becomes a drawer. */}
@@ -346,7 +414,7 @@ export function Layout() {
           navOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        {sidebar}
+        {renderSidebar(false)}
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
@@ -367,27 +435,6 @@ export function Layout() {
           </div>
 
           <GlobalSearch />
-
-          {companies && companies.items.length > 1 ? (
-            <div className="relative hidden sm:block">
-              <select
-                className="input w-auto appearance-none rounded-full pr-9"
-                value={companyId ?? ''}
-                onChange={(event) => setCompanyId(event.target.value)}
-                aria-label="Company"
-              >
-                {companies.items.map((company) => (
-                  <option key={company.id} value={company.id}>
-                    {company.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown
-                className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400"
-                aria-hidden="true"
-              />
-            </div>
-          ) : null}
 
           <NavLink
             to="/notifications"

@@ -155,7 +155,7 @@ export async function generateBankFile(
   }
 
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'Finance Operations';
+  workbook.creator = 'Elixir Finance Ops';
   workbook.created = new Date();
   const sheet = workbook.addWorksheet(definition.sheetName);
 
