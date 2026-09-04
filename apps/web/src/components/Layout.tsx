@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Bell, Building2, ChevronDown, LogOut, Menu, Plus } from 'lucide-react';
+import { Bell, Building2, LogOut, Menu, Plus } from 'lucide-react';
 import { ROLE_LABELS, type RoleKey } from '@fpc/shared';
 import { api } from '@/lib/api';
 import { formatCompactINR } from '@/lib/format';
 import { useAuth } from '@/hooks/useAuth';
 import { NAV_GROUPS } from '@/lib/navigation';
+import { CompanySwitcher } from './CompanySwitcher';
 import { GlobalSearch } from './GlobalSearch';
 
 /** Survives a reload so the rail is a preference, not a per-page accident. */
@@ -103,23 +104,24 @@ export function Layout() {
           rail ? 'flex-col px-2' : 'px-3'
         }`}
       >
-        <NavLink to="/dashboard" className="flex min-w-0 items-center gap-3">
+        <NavLink to="/dashboard" className="flex min-w-0 items-center gap-2">
           <img
             src="/elixir-mark.png"
             alt=""
-            width={40}
-            height={40}
-            className="h-10 w-10 shrink-0"
+            width={32}
+            height={32}
+            className="h-8 w-8 shrink-0"
             aria-hidden="true"
           />
           {rail ? (
             <span className="sr-only">Elixir Finance Ops</span>
           ) : (
+            /* Sized to clear the rail toggle at `w-56` so neither line clips. */
             <span className="min-w-0">
-              <span className="block truncate font-semibold leading-tight text-ink-900">
+              <span className="block truncate text-[13px] font-semibold leading-tight text-ink-900">
                 Elixir Finance Ops
               </span>
-              <span className="block truncate text-xs leading-tight text-ink-500">
+              <span className="block truncate text-[11px] leading-tight text-ink-500">
                 Money-out operations
               </span>
             </span>
@@ -129,7 +131,7 @@ export function Layout() {
         {/* The rail only exists on `lg`, so its toggle lives there too. */}
         <button
           type="button"
-          className={`btn-icon hidden h-9 w-9 lg:inline-flex ${rail ? '' : 'ml-auto'}`}
+          className={`btn-icon hidden h-8 w-8 shrink-0 lg:inline-flex ${rail ? '' : 'ml-auto'}`}
           onClick={toggleCollapsed}
           aria-expanded={!collapsed}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
@@ -213,26 +215,11 @@ export function Layout() {
               <span className="sr-only">Change company</span>
             </button>
           ) : (
-            <div className={`relative ${summary ? 'mt-4' : ''}`}>
-              <Building2
-                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400"
-                aria-hidden="true"
-              />
-              <select
-                className="input appearance-none pl-9 pr-9"
-                value={companyId ?? ''}
-                onChange={(event) => setCompanyId(event.target.value)}
-                aria-label="Company"
-              >
-                {switcher.map((company) => (
-                  <option key={company.id} value={company.id}>
-                    {company.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown
-                className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400"
-                aria-hidden="true"
+            <div className={summary ? 'mt-4' : ''}>
+              <CompanySwitcher
+                companies={switcher}
+                value={companyId ?? null}
+                onChange={setCompanyId}
               />
             </div>
           )
@@ -327,7 +314,7 @@ export function Layout() {
 
             <div className="relative shrink-0" ref={menuRef}>
               <button
-                className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 text-sm transition-colors hover:bg-ink-50"
+                className="flex items-center gap-2 rounded-full border border-ink-200 bg-white py-1 pl-1 pr-2 text-sm transition-colors hover:border-ink-300 hover:bg-ink-50 xl:pr-3"
                 onClick={() => setMenuOpen((open) => !open)}
                 aria-haspopup="menu"
                 aria-expanded={menuOpen}
