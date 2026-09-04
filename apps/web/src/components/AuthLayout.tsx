@@ -32,8 +32,12 @@ export function AuthLayout({
         </div>
 
         <div className="flex flex-1 flex-col items-center justify-center">
-          <Illustration name={illustration} className="h-64" eager />
-          <h2 className="mt-10 max-w-sm text-center text-2xl font-semibold tracking-tight">
+          <Illustration
+            name={illustration}
+            className="h-80 max-h-[50vh] xl:h-[26rem] 2xl:h-[34rem]"
+            eager
+          />
+          <h2 className="mt-8 max-w-sm text-center text-2xl font-semibold tracking-tight">
             {headline}
           </h2>
           <span className="mt-5 h-1 w-12 rounded-full bg-peridot-500" />

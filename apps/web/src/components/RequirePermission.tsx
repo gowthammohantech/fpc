@@ -27,7 +27,7 @@ export function RequirePermission({
   if (permissions.length && !canAny(...permissions)) {
     return (
       <div className="mx-auto flex max-w-lg flex-col items-center py-16 text-center">
-        <Illustration name="no-access" className="h-44" />
+        <Illustration name="no-access" className="h-48 sm:h-60" />
         <h1 className="mt-6 text-lg font-semibold text-ink-900">
           You do not have access to this page
         </h1>
