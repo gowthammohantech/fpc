@@ -130,3 +130,8 @@ node dist/seed/run.js          # --reset to wipe first
   address on every deploy.
 - **Uploads cap at 25 MB** in nginx (`client_max_body_size`), above the API's
   own 2 MB JSON limit; raise both together if invoice PDFs get larger.
+- **No BuildKit cache mounts.** Railway requires every `--mount=type=cache` id
+  to be prefixed with `s/<service-id>-` and forbids variables in it, which would
+  pin these Dockerfiles to one specific service and break local builds. Layer
+  caching already covers the common case: the install layer is reused for as
+  long as no manifest changes.

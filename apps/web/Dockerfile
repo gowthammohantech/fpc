@@ -27,8 +27,7 @@ COPY packages/api-client/package.json packages/api-client/
 COPY apps/server/package.json apps/server/
 COPY apps/web/package.json apps/web/
 COPY apps/mobile/package.json apps/mobile/
-RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm install --frozen-lockfile --filter @fpc/web...
+RUN pnpm install --frozen-lockfile --filter @fpc/web...
 
 COPY tsconfig.base.json ./
 COPY packages ./packages

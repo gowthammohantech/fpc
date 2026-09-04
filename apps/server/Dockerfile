@@ -32,8 +32,7 @@ COPY apps/web/package.json apps/web/
 COPY apps/mobile/package.json apps/mobile/
 
 FROM manifests AS build
-RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm install --frozen-lockfile --filter @fpc/server...
+RUN pnpm install --frozen-lockfile --filter @fpc/server...
 COPY tsconfig.base.json ./
 COPY packages ./packages
 COPY apps/server ./apps/server
@@ -43,8 +42,7 @@ RUN pnpm --filter @fpc/shared build && pnpm --filter @fpc/server build
 # The same install without dev dependencies. Resolved from the identical
 # lockfile, so the runtime tree matches what was built above.
 FROM manifests AS prod-deps
-RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm install --frozen-lockfile --prod --filter @fpc/server...
+RUN pnpm install --frozen-lockfile --prod --filter @fpc/server...
 
 FROM base AS runner
 ENV NODE_ENV=production
