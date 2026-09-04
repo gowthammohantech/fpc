@@ -55,25 +55,63 @@ export function StatusBadge({ status }: { status: string | null | undefined }) {
 function toneFor(status: string): Tone {
   const value = status.toUpperCase();
   if (
-    ['PAID', 'RECONCILED', 'APPROVED', 'MATCHED', 'ACTIVE', 'COMPLETED', 'SENT'].includes(value)
+    [
+      'PAID',
+      'RECONCILED',
+      'APPROVED',
+      'MATCHED',
+      'ACTIVE',
+      'COMPLETED',
+      'SENT',
+      'CONNECTED',
+      'READY_FOR_REVIEW',
+    ].includes(value)
   ) {
     return 'positive';
   }
-  if (['REJECTED', 'FAILED', 'CANCELLED', 'BLOCKED', 'DUPLICATE', 'SUSPENDED'].includes(value)) {
+  if (
+    [
+      'REJECTED',
+      'FAILED',
+      'CANCELLED',
+      'BLOCKED',
+      'DUPLICATE',
+      'SUSPENDED',
+      'REVOKED',
+      'ERROR',
+      'EXPIRED',
+    ].includes(value)
+  ) {
     return 'negative';
   }
   if (
-    ['PENDING_APPROVAL', 'REVIEW_REQUIRED', 'SUGGESTED', 'IN_PROGRESS', 'PENDING'].includes(value)
+    [
+      'PENDING_APPROVAL',
+      'REVIEW_REQUIRED',
+      'SUGGESTED',
+      'IN_PROGRESS',
+      'PENDING',
+      'PARTIAL',
+    ].includes(value)
   ) {
     return 'attention';
   }
   if (
-    ['PAYMENT_PROCESSING', 'PROCESSING', 'EXPORTED', 'BATCHED', 'PARTIALLY_RECONCILED'].includes(
-      value,
-    )
+    [
+      'PAYMENT_PROCESSING',
+      'PROCESSING',
+      'EXPORTED',
+      'BATCHED',
+      'PARTIALLY_RECONCILED',
+      'EXTRACTING',
+      'QUEUED',
+      'RUNNING',
+    ].includes(value)
   ) {
     return 'progress';
   }
+  // SKIPPED falls through to neutral on purpose: an email we deliberately left
+  // alone is an expected outcome, not a problem to colour like one.
   return 'neutral';
 }
 
@@ -221,7 +259,7 @@ export function EmptyState({
 }) {
   return (
     <div className="flex flex-col items-center px-4 py-12 text-center">
-      <Illustration name={illustration} className="h-36" />
+      <Illustration name={illustration} className="h-40 sm:h-48" />
       <p className="mt-4 text-sm font-semibold text-ink-700">{title}</p>
       {hint ? <p className="mt-1 text-sm text-ink-500">{hint}</p> : null}
       {action ? <div className="mt-4">{action}</div> : null}
@@ -261,7 +299,7 @@ export function ErrorState({ error, compact = false }: { error: unknown; compact
   return (
     <div className={forbidden ? 'notice-warning' : 'notice-danger'}>
       <div className="flex flex-col items-center gap-3 py-4 text-center sm:flex-row sm:text-left">
-        <Illustration name={forbidden ? 'no-access' : 'broken'} className="h-24 shrink-0" />
+        <Illustration name={forbidden ? 'no-access' : 'broken'} className="h-28 shrink-0 sm:h-32" />
         <p>{message}</p>
       </div>
     </div>
@@ -498,7 +536,7 @@ function describeAccept(accept?: string): string | null {
     .split(',')
     .map((token) => token.trim())
     .filter(Boolean)
-    .map((token) => (token.startsWith('.') ? token.slice(1) : token.split('/').pop() ?? token))
+    .map((token) => (token.startsWith('.') ? token.slice(1) : (token.split('/').pop() ?? token)))
     .map((token) => (token === 'jpeg' ? 'JPG' : token.toUpperCase()));
   return names.length ? [...new Set(names)].join(' · ') : null;
 }

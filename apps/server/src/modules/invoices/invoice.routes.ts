@@ -1,7 +1,13 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { Types } from 'mongoose';
-import { InvoiceStatus, ValidationCode, ValidationSeverity, schemas } from '@fpc/shared';
+import {
+  InvoiceStatus,
+  SUPPORTED_INVOICE_CONTENT_TYPES,
+  ValidationCode,
+  ValidationSeverity,
+  schemas,
+} from '@fpc/shared';
 import { asyncHandler } from '../../core/asyncHandler.js';
 import { ApiError } from '../../core/errors.js';
 import { paginate } from '../../core/paginate.js';
@@ -22,7 +28,7 @@ import { audit, auditContext } from '../audit/audit.service.js';
 import * as invoiceService from './invoice.service.js';
 import { escapeRegex } from '../organization/crudFactory.js';
 
-const ACCEPTED_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/png']);
+const ACCEPTED_TYPES = new Set<string>(SUPPORTED_INVOICE_CONTENT_TYPES);
 
 const upload = multer({
   storage: multer.memoryStorage(),

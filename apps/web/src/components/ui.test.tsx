@@ -50,6 +50,22 @@ describe('StatusBadge', () => {
     expect(tone('PENDING_APPROVAL')).toBe('attention');
   });
 
+  it('tones the mailbox connector statuses', () => {
+    const tone = (status: string) => {
+      const { container } = render(<StatusBadge status={status} />);
+      return container.querySelector('span')!.getAttribute('data-tone');
+    };
+
+    expect(tone('CONNECTED')).toBe('positive');
+    expect(tone('READY_FOR_REVIEW')).toBe('positive');
+    expect(tone('REVOKED')).toBe('negative');
+    expect(tone('EXTRACTING')).toBe('progress');
+    expect(tone('PARTIAL')).toBe('attention');
+    // Deliberately neutral: a message we chose not to ingest is an expected
+    // outcome, and colouring it as a fault would misread the log.
+    expect(tone('SKIPPED')).toBe('neutral');
+  });
+
   it('renders the pill as a single element, so its tone is unambiguous', () => {
     // The tone lives on the outermost span; nesting another one inside would
     // silently change what a reader — or a test — picks up first.

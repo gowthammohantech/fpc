@@ -1,11 +1,12 @@
 import { Types } from 'mongoose';
+import { SUPPORTED_INVOICE_CONTENT_TYPES } from '@fpc/shared';
 import { logger } from '../config/logger.js';
 import { mailFetcher } from '../integrations/email/index.js';
 import { Company } from '../models/company.model.js';
 import { Invoice } from '../models/invoice.model.js';
 import * as invoiceService from '../modules/invoices/invoice.service.js';
 
-const SUPPORTED = new Set(['application/pdf', 'image/jpeg', 'image/png']);
+const SUPPORTED = new Set<string>(SUPPORTED_INVOICE_CONTENT_TYPES);
 
 /**
  * Polls each company's configured invoice mailbox and creates invoices from

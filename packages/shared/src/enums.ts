@@ -300,6 +300,8 @@ export const EntityType = {
   BANK_STATEMENT: 'BANK_STATEMENT',
   BANK_TRANSACTION: 'BANK_TRANSACTION',
   RECONCILIATION: 'RECONCILIATION',
+  MAIL_CONNECTION: 'MAIL_CONNECTION',
+  MAIL_INGESTION: 'MAIL_INGESTION',
   AUTH: 'AUTH',
 } as const;
 export type EntityType = (typeof EntityType)[keyof typeof EntityType];
@@ -308,3 +310,113 @@ export const Currency = {
   INR: 'INR',
 } as const;
 export type Currency = (typeof Currency)[keyof typeof Currency];
+
+/**
+ * Attachment types the extractor can read.
+ *
+ * Shared rather than repeated so the manual upload endpoint, the shared
+ * company mailbox poller and the per-user Outlook connector can never disagree
+ * about what is worth storing.
+ */
+export const SUPPORTED_INVOICE_CONTENT_TYPES = [
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+] as const;
+export type SupportedInvoiceContentType = (typeof SUPPORTED_INVOICE_CONTENT_TYPES)[number];
+
+/** Mailbox providers a user can connect to pull invoices from. */
+export const MailProvider = {
+  OUTLOOK: 'OUTLOOK',
+} as const;
+export type MailProvider = (typeof MailProvider)[keyof typeof MailProvider];
+export const MAIL_PROVIDERS = Object.values(MailProvider);
+
+/**
+ * Health of a connected mailbox.
+ *
+ * `REVOKED` covers both a user disconnecting here and Microsoft withdrawing
+ * consent at the source; `ERROR` is anything we can retry by reconnecting.
+ */
+export const MailConnectionStatus = {
+  CONNECTED: 'CONNECTED',
+  EXPIRED: 'EXPIRED',
+  REVOKED: 'REVOKED',
+  ERROR: 'ERROR',
+} as const;
+export type MailConnectionStatus = (typeof MailConnectionStatus)[keyof typeof MailConnectionStatus];
+export const MAIL_CONNECTION_STATUSES = Object.values(MailConnectionStatus);
+
+/** Outcome of pulling one email. `SKIPPED` is an expected result, not a fault. */
+export const MailIngestionStatus = {
+  PENDING: 'PENDING',
+  PROCESSING: 'PROCESSING',
+  PARTIAL: 'PARTIAL',
+  COMPLETED: 'COMPLETED',
+  SKIPPED: 'SKIPPED',
+  FAILED: 'FAILED',
+} as const;
+export type MailIngestionStatus = (typeof MailIngestionStatus)[keyof typeof MailIngestionStatus];
+export const MAIL_INGESTION_STATUSES = Object.values(MailIngestionStatus);
+
+/** Outcome of reading one attachment out of a pulled email. */
+export const MailAttachmentStatus = {
+  QUEUED: 'QUEUED',
+  EXTRACTING: 'EXTRACTING',
+  READY_FOR_REVIEW: 'READY_FOR_REVIEW',
+  SKIPPED: 'SKIPPED',
+  FAILED: 'FAILED',
+} as const;
+export type MailAttachmentStatus = (typeof MailAttachmentStatus)[keyof typeof MailAttachmentStatus];
+export const MAIL_ATTACHMENT_STATUSES = Object.values(MailAttachmentStatus);
+
+/**
+ * Why a pulled email produced no invoice.
+ *
+ * Stored rather than dropped: this is the only way a user can answer "why
+ * didn't my invoice come in?" without reading a server log.
+ */
+export const MailSkipReason = {
+  NO_ATTACHMENTS: 'NO_ATTACHMENTS',
+  UNSUPPORTED_ATTACHMENTS: 'UNSUPPORTED_ATTACHMENTS',
+  SENDER_NOT_ALLOWED: 'SENDER_NOT_ALLOWED',
+  SUBJECT_NOT_MATCHED: 'SUBJECT_NOT_MATCHED',
+  ATTACHMENT_TOO_LARGE: 'ATTACHMENT_TOO_LARGE',
+  COMPANY_ACCESS_LOST: 'COMPANY_ACCESS_LOST',
+} as const;
+export type MailSkipReason = (typeof MailSkipReason)[keyof typeof MailSkipReason];
+export const MAIL_SKIP_REASONS = Object.values(MailSkipReason);
+
+/** Printed verbatim on the Invoice Mailbox screen. */
+export const MAIL_SKIP_REASON_LABELS: Record<MailSkipReason, string> = {
+  NO_ATTACHMENTS: 'The email carried no attachments',
+  UNSUPPORTED_ATTACHMENTS: 'No attachment was a PDF, JPEG or PNG',
+  SENDER_NOT_ALLOWED: 'The sender is not on your allow list',
+  SUBJECT_NOT_MATCHED: 'The subject matched none of your keywords',
+  ATTACHMENT_TOO_LARGE: 'Every attachment was too large to read',
+  COMPANY_ACCESS_LOST: 'You no longer have access to the company this would go to',
+};
+
+/** How a sync run ended. `PARTIAL` means some emails failed and the rest did not. */
+export const MailSyncOutcome = {
+  SUCCESS: 'SUCCESS',
+  PARTIAL: 'PARTIAL',
+  FAILED: 'FAILED',
+} as const;
+export type MailSyncOutcome = (typeof MailSyncOutcome)[keyof typeof MailSyncOutcome];
+
+/** Whether a sync is currently claimed. Doubles as the concurrency lock. */
+export const MailSyncState = {
+  IDLE: 'IDLE',
+  RUNNING: 'RUNNING',
+} as const;
+export type MailSyncState = (typeof MailSyncState)[keyof typeof MailSyncState];
+
+/** Which part of a message a company routing rule matches on. */
+export const MailRouteMatch = {
+  SENDER: 'SENDER',
+  SUBJECT: 'SUBJECT',
+  TO: 'TO',
+} as const;
+export type MailRouteMatch = (typeof MailRouteMatch)[keyof typeof MailRouteMatch];
+export const MAIL_ROUTE_MATCHES = Object.values(MailRouteMatch);

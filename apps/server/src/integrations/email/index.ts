@@ -3,14 +3,16 @@ import { logger } from '../../config/logger.js';
 import { ConsoleMailer } from './console.driver.js';
 import { FixtureMailFetcher } from './fixture.driver.js';
 import { GraphMailFetcher, GraphMailer } from './graph.driver.js';
+import { DelegatedGraphMailFetcher } from './graphDelegated.driver.js';
 import { SmtpMailer } from './smtp.driver.js';
-import type { MailFetcher, Mailer } from './types.js';
+import type { DelegatedMailFetcher, MailFetcher, Mailer } from './types.js';
 
 export * from './types.js';
 export { contentTypeFor } from './fixture.driver.js';
 
 let mailerInstance: Mailer | null = null;
 let fetcherInstance: MailFetcher | null = null;
+let delegatedFetcherInstance: DelegatedMailFetcher | null = null;
 
 export function mailer(): Mailer {
   if (mailerInstance) return mailerInstance;
@@ -43,6 +45,20 @@ export function mailFetcher(): MailFetcher {
   return fetcherInstance;
 }
 
+/**
+ * Reads a user's own mailbox with a delegated token.
+ *
+ * Unlike `mailFetcher()` this is not selected by an env driver: the credentials
+ * live on the connection row, not in the environment, so there is one
+ * implementation and the seam exists only for tests.
+ */
+export function delegatedMailFetcher(): DelegatedMailFetcher {
+  if (delegatedFetcherInstance) return delegatedFetcherInstance;
+  delegatedFetcherInstance = new DelegatedGraphMailFetcher();
+  logger.info({ driver: delegatedFetcherInstance.name }, 'delegated mail driver ready');
+  return delegatedFetcherInstance;
+}
+
 function graphOptions() {
   if (!env.GRAPH_TENANT_ID || !env.GRAPH_CLIENT_ID || !env.GRAPH_CLIENT_SECRET) {
     throw new Error(
@@ -62,4 +78,7 @@ export function setMailer(driver: Mailer | null): void {
 }
 export function setMailFetcher(driver: MailFetcher | null): void {
   fetcherInstance = driver;
+}
+export function setDelegatedMailFetcher(driver: DelegatedMailFetcher | null): void {
+  delegatedFetcherInstance = driver;
 }

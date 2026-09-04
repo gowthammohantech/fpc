@@ -9,6 +9,7 @@ import { requestId } from './middleware/requestId.js';
 import { authRouter } from './modules/auth/auth.routes.js';
 import { auditRouter } from './modules/audit/audit.routes.js';
 import { approvalRouter, approvalRuleRouter } from './modules/approvals/approval.routes.js';
+import { integrationsRouter } from './modules/integrations/index.js';
 import { invoiceRouter } from './modules/invoices/invoice.routes.js';
 import { organizationRouter } from './modules/organization/index.js';
 import { payableRouter } from './modules/payables/payable.routes.js';
@@ -58,6 +59,7 @@ export function createApp(): Express {
   api.use('/settings/approval-rules', approvalRuleRouter);
   api.use('/settings', organizationRouter);
   api.use('/invoices', invoiceRouter);
+  api.use('/integrations', integrationsRouter);
   api.use('/approvals', approvalRouter);
   api.use('/payables', payableRouter);
   api.use('/payments', paymentRouter);

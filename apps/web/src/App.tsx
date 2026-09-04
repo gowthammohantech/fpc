@@ -4,6 +4,7 @@ import { RequireAuth, RequirePermission } from '@/components/RequirePermission';
 import { LoginPage } from '@/pages/Login';
 import { AcceptInvitePage } from '@/pages/AcceptInvite';
 import { DashboardPage } from '@/pages/Dashboard';
+import { InvoiceMailboxPage } from '@/pages/InvoiceMailbox';
 import { InvoicesPage } from '@/pages/Invoices';
 import { InvoiceDetailPage } from '@/pages/InvoiceDetail';
 import { ApprovalDetailPage, ApprovalsPage } from '@/pages/Approvals';
@@ -69,6 +70,14 @@ export function App() {
           element={
             <RequirePermission permissions={['invoice:read']}>
               <InvoicesPage initialView="REVIEW" />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="/integrations/outlook"
+          element={
+            <RequirePermission permissions={['mail_connection:manage', 'mail_connection:read_all']}>
+              <InvoiceMailboxPage />
             </RequirePermission>
           }
         />

@@ -3,10 +3,11 @@ import rateLimit from 'express-rate-limit';
 import { schemas } from '@fpc/shared';
 import { isTest } from '../../config/env.js';
 import { asyncHandler } from '../../core/asyncHandler.js';
-import { validateBody } from '../../core/validate.js';
+import { query, validateBody, validateQuery } from '../../core/validate.js';
 import { authenticate, requirePrincipal } from '../../middleware/authenticate.js';
 import { auditContext } from '../audit/audit.service.js';
 import * as authService from './auth.service.js';
+import * as outlookService from '../integrations/outlook/outlook.service.js';
 
 /** Brute-force protection on the credential endpoint. */
 const loginLimiter = rateLimit({
@@ -19,6 +20,20 @@ const loginLimiter = rateLimit({
   },
   // The integration suites sign in as every seeded role many times over from a
   // single address, which would trip the limiter and mask real assertions.
+  skip: () => isTest,
+});
+
+/**
+ * The OAuth callback is a plain browser redirect, so it cannot be authenticated
+ * and cannot be rate-limited as tightly as a credential endpoint. This is
+ * generous enough for a person retrying a consent screen and mean enough to
+ * make a token-exchange oracle unattractive.
+ */
+const oauthCallbackLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
   skip: () => isTest,
 });
 
@@ -104,5 +119,32 @@ authRouter.post(
       auditContext(req),
     );
     res.status(204).send();
+  }),
+);
+
+/**
+ * Where Microsoft returns the user after consent.
+ *
+ * Public by necessity: the browser arrives here mid-navigation with no
+ * Authorization header. Attribution comes from the signed `state` instead, and
+ * the response is always a redirect back into the application — an API error
+ * page would strand the user outside it.
+ */
+authRouter.get(
+  '/outlook/callback',
+  oauthCallbackLimiter,
+  validateQuery(schemas.outlookCallbackQuery),
+  asyncHandler(async (req, res) => {
+    const q = query<typeof schemas.outlookCallbackQuery>(req);
+    const result = await outlookService.completeConnect(
+      {
+        ...(q.code ? { code: q.code } : {}),
+        ...(q.state ? { state: q.state } : {}),
+        ...(q.error ? { error: q.error } : {}),
+        ...(q.error_description ? { errorDescription: q.error_description } : {}),
+      },
+      auditContext(req),
+    );
+    res.redirect(302, result.redirectTo);
   }),
 );

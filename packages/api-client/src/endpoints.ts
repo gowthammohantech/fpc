@@ -10,6 +10,9 @@ import type {
   GlobalSearchResult,
   Invoice,
   Location,
+  MailConnection,
+  MailIngestion,
+  MailIngestionAttachment,
   Notification,
   Paginated,
   PaymentBatch,
@@ -66,6 +69,28 @@ export const endpoints = (api: ApiClient) => ({
       ),
     cancel: (id: string, reason: string) => api.post<Invoice>(`/invoices/${id}/cancel`, { reason }),
     reextract: (id: string) => api.post<{ status: string }>(`/invoices/${id}/reextract`),
+  },
+
+  /** The Invoice Mailbox: a user's own Outlook, and what it has pulled. */
+  mail: {
+    /** Resolves to null when the user has not connected a mailbox yet. */
+    connection: () => api.get<MailConnectionView | null>('/integrations/outlook/connection'),
+    /**
+     * Returns a URL rather than redirecting: the browser must navigate to
+     * Microsoft itself, and this client cannot hand off its bearer token.
+     */
+    connect: (defaultCompanyId: string) =>
+      api.post<{ authorizeUrl: string }>('/integrations/outlook/authorize', { defaultCompanyId }),
+    disconnect: () => api.delete<void>('/integrations/outlook/connection'),
+    updateConnection: (body: Query) =>
+      api.patch<MailConnectionView>('/integrations/outlook/connection', body),
+    /** 202: the run continues in the background and the screen polls for it. */
+    sync: () => api.post<{ syncRunId: string; status: 'RUNNING' }>('/integrations/outlook/sync'),
+    ingestions: (query?: Query) =>
+      api.get<Paginated<MailIngestionRow>>('/integrations/outlook/ingestions', query),
+    ingestion: (id: string) => api.get<MailIngestionRow>(`/integrations/outlook/ingestions/${id}`),
+    retry: (id: string) =>
+      api.post<MailIngestionRow>(`/integrations/outlook/ingestions/${id}/retry`),
   },
 
   approvals: {
@@ -348,6 +373,29 @@ export interface ApprovalRow extends ApprovalRequest {
   waitingDays: number;
   dueAt: string | null;
   overdue: boolean;
+}
+
+/** A connection with the names the screen shows instead of raw ids. */
+export interface MailConnectionView extends MailConnection {
+  ownerName: string;
+  defaultCompanyName: string;
+}
+
+/**
+ * A pulled email with live invoice state joined onto each attachment.
+ *
+ * The invoice is joined rather than copied, so the row keeps telling the truth
+ * once somebody reviews or approves it.
+ */
+export interface MailIngestionRow extends Omit<MailIngestion, 'attachments'> {
+  attachments: Array<
+    MailIngestionAttachment & {
+      invoice: Pick<
+        Invoice,
+        'id' | 'status' | 'invoiceNumber' | 'vendorName' | 'totalAmount'
+      > | null;
+    }
+  >;
 }
 
 export interface ReportDescriptor {

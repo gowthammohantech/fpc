@@ -9,6 +9,14 @@ import type {
   EntityType,
   InvoiceSource,
   InvoiceStatus,
+  MailAttachmentStatus,
+  MailConnectionStatus,
+  MailIngestionStatus,
+  MailProvider,
+  MailRouteMatch,
+  MailSkipReason,
+  MailSyncOutcome,
+  MailSyncState,
   MatchMethod,
   NotificationChannel,
   NotificationStatus,
@@ -630,4 +638,122 @@ export interface GlobalSearchResult {
   amount?: number;
   status?: string;
   link: string;
+}
+
+/** One "send these to that company instead" rule on a mailbox connection. */
+export interface MailCompanyRoute {
+  match: MailRouteMatch;
+  value: string;
+  companyId: Id;
+}
+
+/**
+ * What a connected mailbox is allowed to pull.
+ *
+ * An empty `senderAllowlist` or `subjectKeywords` means "do not filter on
+ * this", not "match nothing" — otherwise a freshly connected mailbox would
+ * silently pull nothing at all.
+ */
+export interface MailSyncRules {
+  folder: string;
+  senderAllowlist: string[];
+  subjectKeywords: string[];
+  allowedContentTypes: string[];
+  maxMessagesPerSync: number;
+  lookbackDays: number;
+  companyRoutes: MailCompanyRoute[];
+}
+
+/**
+ * A user's connected mailbox.
+ *
+ * Note there are no token fields here: the stored OAuth tokens never leave the
+ * server, and the API mapper does not emit them.
+ */
+export interface MailConnection extends Timestamps {
+  id: Id;
+  tenantId: Id;
+  userId: Id;
+  provider: MailProvider;
+  accountEmail: string;
+  accountName?: string;
+  status: MailConnectionStatus;
+  statusMessage?: string;
+  scopes: string[];
+  /** Where pulled invoices land when no routing rule matches. */
+  defaultCompanyId: Id;
+  rules: MailSyncRules;
+  autoSyncEnabled: boolean;
+  watermarkAt?: IsoDate;
+  lastSyncAt?: IsoDate;
+  lastSyncStatus?: MailSyncOutcome;
+  lastSyncError?: string;
+  syncState: MailSyncState;
+  syncStartedAt?: IsoDate;
+  syncRunId?: string;
+  connectedAt: IsoDate;
+  disconnectedAt?: IsoDate;
+  totalMessagesSeen: number;
+  totalInvoicesCreated: number;
+}
+
+/** One attachment on a pulled email, and what became of it. */
+export interface MailIngestionAttachment {
+  name: string;
+  contentType: string;
+  size: number;
+  status: MailAttachmentStatus;
+  skipReason?: string;
+  /** The exact `Invoice.emailMessageId` this attachment was ingested under. */
+  messageKey?: string;
+  invoiceId?: Id;
+  error?: string;
+  extractionStartedAt?: IsoDate;
+  extractionCompletedAt?: IsoDate;
+}
+
+/**
+ * One email pulled from a connected mailbox.
+ *
+ * Skipped and failed messages are recorded alongside successful ones — they
+ * are the rows that explain why an expected invoice never arrived.
+ */
+export interface MailIngestion extends Timestamps {
+  id: Id;
+  tenantId: Id;
+  companyId: Id;
+  connectionId: Id;
+  userId: Id;
+  provider: MailProvider;
+  providerMessageId: string;
+  internetMessageId?: string;
+  subject: string;
+  fromAddress: string;
+  fromName?: string;
+  toAddresses: string[];
+  receivedAt: IsoDate;
+  bodyPreview?: string;
+  folderName?: string;
+  webLink?: string;
+  status: MailIngestionStatus;
+  skipReason?: MailSkipReason;
+  error?: string;
+  attachmentCount: number;
+  processedCount: number;
+  attachments: MailIngestionAttachment[];
+  syncRunId: string;
+  startedAt: IsoDate;
+  completedAt?: IsoDate;
+}
+
+/** What one "Sync now" produced. */
+export interface MailSyncSummary {
+  syncRunId: string;
+  messagesSeen: number;
+  invoicesCreated: number;
+  skipped: number;
+  failed: number;
+  outcome: MailSyncOutcome;
+  /** The provider had more waiting than this run's cap allowed. */
+  hasMore: boolean;
 }

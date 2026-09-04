@@ -3,6 +3,7 @@ import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
 import { processPendingExtractions } from './extractionWorker.js';
 import { pollInvoiceMailboxes } from './mailPoller.js';
+import { reclaimStuckSyncs } from '../modules/integrations/outlook/outlook.sync.js';
 import {
   dispatchPendingEmails,
   registerNotificationHandlers,
@@ -30,6 +31,9 @@ export function startScheduler(): void {
   schedule('invoice-mail-poll', env.MAIL_POLL_CRON, pollInvoiceMailboxes);
   schedule('invoice-extraction', env.EXTRACTION_POLL_CRON, processPendingExtractions);
   schedule('notification-email', env.NOTIFICATION_POLL_CRON, () => dispatchPendingEmails());
+  // Repairs sync locks a crashed process left claimed. Despite sitting beside
+  // the mail poller this never contacts a mailbox — Outlook syncs are manual.
+  schedule('outlook-sync-sweep', env.OUTLOOK_SWEEP_CRON, reclaimStuckSyncs);
 
   logger.info({ jobs: tasks.length }, 'background jobs scheduled');
 }

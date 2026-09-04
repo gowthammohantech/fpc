@@ -10,6 +10,10 @@ export const baseSchemaOptions = {
       ret.id = String(ret._id);
       delete ret._id;
       delete ret.passwordHash;
+      // Belt and braces with `select: false` on the schema: a secret that is
+      // never serialised cannot leak through a route that forgot to map.
+      delete ret.accessTokenCipher;
+      delete ret.refreshTokenCipher;
       return ret;
     },
   },

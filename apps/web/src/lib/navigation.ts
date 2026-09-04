@@ -9,6 +9,7 @@ import {
   Landmark,
   Layers,
   LayoutDashboard,
+  Mailbox,
   MapPin,
   Network,
   RefreshCcw,
@@ -60,6 +61,14 @@ export const NAV_GROUPS: NavGroup[] = [
     title: 'Operations',
     items: [
       { to: '/invoices', label: 'Invoices', icon: FileText, permissions: ['invoice:read'] },
+      {
+        // Operations rather than Administration: this is a queue people watch,
+        // not a master an admin edits on somebody else's behalf.
+        to: '/integrations/outlook',
+        label: 'Invoice Mailbox',
+        icon: Mailbox,
+        permissions: ['mail_connection:manage', 'mail_connection:read_all'],
+      },
       {
         to: '/approvals',
         label: 'Approvals',

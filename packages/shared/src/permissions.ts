@@ -53,6 +53,13 @@ export const PERMISSIONS = [
   'invoice:delete',
   'invoice:approve',
 
+  // Mailbox connectors — a user's own Outlook, connected to pull invoices.
+  // `manage` is deliberately one permission rather than a create/update/delete
+  // set: there is exactly one connection per user and every action on it is the
+  // same act of owning your own mailbox.
+  'mail_connection:manage',
+  'mail_connection:read_all',
+
   // Approvals
   'approval_rule:read',
   'approval_rule:create',
@@ -125,6 +132,7 @@ export const PERMISSION_RESOURCE_LABELS: Record<string, string> = {
   vendor: 'Vendors',
   bank_account: 'Bank accounts',
   invoice: 'Invoices',
+  mail_connection: 'Mailbox connectors',
   approval_rule: 'Approval rules',
   approval: 'Approvals',
   payable: 'Accounts payable',
@@ -180,7 +188,13 @@ export function isPermission(value: string): value is Permission {
 const ALL: Permission[] = [...PERMISSIONS];
 
 const READ_ONLY: Permission[] = ALL.filter(
-  (p) => p.endsWith(':read') || p.endsWith(':read_all') || p === 'report:export',
+  (p) =>
+    (p.endsWith(':read') || p.endsWith(':read_all') || p === 'report:export') &&
+    // Oversight of colleagues' mailboxes is a deliberate grant, not something a
+    // read-only role picks up from the `:read_all` suffix. An auditor reading
+    // the subjects and senders of personal mail is a privacy decision, so it is
+    // made explicitly per role rather than by naming convention.
+    p !== 'mail_connection:read_all',
 );
 
 /**
@@ -200,6 +214,9 @@ const FINANCE_EXECUTIVE: Permission[] = [
   'invoice:update',
   'invoice:submit',
   'invoice:resolve_duplicate',
+  // Matches `invoice:create`: whoever may create an invoice may connect their
+  // own Outlook to pull them.
+  'mail_connection:manage',
   'approval:read',
   'payable:read',
   'obligation:read',
@@ -223,6 +240,7 @@ const FINANCE_EXECUTIVE: Permission[] = [
 const FINANCE_MANAGER: Permission[] = [
   ...FINANCE_EXECUTIVE,
   'invoice:approve',
+  'mail_connection:read_all',
   'invoice:cancel',
   'approval:read_all',
   'approval_rule:read',
@@ -308,6 +326,9 @@ const COMPANY_ADMIN: Permission[] = [
   'approval_rule:delete',
   'approval:read_all',
   'invoice:read',
+  // Oversight only. A company admin cannot create invoices, so it never gets
+  // `mail_connection:manage` — it can watch the connectors, not run them.
+  'mail_connection:read_all',
   'payable:read',
   'obligation:read',
   'payment_batch:read',

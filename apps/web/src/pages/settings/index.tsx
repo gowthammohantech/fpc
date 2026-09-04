@@ -45,9 +45,9 @@ export function CompaniesPage() {
         { name: 'cin', label: 'CIN' },
         {
           name: 'invoiceInboxAddress',
-          label: 'Invoice mailbox',
+          label: 'Shared invoice mailbox',
           type: 'email',
-          help: 'Vendor invoices sent here are ingested automatically.',
+          help: 'A mailbox the platform monitors for everyone. To pull invoices from your own Outlook instead, use Invoice Mailbox under Operations.',
         },
       ]}
     />

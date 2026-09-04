@@ -75,9 +75,17 @@ export function InvoicesPage({ initialView = 'ALL' }: { initialView?: View }) {
         subtitle="Everything received, from any source"
         actions={
           can('invoice:create') ? (
-            <button className="btn-primary" onClick={() => setUploadOpen(true)}>
-              Upload invoice
-            </button>
+            <>
+              {/* Discovery only — the mailbox screen owns the connection. */}
+              {can('mail_connection:manage') ? (
+                <Link className="btn-secondary mr-2" to="/integrations/outlook">
+                  Invoice Mailbox
+                </Link>
+              ) : null}
+              <button className="btn-primary" onClick={() => setUploadOpen(true)}>
+                Upload invoice
+              </button>
+            </>
           ) : null
         }
       />
