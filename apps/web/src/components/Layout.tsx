@@ -246,8 +246,8 @@ export function Layout() {
   const renderSidebar = (rail: boolean) => (
     <>
       <div
-        className={`flex shrink-0 items-center gap-3 border-b border-ink-100 px-3 py-4 ${
-          rail ? 'flex-col' : ''
+        className={`flex shrink-0 items-center gap-3 border-b border-ink-100 py-4 ${
+          rail ? 'flex-col px-2' : 'px-3'
         }`}
       >
         <NavLink to="/dashboard" className="flex min-w-0 items-center gap-3">
@@ -392,7 +392,7 @@ export function Layout() {
     <div className="flex h-screen overflow-hidden bg-ink-50">
       <aside
         className={`hidden shrink-0 flex-col border-r border-ink-200 bg-white transition-[width] duration-200 lg:flex ${
-          collapsed ? 'w-20' : 'w-72'
+          collapsed ? 'w-14' : 'w-56'
         }`}
       >
         {renderSidebar(collapsed)}
@@ -411,7 +411,7 @@ export function Layout() {
         aria-modal="true"
         aria-label="Navigation"
         aria-hidden={!navOpen}
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-ink-200 bg-white transition-transform duration-200 lg:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-56 flex-col border-r border-ink-200 bg-white transition-transform duration-200 lg:hidden ${
           navOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
