@@ -86,7 +86,7 @@ export function AuditPage() {
         ) : (
           <>
             <Table>
-              <thead className="bg-slate-50">
+              <thead className="thead">
                 <tr>
                   <th className="th">When</th>
                   <th className="th">Event</th>
@@ -96,7 +96,7 @@ export function AuditPage() {
                   <th className="th">Change</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
+              <tbody className="tbody">
                 {data.items.map((event) => (
                   <tr key={event.id} className="hover:bg-slate-50">
                     <td className="td text-slate-500">{formatDateTime(event.timestamp)}</td>

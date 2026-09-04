@@ -35,7 +35,9 @@ const VIEWS: Array<{ key: View; label: string }> = [
 export function InvoicesPage({ initialView = 'ALL' }: { initialView?: View }) {
   const { companyId, can } = useAuth();
   const [params, setParams] = useSearchParams();
-  const [uploadOpen, setUploadOpen] = useState(false);
+  // Opened by the shell's "Upload invoice" action, which can only reach this
+  // page-local state through the URL.
+  const [uploadOpen, setUploadOpen] = useState(params.get('upload') === '1');
 
   const view = (params.get('view') as View) ?? initialView;
   const page = Number(params.get('page') ?? 1);
@@ -113,6 +115,7 @@ export function InvoicesPage({ initialView = 'ALL' }: { initialView?: View }) {
           </div>
         ) : !data?.items.length ? (
           <EmptyState
+            illustration="review"
             title="No invoices here"
             hint={
               view === 'REVIEW'
@@ -123,7 +126,7 @@ export function InvoicesPage({ initialView = 'ALL' }: { initialView?: View }) {
         ) : (
           <>
             <Table>
-              <thead className="bg-slate-50">
+              <thead className="thead">
                 <tr>
                   <th className="th">Invoice</th>
                   <th className="th">Vendor</th>
@@ -134,7 +137,7 @@ export function InvoicesPage({ initialView = 'ALL' }: { initialView?: View }) {
                   <th className="th">Source</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
+              <tbody className="tbody">
                 {data.items.map((invoice) => (
                   <tr key={invoice.id} className="hover:bg-slate-50">
                     <td className="td">

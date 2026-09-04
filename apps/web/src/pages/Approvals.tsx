@@ -55,13 +55,14 @@ export function ApprovalsPage() {
           </div>
         ) : !data?.items.length ? (
           <EmptyState
+            illustration="approved"
             title={scope === 'MINE' ? 'Nothing is waiting on you' : 'No approval requests'}
             hint={scope === 'MINE' ? 'Approvals routed to you will appear here.' : undefined}
           />
         ) : (
           <>
             <Table>
-              <thead className="bg-slate-50">
+              <thead className="thead">
                 <tr>
                   <th className="th">Item</th>
                   <th className="th">Type</th>
@@ -71,7 +72,7 @@ export function ApprovalsPage() {
                   <th className="th">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
+              <tbody className="tbody">
                 {data.items.map((request) => {
                   const step = request.steps.find(
                     (entry) => entry.order === request.currentStepOrder,
@@ -233,7 +234,7 @@ export function ApprovalDetailPage() {
 
         <div className="space-y-6">
           <Card className="p-5">
-            <p className="text-xs uppercase tracking-wide text-slate-500">Amount</p>
+            <p className="stat-label">Amount</p>
             <p className="mt-1 text-3xl font-semibold tabular">
               <Money minor={request.amount} />
             </p>

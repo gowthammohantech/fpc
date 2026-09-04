@@ -93,6 +93,7 @@ export function ReconciliationPage() {
           </div>
         ) : !data?.items.length ? (
           <EmptyState
+            illustration="sync"
             title={
               tab === 'SUGGESTED'
                 ? 'No suggestions waiting'
@@ -113,9 +114,7 @@ export function ReconciliationPage() {
                 <li key={row.id} className="p-5">
                   <div className="grid gap-4 lg:grid-cols-[1fr_auto_1fr] lg:items-center">
                     <div>
-                      <p className="text-xs uppercase tracking-wide text-slate-500">
-                        Bank transaction
-                      </p>
+                      <p className="stat-label">Bank transaction</p>
                       <p className="mt-1 font-medium">{row.description}</p>
                       <p className="mt-1 text-sm text-slate-500">
                         {formatDate(row.transactionDate)}
@@ -134,7 +133,7 @@ export function ReconciliationPage() {
                     <div>
                       {row.match?.obligation ? (
                         <>
-                          <p className="text-xs uppercase tracking-wide text-slate-500">Payment</p>
+                          <p className="stat-label">Payment</p>
                           <p className="mt-1 font-medium">{row.match.obligation.payeeName}</p>
                           <p className="mt-1 text-sm text-slate-500">
                             {row.match.obligation.reference}

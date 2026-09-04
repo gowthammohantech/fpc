@@ -7,44 +7,227 @@
     font-feature-settings:
       'tnum' on,
       'lnum' on;
+    -webkit-tap-highlight-color: transparent;
   }
   body {
-    @apply bg-slate-50 text-slate-900 antialiased;
+    @apply bg-ink-50 text-ink-900 antialiased;
   }
   /* Financial figures line up only with tabular numerals. */
   .tabular {
     font-variant-numeric: tabular-nums;
   }
+  /* Keyboard focus is visible everywhere; pointer focus stays quiet. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-brand-500 ring-offset-2 ring-offset-white;
+  }
 }
 
+/*
+ * Apex component layer.
+ *
+ * Every class name here predates the restyle or is additive — the ~380 existing
+ * usages across the pages keep working untouched, which is what lets the whole
+ * app re-skin from this one file.
+ *
+ * Two colour rules the palette enforces, both measured:
+ *   - Peridot is 1.31:1 on white. It is a FILL, never text on a light surface.
+ *   - Strong Amber (amber-500) is 2.15:1 under white. It never carries white text.
+ */
 @layer components {
+  /* ── Buttons ────────────────────────────────────────────────────────── */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium
-           transition disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm
+           font-semibold leading-5 transition-colors duration-150
+           disabled:cursor-not-allowed disabled:opacity-50;
   }
+  /* brand-700 on white is 6.29:1 — the lightest teal safe for a filled CTA. */
   .btn-primary {
-    @apply btn bg-brand-600 text-white hover:bg-brand-700;
+    @apply btn bg-brand-700 text-white shadow-sm hover:bg-brand-800 active:bg-brand-900;
   }
   .btn-secondary {
-    @apply btn border border-slate-300 bg-white text-slate-700 hover:bg-slate-50;
+    @apply btn border border-ink-200 bg-white text-ink-700 hover:border-ink-300 hover:bg-ink-50;
   }
   .btn-danger {
     @apply btn bg-red-600 text-white hover:bg-red-700;
   }
-  .card {
-    @apply rounded-lg border border-slate-200 bg-white shadow-sm;
+  /* Peridot as a fill under ink-900 text: 13.61:1. */
+  .btn-accent {
+    @apply btn bg-peridot-500 text-ink-900 hover:bg-peridot-600;
   }
+  .btn-ghost {
+    @apply btn bg-transparent text-ink-600 hover:bg-ink-100 hover:text-ink-900;
+  }
+  .btn-icon {
+    @apply relative inline-flex h-10 w-10 items-center justify-center rounded-full border
+           border-ink-200 bg-white text-ink-500 transition-colors
+           hover:border-ink-300 hover:bg-ink-50 hover:text-ink-900;
+  }
+
+  /* ── Surfaces ───────────────────────────────────────────────────────── */
+  .card {
+    @apply rounded-card border border-ink-200 bg-white shadow-card;
+  }
+  /* Dark-teal hero: white on brand-800 is 8.74:1. */
+  .card-hero {
+    @apply rounded-card border border-brand-800 bg-brand-800 text-white shadow-hero;
+  }
+  .card-dark {
+    @apply rounded-card border border-ink-900 bg-ink-900 text-white shadow-card;
+  }
+  .panel-head {
+    @apply flex flex-wrap items-center justify-between gap-3 border-b border-ink-100 px-5 py-4;
+  }
+
+  /* ── Forms ──────────────────────────────────────────────────────────── */
   .input {
-    @apply w-full rounded-md border border-slate-300 px-3 py-2 text-sm
-           focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500;
+    @apply w-full rounded-xl border border-ink-200 bg-white px-3.5 py-2 text-sm text-ink-900
+           placeholder:text-ink-400 focus:border-brand-500 focus:outline-none
+           focus:ring-2 focus:ring-brand-500/25 disabled:bg-ink-50 disabled:text-ink-500;
+  }
+  /* pl-10 leaves room for the leading search icon. */
+  .input-search {
+    @apply input rounded-full pl-10;
   }
   .label {
-    @apply mb-1 block text-sm font-medium text-slate-700;
+    @apply mb-1.5 block text-sm font-medium text-ink-700;
   }
+  /* ink-500 is 4.76:1 — the floor for muted text. Never use ink-400 for copy. */
+  .muted {
+    @apply text-ink-500;
+  }
+
+  /* ── Tables ─────────────────────────────────────────────────────────── */
   .th {
-    @apply whitespace-nowrap px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-500;
+    @apply whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase
+           tracking-[0.08em] text-ink-500;
   }
   .td {
-    @apply whitespace-nowrap px-4 py-3 text-sm text-slate-700;
+    @apply whitespace-nowrap px-5 py-3.5 text-sm text-ink-700;
+  }
+  .thead {
+    @apply bg-ink-50;
+  }
+  .tbody {
+    @apply divide-y divide-ink-100 bg-white;
+  }
+  .trow {
+    @apply transition-colors hover:bg-brand-50/60;
+  }
+
+  /* ── Typography helpers ─────────────────────────────────────────────── */
+  .stat-label {
+    @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-500;
+  }
+  .stat-value {
+    @apply mt-2 text-2xl font-semibold tracking-tight;
+    font-variant-numeric: tabular-nums;
+  }
+  .section-title {
+    @apply mb-3 text-sm font-semibold uppercase tracking-wide text-ink-500;
+  }
+
+  /* ── Badges: shape plus a tone, selected by data-tone ───────────────── */
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+  .badge-positive {
+    @apply bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20;
+  }
+  .badge-negative {
+    @apply bg-red-50 text-red-700 ring-1 ring-inset ring-red-600/20;
+  }
+  .badge-attention {
+    @apply bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-600/25;
+  }
+  .badge-progress {
+    @apply bg-brand-50 text-brand-800 ring-1 ring-inset ring-brand-600/20;
+  }
+  .badge-neutral {
+    @apply bg-ink-100 text-ink-600 ring-1 ring-inset ring-ink-500/15;
+  }
+
+  /* ── Delta pills ────────────────────────────────────────────────────── */
+  .delta {
+    @apply inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-semibold;
+  }
+  .delta-up {
+    @apply delta bg-emerald-50 text-emerald-700;
+  }
+  .delta-down {
+    @apply delta bg-red-50 text-red-700;
+  }
+  .delta-warn {
+    @apply delta bg-amber-50 text-amber-800;
+  }
+  .delta-on-dark {
+    @apply delta bg-white/15 text-peridot-300;
+  }
+
+  /* ── Tinted icon chips ──────────────────────────────────────────────── */
+  .chip {
+    @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl;
+  }
+  .chip-brand {
+    @apply chip bg-brand-100 text-brand-800;
+  }
+  .chip-accent {
+    @apply chip bg-peridot-200 text-peridot-900;
+  }
+  .chip-amber {
+    @apply chip bg-amber-100 text-amber-700;
+  }
+  .chip-danger {
+    @apply chip bg-red-100 text-red-700;
+  }
+  .chip-neutral {
+    @apply chip bg-ink-100 text-ink-600;
+  }
+  .chip-on-dark {
+    @apply chip bg-white/10 text-peridot-400;
+  }
+
+  /* ── Navigation ─────────────────────────────────────────────────────── */
+  .nav-item {
+    @apply flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-ink-600
+           transition-colors hover:bg-ink-100 hover:text-ink-900;
+  }
+  .nav-item-active {
+    @apply bg-brand-50 font-semibold text-brand-800;
+  }
+  .nav-group-title {
+    @apply mb-1 px-3 text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-400;
+  }
+
+  /* ── Overlays ───────────────────────────────────────────────────────── */
+  .scrim {
+    @apply fixed inset-0 bg-ink-900/50 backdrop-blur-[2px];
+  }
+  .menu {
+    @apply rounded-xl border border-ink-200 bg-white py-1 shadow-raised;
+  }
+  .menu-item {
+    @apply block w-full px-4 py-2 text-left text-sm text-ink-700 hover:bg-ink-50;
+  }
+
+  /* ── Notices ────────────────────────────────────────────────────────── */
+  .notice {
+    @apply rounded-xl border p-4 text-sm;
+  }
+  .notice-info {
+    @apply notice border-brand-200 bg-brand-50 text-brand-900;
+  }
+  .notice-warning {
+    @apply notice border-amber-200 bg-amber-50 text-amber-900;
+  }
+  .notice-danger {
+    @apply notice border-red-200 bg-red-50 text-red-800;
+  }
+
+  /* ── Meters (sidebar quick stats) ───────────────────────────────────── */
+  .meter {
+    @apply h-1.5 w-full overflow-hidden rounded-full bg-ink-200;
+  }
+  .meter-bar {
+    @apply h-full rounded-full transition-[width] duration-500;
   }
 }

@@ -63,6 +63,7 @@ export function ApprovalRulesPage() {
       ) : !data?.items.length ? (
         <Card>
           <EmptyState
+            illustration="approved"
             title="No approval rules configured"
             hint="Without a rule, submitted invoices are approved automatically and the reason is recorded in the audit trail."
           />

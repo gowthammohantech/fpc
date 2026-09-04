@@ -50,7 +50,7 @@ export function NotificationsPage() {
             <ErrorState error={error} />
           </div>
         ) : !data?.items.length ? (
-          <EmptyState title="Nothing to catch up on" />
+          <EmptyState illustration="inbox-zero" title="Nothing to catch up on" />
         ) : (
           <ul className="divide-y divide-slate-100">
             {data.items.map((notification) => (

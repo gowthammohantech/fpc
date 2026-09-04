@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import type { Permission } from '@fpc/shared';
 import { useAuth } from '@/hooks/useAuth';
+import { Illustration } from './Illustration';
 import { Spinner } from './ui';
 
 /**
@@ -25,11 +26,12 @@ export function RequirePermission({
 
   if (permissions.length && !canAny(...permissions)) {
     return (
-      <div className="mx-auto max-w-lg py-16 text-center">
-        <h1 className="text-lg font-semibold text-slate-900">
+      <div className="mx-auto flex max-w-lg flex-col items-center py-16 text-center">
+        <Illustration name="no-access" className="h-44" />
+        <h1 className="mt-6 text-lg font-semibold text-ink-900">
           You do not have access to this page
         </h1>
-        <p className="mt-2 text-sm text-slate-500">
+        <p className="mt-2 text-sm text-ink-500">
           Your role does not include the permission this screen requires. If you need it, ask a
           company administrator to update your role.
         </p>

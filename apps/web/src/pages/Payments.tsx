@@ -137,13 +137,14 @@ export function PaymentQueuePage() {
           </div>
         ) : !rows.length ? (
           <EmptyState
+            illustration="wallet"
             title="Nothing waiting to be paid"
             hint="Approved invoices and payroll appear here."
           />
         ) : (
           <>
             <Table>
-              <thead className="bg-slate-50">
+              <thead className="thead">
                 <tr>
                   <th className="th w-10">
                     <input
@@ -170,7 +171,7 @@ export function PaymentQueuePage() {
                   <th className="th" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
+              <tbody className="tbody">
                 {rows.map((row) => {
                   const aggregate = (row as { aggregate?: boolean }).aggregate;
                   return (
@@ -415,13 +416,14 @@ export function PaymentBatchesPage() {
           </div>
         ) : !data?.items.length ? (
           <EmptyState
+            illustration="wallet"
             title="No payment batches yet"
             hint="Select payments in the queue to create one."
           />
         ) : (
           <>
             <Table>
-              <thead className="bg-slate-50">
+              <thead className="thead">
                 <tr>
                   <th className="th">Batch</th>
                   <th className="th">Payment date</th>
@@ -433,7 +435,7 @@ export function PaymentBatchesPage() {
                   <th className="th">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
+              <tbody className="tbody">
                 {data.items.map((batch) => (
                   <tr key={batch.id} className="hover:bg-slate-50">
                     <td className="td">
@@ -580,28 +582,28 @@ export function PaymentBatchDetailPage() {
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card className="p-4">
-          <p className="text-xs uppercase tracking-wide text-slate-500">Vendor payments</p>
+          <p className="stat-label">Vendor payments</p>
           <p className="mt-1 text-xl font-semibold tabular">
             <Money minor={batch.vendorAmount} />
           </p>
           <p className="text-xs text-slate-500">{batch.vendorCount} payments</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs uppercase tracking-wide text-slate-500">Payroll</p>
+          <p className="stat-label">Payroll</p>
           <p className="mt-1 text-xl font-semibold tabular">
             <Money minor={batch.payrollAmount} />
           </p>
           <p className="text-xs text-slate-500">{batch.payrollCount} payments</p>
         </Card>
-        <Card className="bg-slate-900 p-4 text-white">
-          <p className="text-xs uppercase tracking-wide text-slate-300">Batch total</p>
+        <Card variant="dark" className="p-4">
+          <p className="stat-label text-ink-300">Batch total</p>
           <p className="mt-1 text-xl font-semibold tabular">
             <Money minor={batch.totalAmount} />
           </p>
-          <p className="text-xs text-slate-300">{batch.itemCount} payments</p>
+          <p className="text-xs text-ink-300">{batch.itemCount} payments</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs uppercase tracking-wide text-slate-500">Reconciled</p>
+          <p className="stat-label">Reconciled</p>
           <p className="mt-1 text-xl font-semibold tabular text-emerald-700">
             <Money minor={batch.reconciledAmount} />
           </p>
@@ -635,7 +637,7 @@ export function PaymentBatchDetailPage() {
           ) : null}
         </div>
         <Table>
-          <thead className="bg-slate-50">
+          <thead className="thead">
             <tr>
               <th className="th">Beneficiary</th>
               <th className="th">Account</th>
@@ -647,7 +649,7 @@ export function PaymentBatchDetailPage() {
               <th className="th" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 bg-white">
+          <tbody className="tbody">
             {batch.items.map((item) => (
               <tr key={item.id}>
                 <td className="td font-medium">{item.beneficiaryName}</td>

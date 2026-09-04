@@ -59,7 +59,7 @@ export function PayablesPage() {
         <div className="mb-6 grid gap-4 sm:grid-cols-3 xl:grid-cols-6">
           {(['NOT_DUE', '1_30', '31_60', '61_90', '90_PLUS'] as const).map((bucket) => (
             <Card key={bucket} className="p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-500">
+              <p className="stat-label">
                 {bucket === 'NOT_DUE'
                   ? 'Not due'
                   : `${bucket.replace('_', '–').replace('PLUS', '+')} days`}
@@ -72,12 +72,12 @@ export function PayablesPage() {
               <p className="text-xs text-slate-500">{ageing[bucket]?.count ?? 0} invoices</p>
             </Card>
           ))}
-          <Card className="bg-slate-900 p-4 text-white">
-            <p className="text-xs uppercase tracking-wide text-slate-300">Total open</p>
+          <Card variant="dark" className="p-4">
+            <p className="stat-label text-ink-300">Total open</p>
             <p className="mt-1 text-xl font-semibold tabular">
               {formatCompactINR(ageing.total?.amount ?? 0)}
             </p>
-            <p className="text-xs text-slate-300">{ageing.total?.count ?? 0} invoices</p>
+            <p className="text-xs text-ink-300">{ageing.total?.count ?? 0} invoices</p>
           </Card>
         </div>
       ) : null}
@@ -99,11 +99,11 @@ export function PayablesPage() {
             <ErrorState error={error} />
           </div>
         ) : !data?.items.length ? (
-          <EmptyState title="Nothing in this view" />
+          <EmptyState illustration="wallet" title="Nothing in this view" />
         ) : (
           <>
             <Table>
-              <thead className="bg-slate-50">
+              <thead className="thead">
                 <tr>
                   <th className="th">Vendor</th>
                   <th className="th">Invoice</th>
@@ -112,7 +112,7 @@ export function PayablesPage() {
                   <th className="th">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
+              <tbody className="tbody">
                 {data.items.map((invoice) => (
                   <tr key={invoice.id} className="hover:bg-slate-50">
                     <td className="td font-medium">{invoice.vendorName ?? '—'}</td>

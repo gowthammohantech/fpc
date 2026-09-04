@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { Wallet } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { AuthLayout } from '@/components/AuthLayout';
 import { Spinner } from '@/components/ui';
 
 export function LoginPage() {
@@ -30,18 +32,21 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100 p-4">
-      <form onSubmit={onSubmit} className="card w-full max-w-sm p-6">
-        <h1 className="text-xl font-semibold text-brand-700">Finance Operations</h1>
-        <p className="mt-1 text-sm text-slate-500">Sign in to continue</p>
+    <AuthLayout
+      illustration="sign-in"
+      headline="Every rupee out, accounted for."
+      blurb="Invoices, approvals, payroll and reconciliation in one place."
+    >
+      <form onSubmit={onSubmit}>
+        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-700 lg:hidden">
+          <Wallet className="h-6 w-6 text-peridot-400" aria-hidden="true" />
+        </span>
+        <h1 className="mt-4 text-2xl font-semibold tracking-tight text-ink-900 lg:mt-0">Sign in</h1>
+        <p className="mt-1 text-sm text-ink-500">Continue to Finance Operations.</p>
 
-        {error ? (
-          <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-            {error}
-          </div>
-        ) : null}
+        {error ? <div className="notice-danger mt-5">{error}</div> : null}
 
-        <div className="mt-5">
+        <div className="mt-6">
           <label className="label" htmlFor="email">
             Email
           </label>
@@ -75,6 +80,6 @@ export function LoginPage() {
           {submitting ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
-    </div>
+    </AuthLayout>
   );
 }

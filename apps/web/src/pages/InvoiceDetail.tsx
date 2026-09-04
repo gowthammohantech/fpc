@@ -178,7 +178,7 @@ export function InvoiceDetailPage() {
             <h2 className="font-semibold">Line items</h2>
           </div>
           <table className="min-w-full divide-y divide-slate-200">
-            <thead className="bg-slate-50">
+            <thead className="thead">
               <tr>
                 <th className="th">Description</th>
                 <th className="th text-right">Qty</th>

@@ -66,13 +66,14 @@ export function PayrollPage() {
           </div>
         ) : !data?.items.length ? (
           <EmptyState
+            illustration="wallet"
             title="No payroll batches yet"
             hint="Import a finalised payroll file to begin."
           />
         ) : (
           <>
             <Table>
-              <thead className="bg-slate-50">
+              <thead className="thead">
                 <tr>
                   <th className="th">Period</th>
                   <th className="th text-right">Employees</th>
@@ -81,7 +82,7 @@ export function PayrollPage() {
                   <th className="th">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
+              <tbody className="tbody">
                 {data.items.map((batch) => {
                   const difference =
                     batch.previousTotalNetAmount !== undefined &&
@@ -248,6 +249,7 @@ export function PayrollImportPage() {
           {!preview ? (
             <Card>
               <EmptyState
+                illustration="review"
                 title="Nothing to review yet"
                 hint="Choose a payroll file and validate it to see the detected columns and totals."
               />
@@ -258,21 +260,19 @@ export function PayrollImportPage() {
                 <h2 className="font-semibold">2. Check the totals</h2>
                 <div className="mt-4 grid gap-4 sm:grid-cols-3">
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-slate-500">Employees</p>
+                    <p className="stat-label">Employees</p>
                     <p className="mt-1 text-2xl font-semibold tabular">
                       {preview.employeeCount.toLocaleString('en-IN')}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-slate-500">Net payroll</p>
+                    <p className="stat-label">Net payroll</p>
                     <p className="mt-1 text-2xl font-semibold tabular">
                       <Money minor={preview.totalNetAmount} />
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-slate-500">
-                      Rows with errors
-                    </p>
+                    <p className="stat-label">Rows with errors</p>
                     <p
                       className={`mt-1 text-2xl font-semibold tabular ${
                         preview.rowsWithErrors > 0 ? 'text-red-700' : 'text-emerald-700'
@@ -388,7 +388,7 @@ export function PayrollImportPage() {
                   <h2 className="font-semibold">Sample rows</h2>
                 </div>
                 <Table>
-                  <thead className="bg-slate-50">
+                  <thead className="thead">
                     <tr>
                       <th className="th">Row</th>
                       <th className="th">Employee</th>
@@ -397,7 +397,7 @@ export function PayrollImportPage() {
                       <th className="th text-right">Net</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 bg-white">
+                  <tbody className="tbody">
                     {preview.sample.map((row) => (
                       <tr key={String(row.rowNumber)}>
                         <td className="td text-slate-400">{String(row.rowNumber)}</td>
@@ -560,19 +560,19 @@ export function PayrollDetailPage() {
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card className="p-4">
-          <p className="text-xs uppercase tracking-wide text-slate-500">Employees</p>
+          <p className="stat-label">Employees</p>
           <p className="mt-1 text-2xl font-semibold tabular">
             {batch.employeeCount.toLocaleString('en-IN')}
           </p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs uppercase tracking-wide text-slate-500">Total net payroll</p>
+          <p className="stat-label">Total net payroll</p>
           <p className="mt-1 text-2xl font-semibold tabular">
             <Money minor={batch.totalNetAmount} />
           </p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs uppercase tracking-wide text-slate-500">Previous month</p>
+          <p className="stat-label">Previous month</p>
           <p className="mt-1 text-2xl font-semibold tabular text-slate-600">
             {batch.comparison.previousTotalNetAmount !== null ? (
               <Money minor={batch.comparison.previousTotalNetAmount} />
@@ -582,7 +582,7 @@ export function PayrollDetailPage() {
           </p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs uppercase tracking-wide text-slate-500">Difference</p>
+          <p className="stat-label">Difference</p>
           {batch.comparison.difference !== null ? (
             <>
               <p
@@ -628,7 +628,7 @@ export function PayrollDetailPage() {
         ) : (
           <>
             <Table>
-              <thead className="bg-slate-50">
+              <thead className="thead">
                 <tr>
                   <th className="th">Employee</th>
                   <th className="th">Account</th>
@@ -637,7 +637,7 @@ export function PayrollDetailPage() {
                   <th className="th text-right">Net salary</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
+              <tbody className="tbody">
                 {employees.items.map((employee) => (
                   <tr key={employee.id}>
                     <td className="td">

@@ -73,7 +73,11 @@ export function ReportsPage() {
         <div className="lg:col-span-3">
           {!report ? (
             <Card>
-              <EmptyState title="Choose a report" hint="Pick one from the list to run it." />
+              <EmptyState
+                illustration="charts"
+                title="Choose a report"
+                hint="Pick one from the list to run it."
+              />
             </Card>
           ) : (
             <Card>
@@ -136,7 +140,7 @@ export function ReportsPage() {
                 <EmptyState title="No rows for these filters" />
               ) : (
                 <Table>
-                  <thead className="bg-slate-50">
+                  <thead className="thead">
                     <tr>
                       {data.columns.map((column) => (
                         <th
@@ -148,7 +152,7 @@ export function ReportsPage() {
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 bg-white">
+                  <tbody className="tbody">
                     {data.rows.map((row, index) => (
                       <tr key={String(row.id ?? index)} className="hover:bg-slate-50">
                         {data.columns.map((column) => (

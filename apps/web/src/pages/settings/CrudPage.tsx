@@ -129,7 +129,7 @@ export function CrudPage<T extends { id: string }>({
         ) : (
           <>
             <Table>
-              <thead className="bg-slate-50">
+              <thead className="thead">
                 <tr>
                   {columns.map((column) => (
                     <th
@@ -142,7 +142,7 @@ export function CrudPage<T extends { id: string }>({
                   <th className="th" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
+              <tbody className="tbody">
                 {data.items.map((row) => (
                   <tr key={row.id} className="hover:bg-slate-50">
                     {columns.map((column) => (

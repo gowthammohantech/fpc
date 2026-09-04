@@ -36,15 +36,25 @@ describe('StatusBadge', () => {
     expect(screen.getByText('Payment Processing')).toBeInTheDocument();
   });
 
-  it('distinguishes settled, blocked and in-flight states by colour', () => {
+  it('distinguishes settled, blocked and in-flight states by tone', () => {
+    // Asserted on the tone rather than on a colour class: the meaning is the
+    // contract, the palette expressing it is a styling detail a restyle may
+    // change.
     const tone = (status: string) => {
       const { container } = render(<StatusBadge status={status} />);
-      return container.querySelector('span')!.className;
+      return container.querySelector('span')!.getAttribute('data-tone');
     };
 
-    expect(tone('PAID')).toContain('emerald');
-    expect(tone('REJECTED')).toContain('red');
-    expect(tone('PENDING_APPROVAL')).toContain('amber');
+    expect(tone('PAID')).toBe('positive');
+    expect(tone('REJECTED')).toBe('negative');
+    expect(tone('PENDING_APPROVAL')).toBe('attention');
+  });
+
+  it('renders the pill as a single element, so its tone is unambiguous', () => {
+    // The tone lives on the outermost span; nesting another one inside would
+    // silently change what a reader — or a test — picks up first.
+    const { container } = render(<StatusBadge status="PAID" />);
+    expect(container.querySelectorAll('span')).toHaveLength(1);
   });
 
   it('renders an em dash for an absent status, consistent with Money', () => {
@@ -63,14 +73,14 @@ describe('ConfidenceBadge', () => {
     expect(screen.getAllByText('94%')).toHaveLength(2);
   });
 
-  it('colours a weak match differently from a strong one', () => {
+  it('tones a weak match differently from a strong one', () => {
     const tone = (value: number) => {
       const { container } = render(<ConfidenceBadge value={value} />);
-      return container.querySelector('span')!.className;
+      return container.querySelector('span')!.getAttribute('data-tone');
     };
 
-    expect(tone(0.95)).toContain('emerald');
-    expect(tone(0.8)).toContain('amber');
-    expect(tone(0.4)).toContain('red');
+    expect(tone(0.95)).toBe('positive');
+    expect(tone(0.8)).toBe('attention');
+    expect(tone(0.4)).toBe('negative');
   });
 });

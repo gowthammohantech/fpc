@@ -4,6 +4,9 @@ import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { App } from './App';
 import { AuthProvider } from './hooks/useAuth';
+// Imported as JS, above the stylesheet: postcss-import is not configured, so an
+// @import inside index.css would order unpredictably against @tailwind base.
+import '@fontsource-variable/inter-tight';
 import './index.css';
 
 const queryClient = new QueryClient({

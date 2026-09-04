@@ -72,13 +72,14 @@ export function BankStatementsPage() {
           </div>
         ) : !data?.items.length ? (
           <EmptyState
+            illustration="bank"
             title="No statements imported"
             hint="Download a statement from your bank portal and upload it here to reconcile payments."
           />
         ) : (
           <>
             <Table>
-              <thead className="bg-slate-50">
+              <thead className="thead">
                 <tr>
                   <th className="th">File</th>
                   <th className="th">Period</th>
@@ -91,7 +92,7 @@ export function BankStatementsPage() {
                   <th className="th" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
+              <tbody className="tbody">
                 {data.items.map((statement) => (
                   <tr key={statement.id} className="hover:bg-slate-50">
                     <td className="td font-medium">{statement.fileName}</td>
@@ -425,11 +426,11 @@ export function BankTransactionsPage() {
             <ErrorState error={error} />
           </div>
         ) : !data?.items.length ? (
-          <EmptyState title="No transactions" />
+          <EmptyState illustration="bank" title="No transactions" />
         ) : (
           <>
             <Table>
-              <thead className="bg-slate-50">
+              <thead className="thead">
                 <tr>
                   <th className="th">Date</th>
                   <th className="th">Narration</th>
@@ -440,7 +441,7 @@ export function BankTransactionsPage() {
                   <th className="th">Reconciliation</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
+              <tbody className="tbody">
                 {data.items.map((transaction) => (
                   <tr key={transaction.id} className="hover:bg-slate-50">
                     <td className="td">{formatDate(transaction.transactionDate)}</td>

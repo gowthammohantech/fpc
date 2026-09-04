@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { apiClient } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
+import { AuthLayout } from '@/components/AuthLayout';
 import { ErrorState } from '@/components/ui';
 
 /**
@@ -47,35 +48,43 @@ export function AcceptInvitePage() {
 
   if (!token) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-100 p-4">
-        <div className="card w-full max-w-sm p-6">
-          <h1 className="text-lg font-semibold">This invitation link is incomplete</h1>
-          <p className="mt-2 text-sm text-slate-500">
-            It is missing its token. Ask your administrator to send a new invitation.
-          </p>
-          <button className="btn-secondary mt-4 w-full" onClick={() => navigate('/login')}>
-            Go to sign in
-          </button>
-        </div>
-      </div>
+      <AuthLayout
+        illustration="no-access"
+        headline="That link is missing something."
+        blurb="An invitation carries a one-time token. Without it we cannot tell whose account to activate."
+      >
+        <h1 className="text-2xl font-semibold tracking-tight text-ink-900">
+          This invitation link is incomplete
+        </h1>
+        <p className="mt-2 text-sm text-ink-500">
+          It is missing its token. Ask your administrator to send a new invitation.
+        </p>
+        <button className="btn-secondary mt-6 w-full" onClick={() => navigate('/login')}>
+          Go to sign in
+        </button>
+      </AuthLayout>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100 p-4">
-      <form onSubmit={onSubmit} className="card w-full max-w-sm p-6">
-        <h1 className="text-xl font-semibold text-brand-700">Set your password</h1>
-        <p className="mt-1 text-sm text-slate-500">
+    <AuthLayout
+      illustration="welcome"
+      headline="Welcome to Finance Ops."
+      blurb="Set a password and your account is ready to use."
+    >
+      <form onSubmit={onSubmit}>
+        <h1 className="text-2xl font-semibold tracking-tight text-ink-900">Set your password</h1>
+        <p className="mt-1 text-sm text-ink-500">
           Choose a password to activate your Finance Operations account.
         </p>
 
         {error ? (
-          <div className="mt-4">
-            <ErrorState error={error} />
+          <div className="mt-5">
+            <ErrorState error={error} compact />
           </div>
         ) : null}
 
-        <div className="mt-5">
+        <div className="mt-6">
           <label className="label" htmlFor="password">
             New password
           </label>
@@ -89,7 +98,7 @@ export function AcceptInvitePage() {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
           />
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-ink-500">
             At least 10 characters, with an uppercase letter, a lowercase letter and a digit.
           </p>
         </div>
@@ -120,6 +129,6 @@ export function AcceptInvitePage() {
           {submitting ? 'Activating…' : 'Activate account'}
         </button>
       </form>
-    </div>
+    </AuthLayout>
   );
 }

@@ -234,9 +234,7 @@ export function UsersPage() {
     queryKey: ['roles'],
     queryFn: () => api.settings.roles(),
   });
-  const roleLabels = Object.fromEntries(
-    (roles?.items ?? []).map((role) => [role.key, role.label]),
-  );
+  const roleLabels = Object.fromEntries((roles?.items ?? []).map((role) => [role.key, role.label]));
 
   return (
     <>
