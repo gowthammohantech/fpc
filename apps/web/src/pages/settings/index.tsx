@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ROLE_KEYS, ROLE_LABELS, ROLE_PERMISSIONS, type RoleKey } from '@fpc/shared';
+import { roleLabel } from '@fpc/shared';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDate, humanize } from '@/lib/format';
-import { Card, Modal, Money, PageHeader, Spinner, StatusBadge } from '@/components/ui';
+import { Modal, Money, StatusBadge } from '@/components/ui';
 import { CrudPage } from './CrudPage';
 
 export function CompaniesPage() {
@@ -228,6 +228,16 @@ export function UsersPage() {
     queryFn: () => api.settings.companies({ pageSize: 100 }),
   });
 
+  // The catalogue rather than the built-in list, so roles the tenant created
+  // under Settings → Roles can be granted here too.
+  const { data: roles } = useQuery({
+    queryKey: ['roles'],
+    queryFn: () => api.settings.roles(),
+  });
+  const roleLabels = Object.fromEntries(
+    (roles?.items ?? []).map((role) => [role.key, role.label]),
+  );
+
   return (
     <>
       {invite ? <InviteLinkModal invite={invite} onClose={() => setInvite(null)} /> : null}
@@ -271,7 +281,7 @@ export function UsersPage() {
           { header: 'Email', render: (row) => row.email },
           {
             header: 'Roles',
-            render: (row) => row.roleKeys.map((role) => ROLE_LABELS[role as RoleKey]).join(', '),
+            render: (row) => row.roleKeys.map((role) => roleLabel(role, roleLabels)).join(', '),
           },
           {
             header: 'Companies',
@@ -307,14 +317,19 @@ export function UsersPage() {
             name: 'roleKeys',
             label: 'Roles',
             type: 'multiselect',
+            // A handful of roles, compared against each other — two columns
+            // show all of them without a scrollbar.
+            columns: 2,
             required: true,
-            options: ROLE_KEYS.map((role) => ({
-              value: role,
-              label: ROLE_LABELS[role as RoleKey],
-              // The same count the Roles screen shows, so the weight of a role
-              // is visible at the moment it is granted.
-              hint: `${ROLE_PERMISSIONS[role as RoleKey].length} permissions`,
-            })),
+            options: (roles?.items ?? [])
+              .filter((role) => role.active)
+              .map((role) => ({
+                value: role.key,
+                label: role.label,
+                // The same count the Roles screen shows, so the weight of a
+                // role is visible at the moment it is granted.
+                hint: `${role.permissionCount} permissions`,
+              })),
             help: 'Permissions are the union of the selected roles. See Roles for what each one grants.',
           },
           {
@@ -395,62 +410,6 @@ function InviteLinkModal({
         This link is shown only once. If it is lost, use “Resend invite” on the user row.
       </p>
     </Modal>
-  );
-}
-
-/**
- * Role reference — PRD §7.
- *
- * Roles are fixed in code rather than editable rows: the MVP defines exactly
- * eight, and the permissions listed here are the same ones the API enforces.
- */
-export function RolesPage() {
-  const { data, isLoading } = useQuery({
-    queryKey: ['roles'],
-    queryFn: () => api.settings.roles(),
-  });
-
-  if (isLoading) return <Spinner />;
-
-  return (
-    <>
-      <PageHeader
-        title="Roles"
-        subtitle="What each role can do. These are enforced by the API, not just the interface."
-      />
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        {data?.items.map((role) => (
-          <Card key={role.key} className="p-5">
-            <div className="flex items-baseline justify-between">
-              <h2 className="font-semibold">{role.label}</h2>
-              <span className="text-xs text-slate-500">{role.permissionCount} permissions</span>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-1">
-              {role.permissions.map((permission) => (
-                <span
-                  key={permission}
-                  className={`rounded px-1.5 py-0.5 font-mono text-xs ${
-                    permission.startsWith('payroll:')
-                      ? 'bg-purple-100 text-purple-800'
-                      : permission.endsWith(':approve')
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : 'bg-slate-100 text-slate-600'
-                  }`}
-                >
-                  {permission}
-                </span>
-              ))}
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      <p className="mt-6 text-sm text-slate-500">
-        Payroll permissions are shown in purple and approval permissions in green — the two
-        separations the platform relies on. Change a user's roles under Users.
-      </p>
-    </>
   );
 }
 

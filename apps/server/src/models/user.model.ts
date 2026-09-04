@@ -1,5 +1,4 @@
 import { Schema, Types, model } from 'mongoose';
-import { ROLE_KEYS, type RoleKey } from '@fpc/shared';
 import { baseSchemaOptions } from './base.js';
 
 export interface UserDoc {
@@ -7,7 +6,8 @@ export interface UserDoc {
   name: string;
   email: string;
   passwordHash: string;
-  roleKeys: RoleKey[];
+  /** Built-in role keys (PRD §7) and the tenant's own, mixed freely. */
+  roleKeys: string[];
   /** Empty means "every company in the tenant" (used by platform admins). */
   companyIds: Types.ObjectId[];
   locationIds: Types.ObjectId[];
@@ -30,7 +30,9 @@ const schema = new Schema<UserDoc>(
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, trim: true, lowercase: true },
     passwordHash: { type: String, required: true, select: false },
-    roleKeys: [{ type: String, enum: ROLE_KEYS, required: true }],
+    // Not an enum: a tenant's own roles (see `role.model.ts`) are rows, and
+    // the assignment is validated against the catalogue in the route instead.
+    roleKeys: [{ type: String, required: true }],
     companyIds: [{ type: Schema.Types.ObjectId, ref: 'Company' }],
     locationIds: [{ type: Schema.Types.ObjectId, ref: 'Location' }],
     departmentIds: [{ type: Schema.Types.ObjectId, ref: 'Department' }],

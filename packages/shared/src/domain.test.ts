@@ -12,6 +12,9 @@ import {
   normalizeName,
   parseAmountToMinor,
   paymentBatchMachine,
+  isSystemRoleKey,
+  PERMISSION_GROUPS,
+  PERMISSIONS,
   permissionsForRoles,
   ROLE_PERMISSIONS,
   RoleKey,
@@ -142,6 +145,24 @@ describe('permissions', () => {
   it('unions permissions across multiple roles', () => {
     const granted = permissionsForRoles([RoleKey.PAYROLL_USER, RoleKey.APPROVER]);
     expect(granted).toEqual(expect.arrayContaining(['payroll:create', 'invoice:approve']));
+  });
+
+  it('unions a tenant’s own roles with the built-in ones', () => {
+    const granted = permissionsForRoles([RoleKey.APPROVER, 'INVOICE_CLERK'], {
+      INVOICE_CLERK: ['audit:read'],
+    });
+    expect(granted).toEqual(expect.arrayContaining(['invoice:approve', 'audit:read']));
+  });
+
+  it('grants nothing for a role key it cannot resolve', () => {
+    expect(permissionsForRoles(['DELETED_ROLE'])).toEqual([]);
+    expect(isSystemRoleKey('DELETED_ROLE')).toBe(false);
+    expect(isSystemRoleKey(RoleKey.CFO)).toBe(true);
+  });
+
+  it('groups every permission exactly once for the role editor', () => {
+    const grouped = PERMISSION_GROUPS.flatMap((group) => group.permissions);
+    expect(grouped.sort()).toEqual([...PERMISSIONS].sort());
   });
 });
 

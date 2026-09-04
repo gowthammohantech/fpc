@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ROLE_LABELS, type Permission, type RoleKey } from '@fpc/shared';
+import { roleLabel, type Permission } from '@fpc/shared';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { GlobalSearch } from './GlobalSearch';
@@ -171,7 +171,7 @@ export function Layout() {
               <span className="hidden text-left sm:block">
                 <span className="block font-medium leading-tight">{user?.name}</span>
                 <span className="block text-xs leading-tight text-slate-500">
-                  {user?.roleKeys.map((role) => ROLE_LABELS[role as RoleKey]).join(', ')}
+                  {user?.roleKeys.map((role) => roleLabel(role)).join(', ')}
                 </span>
               </span>
             </button>

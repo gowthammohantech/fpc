@@ -351,6 +351,159 @@ RUN()('audit trail', () => {
   });
 });
 
+RUN()('custom roles', () => {
+  /**
+   * A role a tenant defines has to be enforced by the same middleware as a
+   * built-in one — otherwise the settings screen would hand out grants the API
+   * quietly ignores.
+   */
+  it('creates a role, grants it to a user, and enforces exactly its permissions', async () => {
+    const adminToken = await signIn('admin@nova.example.com');
+
+    const created = await request(app)
+      .post('/api/settings/roles')
+      .set('authorization', `Bearer ${adminToken}`)
+      .send({
+        label: 'Invoice Clerk',
+        description: 'Files invoices, sees nothing else',
+        permissions: ['invoice:read', 'dashboard:read', 'notification:read'],
+      });
+
+    expect(created.status, JSON.stringify(created.body)).toBe(201);
+    expect(created.body.key).toBe('INVOICE_CLERK');
+    expect(created.body.system).toBe(false);
+    expect(created.body.permissionCount).toBe(3);
+
+    const invited = await request(app)
+      .post('/api/settings/users')
+      .set('authorization', `Bearer ${adminToken}`)
+      .send({
+        name: 'Nikhil Das',
+        email: 'clerk@nova.example.com',
+        password: DEMO_PASSWORD,
+        roleKeys: ['INVOICE_CLERK'],
+        companyIds: [],
+        locationIds: [],
+        departmentIds: [],
+      });
+    expect(invited.status, JSON.stringify(invited.body)).toBe(201);
+
+    const clerkToken = await signIn('clerk@nova.example.com');
+    const me = await request(app).get('/api/auth/me').set('authorization', `Bearer ${clerkToken}`);
+
+    expect(me.status).toBe(200);
+    expect(me.body.roleKeys).toEqual(['INVOICE_CLERK']);
+    expect([...me.body.permissions].sort()).toEqual(
+      ['dashboard:read', 'invoice:read', 'notification:read'].sort(),
+    );
+
+    // Granted, so allowed; never granted, so refused.
+    const invoices = await request(app)
+      .get('/api/invoices')
+      .set('authorization', `Bearer ${clerkToken}`);
+    const payroll = await request(app)
+      .get('/api/payroll')
+      .set('authorization', `Bearer ${clerkToken}`);
+
+    expect(invoices.status).toBe(200);
+    expect(payroll.status).toBe(403);
+  });
+
+  it('applies an edited grant on the next request', async () => {
+    const adminToken = await signIn('admin@nova.example.com');
+    const catalogue = await request(app)
+      .get('/api/settings/roles')
+      .set('authorization', `Bearer ${adminToken}`);
+    const clerk = (catalogue.body.items as Array<Record<string, unknown>>).find(
+      (role) => role.key === 'INVOICE_CLERK',
+    );
+    expect(clerk).toBeDefined();
+
+    const clerkToken = await signIn('clerk@nova.example.com');
+    expect(
+      (await request(app).get('/api/audit').set('authorization', `Bearer ${clerkToken}`)).status,
+    ).toBe(403);
+
+    const updated = await request(app)
+      .patch(`/api/settings/roles/${clerk!.id}`)
+      .set('authorization', `Bearer ${adminToken}`)
+      .send({ permissions: ['invoice:read', 'dashboard:read', 'notification:read', 'audit:read'] });
+    expect(updated.status, JSON.stringify(updated.body)).toBe(200);
+
+    // The same access token, now carrying the wider grant: permissions are
+    // resolved per request rather than frozen into the token.
+    expect(
+      (await request(app).get('/api/audit').set('authorization', `Bearer ${clerkToken}`)).status,
+    ).toBe(200);
+  });
+
+  it('lists built-in roles as read-only alongside the tenant’s own', async () => {
+    const token = await signIn('admin@nova.example.com');
+    const response = await request(app)
+      .get('/api/settings/roles')
+      .set('authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    const items = response.body.items as Array<Record<string, unknown>>;
+    const builtIn = items.find((role) => role.key === RoleKey.CFO);
+    const custom = items.find((role) => role.key === 'INVOICE_CLERK');
+
+    expect(builtIn).toMatchObject({ system: true });
+    expect(builtIn?.id).toBeUndefined();
+    expect(custom).toMatchObject({ system: false, userCount: 1 });
+  });
+
+  it('refuses to delete a role someone still holds, and refuses built-in keys', async () => {
+    const token = await signIn('admin@nova.example.com');
+    const catalogue = await request(app)
+      .get('/api/settings/roles')
+      .set('authorization', `Bearer ${token}`);
+    const clerk = (catalogue.body.items as Array<Record<string, unknown>>).find(
+      (role) => role.key === 'INVOICE_CLERK',
+    );
+
+    const held = await request(app)
+      .delete(`/api/settings/roles/${clerk!.id}`)
+      .set('authorization', `Bearer ${token}`);
+    expect(held.status).toBe(409);
+
+    const collision = await request(app)
+      .post('/api/settings/roles')
+      .set('authorization', `Bearer ${token}`)
+      .send({ label: 'CFO', permissions: ['invoice:read'] });
+    expect(collision.status).toBe(409);
+  });
+
+  it('will not let a user be given a role that does not exist', async () => {
+    const token = await signIn('admin@nova.example.com');
+    const response = await request(app)
+      .post('/api/settings/users')
+      .set('authorization', `Bearer ${token}`)
+      .send({
+        name: 'Ghost',
+        email: 'ghost@nova.example.com',
+        password: DEMO_PASSWORD,
+        roleKeys: ['NO_SUCH_ROLE'],
+        companyIds: [],
+        locationIds: [],
+        departmentIds: [],
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.message).toMatch(/NO_SUCH_ROLE/);
+  });
+
+  it('keeps role creation to the administrators who hold the permission', async () => {
+    const token = await signIn('ravi@nova.example.com');
+    const response = await request(app)
+      .post('/api/settings/roles')
+      .set('authorization', `Bearer ${token}`)
+      .send({ label: 'Self Promotion', permissions: ['invoice:approve'] });
+
+    expect(response.status).toBe(403);
+  });
+});
+
 if (!available) {
   // Surfaces the reason once, so a skipped suite is never mistaken for a pass.
   console.warn(`[rbac.integration] skipped — ${databaseSkipReason() ?? 'no database'}`);

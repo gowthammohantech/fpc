@@ -1,6 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
 import jwt from 'jsonwebtoken';
-import type { RoleKey } from '@fpc/shared';
 import { env } from '../../config/env.js';
 
 export interface AccessClaims {
@@ -8,7 +7,7 @@ export interface AccessClaims {
   tenantId: string;
   email: string;
   name: string;
-  roleKeys: RoleKey[];
+  roleKeys: string[];
   companyIds: string[];
   locationIds: string[];
   departmentIds: string[];

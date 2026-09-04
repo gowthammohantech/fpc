@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
-import { permissionsForRoles, schemas, type RoleKey } from '@fpc/shared';
+import { schemas } from '@fpc/shared';
 import { isTest } from '../../config/env.js';
 import { asyncHandler } from '../../core/asyncHandler.js';
 import { validateBody } from '../../core/validate.js';
@@ -81,7 +81,8 @@ authRouter.get(
       email: principal.email,
       name: principal.name,
       roleKeys: principal.roleKeys,
-      permissions: permissionsForRoles(principal.roleKeys as RoleKey[]),
+      // Already resolved by `authenticate`, custom roles included.
+      permissions: principal.permissions,
       companyIds: principal.companyIds.map(String),
       locationIds: principal.locationIds.map(String),
       departmentIds: principal.departmentIds.map(String),

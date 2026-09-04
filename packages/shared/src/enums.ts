@@ -31,6 +31,25 @@ export const ROLE_LABELS: Record<RoleKey, string> = {
   AUDITOR: 'Auditor / Read Only',
 };
 
+/**
+ * Display name for a role key.
+ *
+ * Tenants can define their own roles, whose keys are not in `ROLE_LABELS`, so
+ * every screen that prints a role goes through here rather than indexing the
+ * map directly and rendering `undefined`.
+ */
+export function roleLabel(key: string, catalogue?: Readonly<Record<string, string>>): string {
+  return (
+    catalogue?.[key] ??
+    ROLE_LABELS[key as RoleKey] ??
+    key
+      .toLowerCase()
+      .split('_')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
+  );
+}
+
 /** Invoice lifecycle — PRD §14. */
 export const InvoiceStatus = {
   RECEIVED: 'RECEIVED',

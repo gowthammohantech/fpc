@@ -41,7 +41,8 @@ export interface Principal {
   tenantId: Id;
   email: string;
   name: string;
-  roleKeys: RoleKey[];
+  /** Built-in role keys (PRD §7) and the tenant's own, mixed freely. */
+  roleKeys: string[];
   permissions: Permission[];
   /** Companies this user may act within. Empty means all companies in tenant. */
   companyIds: Id[];
@@ -106,7 +107,7 @@ export interface User extends Timestamps {
   tenantId: Id;
   name: string;
   email: string;
-  roleKeys: RoleKey[];
+  roleKeys: string[];
   companyIds: Id[];
   locationIds: Id[];
   departmentIds: Id[];

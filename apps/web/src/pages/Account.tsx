@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { ROLE_LABELS, type RoleKey } from '@fpc/shared';
+import { roleLabel } from '@fpc/shared';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, ErrorState, PageHeader } from '@/components/ui';
@@ -51,7 +51,7 @@ export function AccountPage() {
             <div className="flex justify-between gap-6">
               <dt className="text-slate-500">Roles</dt>
               <dd className="text-right">
-                {user?.roleKeys.map((role) => ROLE_LABELS[role as RoleKey]).join(', ')}
+                {user?.roleKeys.map((role) => roleLabel(role)).join(', ')}
               </dd>
             </div>
           </dl>

@@ -6,7 +6,8 @@ import { Vendor } from '../../models/vendor.model.js';
 import { BankAccount } from '../../models/bankAccount.model.js';
 import { crudRouter } from './crudFactory.js';
 import { companyRouter } from './company.routes.js';
-import { roleRouter, userRouter } from './user.routes.js';
+import { roleRouter } from './role.routes.js';
+import { userRouter } from './user.routes.js';
 
 const locationRouter = crudRouter({
   model: Location,

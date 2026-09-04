@@ -1,10 +1,11 @@
 import { randomBytes } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { Types } from 'mongoose';
-import { permissionsForRoles, type LoginResponse, type RoleKey } from '@fpc/shared';
+import type { LoginResponse } from '@fpc/shared';
 import { ApiError } from '../../core/errors.js';
 import { User } from '../../models/user.model.js';
 import { audit, type AuditContext } from '../audit/audit.service.js';
+import { resolvePermissions } from '../organization/role.service.js';
 import {
   accessTokenTtlSeconds,
   hashToken,
@@ -57,7 +58,7 @@ export async function login(
       entityLabel: user.email,
       tenantId: user.tenantId,
     },
-    { ...context, principal: toPrincipalLike(user) },
+    { ...context, principal: await toPrincipalLike(user) },
   );
 
   return tokens;
@@ -152,7 +153,7 @@ export async function acceptInvite(
       entityLabel: user.email,
       tenantId: user.tenantId,
     },
-    { ...context, principal: toPrincipalLike(user) },
+    { ...context, principal: await toPrincipalLike(user) },
   );
 
   return tokens;
@@ -191,7 +192,8 @@ export async function changePassword(
 async function issueTokens(user: InstanceType<typeof User>): Promise<LoginResponse> {
   const userId = String(user._id);
   const tenantId = String(user.tenantId);
-  const roleKeys = user.roleKeys as RoleKey[];
+  const roleKeys = user.roleKeys;
+  const permissions = await resolvePermissions(user.tenantId, roleKeys);
 
   const accessToken = signAccessToken({
     sub: userId,
@@ -223,7 +225,7 @@ async function issueTokens(user: InstanceType<typeof User>): Promise<LoginRespon
       email: user.email,
       name: user.name,
       roleKeys,
-      permissions: permissionsForRoles(roleKeys),
+      permissions,
       companyIds: user.companyIds.map(String),
       locationIds: user.locationIds.map(String),
       departmentIds: user.departmentIds.map(String),
@@ -240,14 +242,14 @@ function parseTtlMs(ttl: string): number {
   return amount * multiplier;
 }
 
-function toPrincipalLike(user: InstanceType<typeof User>) {
+async function toPrincipalLike(user: InstanceType<typeof User>) {
   return {
     userId: user._id,
     tenantId: user.tenantId,
     email: user.email,
     name: user.name,
-    roleKeys: user.roleKeys as RoleKey[],
-    permissions: permissionsForRoles(user.roleKeys as RoleKey[]),
+    roleKeys: user.roleKeys,
+    permissions: await resolvePermissions(user.tenantId, user.roleKeys),
     companyIds: user.companyIds,
     locationIds: user.locationIds,
     departmentIds: user.departmentIds,

@@ -1,4 +1,4 @@
-import type { Permission, RoleKey } from '@fpc/shared';
+import type { Permission } from '@fpc/shared';
 import type { Types } from 'mongoose';
 
 /** The authenticated caller, attached to every request by `authenticate`. */
@@ -7,7 +7,8 @@ export interface Principal {
   tenantId: Types.ObjectId;
   email: string;
   name: string;
-  roleKeys: RoleKey[];
+  /** Built-in role keys and the tenant's own, mixed freely. */
+  roleKeys: string[];
   permissions: Permission[];
   /** Companies this user may act within. Empty means all in the tenant. */
   companyIds: Types.ObjectId[];

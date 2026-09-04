@@ -21,6 +21,7 @@ import { ApprovalRule } from '../../models/approvalRule.model.js';
 import { Department } from '../../models/department.model.js';
 import { User } from '../../models/user.model.js';
 import { audit, type AuditContext } from '../audit/audit.service.js';
+import { customGrants } from '../organization/role.service.js';
 import { evaluate, type RuleContext } from './rule.engine.js';
 
 export interface StartApprovalInput {
@@ -262,11 +263,20 @@ async function withApprovalPermission(
 
   const needed = permissionForSubject(subjectType);
   const users = await User.find({ _id: { $in: candidateUserIds } })
-    .select('_id roleKeys')
+    .select('_id tenantId roleKeys')
     .lean();
 
+  // A candidate may hold one of the tenant's own roles, whose grants are rows
+  // rather than code, so the grant map is loaded per tenant present here.
+  const grants = new Map<string, Awaited<ReturnType<typeof customGrants>>>();
+  for (const tenantId of new Set(users.map((user) => String(user.tenantId)))) {
+    grants.set(tenantId, await customGrants(tenantId));
+  }
+
   return users
-    .filter((user) => permissionsForRoles(user.roleKeys).includes(needed))
+    .filter((user) =>
+      permissionsForRoles(user.roleKeys, grants.get(String(user.tenantId))).includes(needed),
+    )
     .map((user) => user._id);
 }
 

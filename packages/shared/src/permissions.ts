@@ -29,7 +29,9 @@ export const PERMISSIONS = [
   'user:update',
   'user:delete',
   'role:read',
+  'role:create',
   'role:update',
+  'role:delete',
 
   // Vendor master & company bank accounts
   'vendor:read',
@@ -101,6 +103,79 @@ export const PERMISSIONS = [
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
+
+/** The `resource` half of a `resource:action` permission. */
+export function permissionResource(permission: Permission): string {
+  return permission.slice(0, permission.indexOf(':'));
+}
+
+/** The `action` half of a `resource:action` permission. */
+export function permissionAction(permission: Permission): string {
+  return permission.slice(permission.indexOf(':') + 1);
+}
+
+/** Human names for each resource, used to head the permission picker. */
+export const PERMISSION_RESOURCE_LABELS: Record<string, string> = {
+  tenant: 'Tenant',
+  company: 'Companies',
+  location: 'Locations',
+  department: 'Departments',
+  user: 'Users',
+  role: 'Roles',
+  vendor: 'Vendors',
+  bank_account: 'Bank accounts',
+  invoice: 'Invoices',
+  approval_rule: 'Approval rules',
+  approval: 'Approvals',
+  payable: 'Accounts payable',
+  payroll: 'Payroll',
+  obligation: 'Payment obligations',
+  payment_batch: 'Payment batches',
+  bank_statement: 'Bank statements',
+  bank_transaction: 'Bank transactions',
+  reconciliation: 'Reconciliation',
+  report: 'Reports',
+  audit: 'Audit trail',
+  dashboard: 'Dashboard',
+  notification: 'Notifications',
+};
+
+export interface PermissionGroup {
+  resource: string;
+  label: string;
+  permissions: Permission[];
+}
+
+/**
+ * The catalogue arranged by resource, in declaration order.
+ *
+ * The role editor renders one checkbox group per entry, so this is what keeps
+ * the picker and the enforced catalogue from drifting apart: a permission
+ * added above shows up in the interface without further work.
+ */
+export const PERMISSION_GROUPS: PermissionGroup[] = buildPermissionGroups();
+
+function buildPermissionGroups(): PermissionGroup[] {
+  const groups = new Map<string, PermissionGroup>();
+  for (const permission of PERMISSIONS) {
+    const resource = permissionResource(permission);
+    const group = groups.get(resource) ?? {
+      resource,
+      label: PERMISSION_RESOURCE_LABELS[resource] ?? resource.replace(/_/g, ' '),
+      permissions: [],
+    };
+    group.permissions.push(permission);
+    groups.set(resource, group);
+  }
+  return [...groups.values()];
+}
+
+const PERMISSION_SET: ReadonlySet<string> = new Set<string>(PERMISSIONS);
+
+/** Narrows an arbitrary string — a request body, a stored role — to a known permission. */
+export function isPermission(value: string): value is Permission {
+  return PERMISSION_SET.has(value);
+}
 
 const ALL: Permission[] = [...PERMISSIONS];
 
@@ -216,7 +291,9 @@ const COMPANY_ADMIN: Permission[] = [
   'user:update',
   'user:delete',
   'role:read',
+  'role:create',
   'role:update',
+  'role:delete',
   'vendor:read',
   'vendor:create',
   'vendor:update',
@@ -262,11 +339,26 @@ function dedupe(list: Permission[]): Permission[] {
   return [...new Set(list)];
 }
 
-/** Union of the permissions granted by a set of roles. */
-export function permissionsForRoles(roleKeys: RoleKey[]): Permission[] {
+/** True when the key names one of the roles built into the product. */
+export function isSystemRoleKey(key: string): key is RoleKey {
+  return key in ROLE_PERMISSIONS;
+}
+
+/**
+ * Union of the permissions granted by a set of roles.
+ *
+ * `customGrants` carries the tenant's own roles, which are rows rather than
+ * code; anything not found in either map grants nothing, so a role deleted
+ * out from under a user silently narrows their access instead of widening it.
+ */
+export function permissionsForRoles(
+  roleKeys: readonly string[],
+  customGrants?: Readonly<Record<string, readonly Permission[]>>,
+): Permission[] {
   const granted = new Set<Permission>();
   for (const key of roleKeys) {
-    for (const permission of ROLE_PERMISSIONS[key] ?? []) granted.add(permission);
+    const fromRole = isSystemRoleKey(key) ? ROLE_PERMISSIONS[key] : (customGrants?.[key] ?? []);
+    for (const permission of fromRole) granted.add(permission);
   }
   return [...granted];
 }

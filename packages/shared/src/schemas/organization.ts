@@ -1,6 +1,21 @@
 import { z } from 'zod';
-import { ROLE_KEYS } from '../enums.js';
+import { PERMISSIONS } from '../permissions.js';
 import { bankAccountNumber, gstin, ifsc, objectId } from './common.js';
+
+/**
+ * A role key: the eight built into the product plus whatever a tenant defines.
+ *
+ * Deliberately a pattern rather than an enum of `ROLE_KEYS` — custom roles are
+ * rows, so the closed list moved to a database lookup in the route, which is
+ * the only place that knows the tenant.
+ */
+export const roleKey = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .regex(/^[A-Z][A-Z0-9_]{1,39}$/, 'Role keys are uppercase letters, digits and underscores');
+
+export const permission = z.enum(PERMISSIONS);
 
 export const createCompanyRequest = z.object({
   name: z.string().trim().min(2).max(160),
@@ -44,7 +59,7 @@ export const createUserRequest = z.object({
   name: z.string().trim().min(2).max(120),
   email: z.string().trim().toLowerCase().email(),
   password: z.string().min(10).optional(),
-  roleKeys: z.array(z.enum(ROLE_KEYS as [string, ...string[]])).min(1, 'At least one role'),
+  roleKeys: z.array(roleKey).min(1, 'At least one role'),
   companyIds: z.array(objectId).default([]),
   locationIds: z.array(objectId).default([]),
   departmentIds: z.array(objectId).default([]),
@@ -53,6 +68,21 @@ export type CreateUserRequest = z.infer<typeof createUserRequest>;
 export const updateUserRequest = createUserRequest.partial().extend({
   status: z.enum(['ACTIVE', 'INVITED', 'SUSPENDED']).optional(),
 });
+
+export const createRoleRequest = z.object({
+  label: z.string().trim().min(2).max(60),
+  /** Derived from the label when omitted, so the form only asks for a name. */
+  key: roleKey.optional(),
+  description: z.string().trim().max(240).optional(),
+  permissions: z.array(permission).min(1, 'Select at least one permission'),
+});
+export type CreateRoleRequest = z.infer<typeof createRoleRequest>;
+
+export const updateRoleRequest = createRoleRequest
+  .omit({ key: true })
+  .partial()
+  .extend({ active: z.boolean().optional() });
+export type UpdateRoleRequest = z.infer<typeof updateRoleRequest>;
 
 export const createVendorRequest = z.object({
   companyId: objectId,

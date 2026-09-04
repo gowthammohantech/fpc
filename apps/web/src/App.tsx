@@ -21,11 +21,11 @@ import {
   CompaniesPage,
   DepartmentsPage,
   LocationsPage,
-  RolesPage,
   UsersPage,
   VendorsPage,
 } from '@/pages/settings';
 import { ApprovalRulesPage } from '@/pages/settings/ApprovalRules';
+import { RolesPage } from '@/pages/settings/Roles';
 
 /**
  * Routes mirror PRD §36 exactly. Each is wrapped in the permission its screen

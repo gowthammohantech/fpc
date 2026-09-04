@@ -16,6 +16,7 @@ import type {
   PaymentObligation,
   PayrollBatch,
   PayrollEmployee,
+  Permission,
   Principal,
   User,
   Vendor,
@@ -247,6 +248,10 @@ export const endpoints = (api: ApiClient) => ({
     deleteUser: (id: string) => api.delete<void>(`/settings/users/${id}`),
 
     roles: () => api.get<{ items: RoleDescriptor[] }>('/settings/roles'),
+    createRole: (body: Query) => api.post<RoleDescriptor>('/settings/roles', body),
+    updateRole: (id: string, body: Query) =>
+      api.patch<RoleDescriptor>(`/settings/roles/${id}`, body),
+    deleteRole: (id: string) => api.delete<void>(`/settings/roles/${id}`),
 
     bankAccounts: (query?: Query) =>
       api.get<Paginated<BankAccount>>('/settings/bank-accounts', query),
@@ -363,10 +368,18 @@ export interface ReportResult {
 }
 
 export interface RoleDescriptor {
+  /** Absent for the built-in roles, which are code rather than rows. */
+  id?: string;
   key: string;
   label: string;
-  permissions: string[];
+  description?: string;
+  permissions: Permission[];
   permissionCount: number;
+  /** Built-in roles cannot be edited or deleted. */
+  system: boolean;
+  active: boolean;
+  /** How many users hold the role — why a delete may be refused. */
+  userCount: number;
 }
 
 export interface ApprovalRuleView {

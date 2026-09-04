@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { Router } from 'express';
 import { Types } from 'mongoose';
-import { ROLE_PERMISSIONS, ROLE_LABELS, ROLE_KEYS, schemas, type RoleKey } from '@fpc/shared';
+import { schemas } from '@fpc/shared';
 import { asyncHandler } from '../../core/asyncHandler.js';
 import { ApiError } from '../../core/errors.js';
 import { paginate } from '../../core/paginate.js';
@@ -13,6 +13,7 @@ import { toApi } from '../../models/base.js';
 import { audit, auditContext } from '../audit/audit.service.js';
 import { hashPassword, issueInviteToken } from '../auth/auth.service.js';
 import { escapeRegex } from './crudFactory.js';
+import { knownRoleKeys } from './role.service.js';
 
 export const userRouter: Router = Router();
 
@@ -65,6 +66,7 @@ userRouter.post(
     if (await User.exists({ tenantId: principal.tenantId, email: payload.email })) {
       throw ApiError.conflict('A user with this email already exists');
     }
+    await assertRolesExist(principal.tenantId, payload.roleKeys);
 
     // Without an explicit password the account starts INVITED and is unusable
     // until the invitation is redeemed, so an invite token is issued below.
@@ -119,6 +121,9 @@ userRouter.patch(
     if (!before) throw ApiError.notFound('User');
 
     const payload = { ...(req.body as Record<string, unknown>) };
+    if (Array.isArray(payload.roleKeys)) {
+      await assertRolesExist(principal.tenantId, payload.roleKeys as string[]);
+    }
     if (payload.password) {
       payload.passwordHash = await hashPassword(String(payload.password));
       delete payload.password;
@@ -221,23 +226,11 @@ userRouter.delete(
 );
 
 /**
- * The role catalogue. Roles are fixed in code rather than editable rows —
- * the MVP defines exactly the eight roles in PRD §7, and this endpoint lets
- * the settings screen show what each one can do.
+ * Role keys are validated here rather than in the schema: the tenant's own
+ * roles are rows, so the closed list is only knowable with a tenant in hand.
  */
-export const roleRouter: Router = Router();
-
-roleRouter.get(
-  '/',
-  requirePermission('role:read'),
-  asyncHandler(async (_req, res) => {
-    res.json({
-      items: ROLE_KEYS.map((key) => ({
-        key,
-        label: ROLE_LABELS[key as RoleKey],
-        permissions: ROLE_PERMISSIONS[key as RoleKey],
-        permissionCount: ROLE_PERMISSIONS[key as RoleKey].length,
-      })),
-    });
-  }),
-);
+async function assertRolesExist(tenantId: Types.ObjectId, roleKeys: string[]): Promise<void> {
+  const known = await knownRoleKeys(tenantId);
+  const unknown = roleKeys.filter((key) => !known.has(key));
+  if (unknown.length) throw ApiError.badRequest(`Unknown role: ${unknown.join(', ')}`);
+}
