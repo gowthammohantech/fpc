@@ -28,8 +28,26 @@ function read(): AuthTokens | null {
   }
 }
 
+/**
+ * Where the API lives.
+ *
+ * VITE_API_URL is baked in at build time and wins when set, which is what a
+ * deploy that serves the SPA and the API from different origins needs. Without
+ * it the base stays the relative '/api' that the dev server proxies and nginx
+ * reverse-proxies in the container, so the browser sees a single origin and the
+ * auth flow stays free of CORS and third-party cookie rules.
+ */
+function resolveBaseUrl(): string {
+  const configured = import.meta.env.VITE_API_URL?.trim();
+  if (!configured) return '/api';
+  // Paths are appended verbatim, so a trailing slash would double up.
+  return configured.replace(/\/+$/, '');
+}
+
+export const apiBaseUrl = resolveBaseUrl();
+
 export const apiClient = new ApiClient({
-  baseUrl: '/api',
+  baseUrl: apiBaseUrl,
   tokens: browserTokens,
   onUnauthenticated: () => {
     localStorage.removeItem(STORAGE_KEY);

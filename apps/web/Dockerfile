@@ -32,6 +32,11 @@ RUN pnpm install --frozen-lockfile --filter @fpc/web...
 COPY tsconfig.base.json ./
 COPY packages ./packages
 COPY apps/web ./apps/web
+# Vite bakes VITE_ vars into the bundle, so an absolute API base has to be
+# supplied here rather than at run time. Empty by default, which leaves the
+# client on the relative /api that nginx proxies below.
+ARG VITE_API_URL=
+ENV VITE_API_URL=${VITE_API_URL}
 # The workspace packages resolve through their built dist/, so they precede the
 # app's own typecheck-and-bundle step.
 RUN pnpm --filter @fpc/shared build \

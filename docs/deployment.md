@@ -10,11 +10,16 @@ workspace and each app resolves `@fpc/shared` through the lockfile:
 
 ## Why the web image runs nginx
 
-`apps/web/src/lib/api.ts` sets `baseUrl: '/api'`. That is deliberate — the
+`apps/web/src/lib/api.ts` defaults `baseUrl` to `/api`. That is deliberate — the
 browser sees one origin, so the auth flow never touches CORS or third-party
 cookie rules. The web container upholds that contract by proxying `/api` to
 the API over Railway's private network, so the API needs no public domain and
 its URL is never baked into the bundle.
+
+To point the SPA straight at an API on another origin instead, build with
+`--build-arg VITE_API_URL=https://api.example.com/api`. Vite bakes `VITE_` vars
+in at build time, so this is a build argument, not a run-time one, and the API's
+`CORS_ORIGINS` then has to name the web origin.
 
 ## Building and running locally
 
