@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Permission } from '@fpc/shared';
 import { useAuth } from '@/hooks/useAuth';
@@ -16,7 +16,7 @@ export interface FieldDefinition {
   name: string;
   label: string;
   type?: 'text' | 'email' | 'number' | 'select' | 'multiselect' | 'checkbox';
-  options?: Array<{ value: string; label: string }>;
+  options?: Array<{ value: string; label: string; hint?: string }>;
   required?: boolean;
   help?: string;
   /** Hidden when editing (e.g. companyId, which cannot move). */
@@ -300,7 +300,7 @@ function RecordForm({
                 ))}
               </select>
             ) : field.type === 'multiselect' ? (
-              <MultiSelect
+              <CheckboxGroup
                 id={field.name}
                 label={field.label}
                 options={field.options ?? []}
@@ -344,13 +344,15 @@ function RecordForm({
 }
 
 /**
- * Checkbox list collapsed into a dropdown.
+ * Checkbox list for the multi-value fields.
  *
- * Roles and companies are long lists — expanded inline they pushed the rest of
- * the user form below the fold — so the selection is summarised on a trigger
- * and the options open over the content.
+ * Roles and companies are each a small, fixed set that the administrator has
+ * to compare before choosing — a role means nothing without its permission
+ * count beside it — so every option is on screen with its own checkbox rather
+ * than hidden behind a dropdown. The list scrolls once it grows past a few
+ * options, which keeps the rest of the form above the fold.
  */
-function MultiSelect({
+function CheckboxGroup({
   id,
   label,
   options,
@@ -359,89 +361,43 @@ function MultiSelect({
 }: {
   id: string;
   label: string;
-  options: Array<{ value: string; label: string }>;
+  options: Array<{ value: string; label: string; hint?: string }>;
   selected: string[];
   onChange(next: string[]): void;
 }) {
-  const [open, setOpen] = useState(false);
-  const container = useRef<HTMLDivElement>(null);
-  const panel = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (event: MouseEvent) => {
-      if (!container.current?.contains(event.target as Node)) setOpen(false);
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('mousedown', onPointerDown);
-    document.addEventListener('keydown', onKeyDown);
-    // The modal body scrolls; an absolutely positioned panel adds no height to
-    // it, so a dropdown opened near the bottom has to be pulled into view.
-    panel.current?.scrollIntoView({ block: 'nearest' });
-    return () => {
-      document.removeEventListener('mousedown', onPointerDown);
-      document.removeEventListener('keydown', onKeyDown);
-    };
-  }, [open]);
-
-  const summary = options
-    .filter((option) => selected.includes(option.value))
-    .map((option) => option.label)
-    .join(', ');
-
   return (
-    <div className="relative" ref={container}>
-      <button
-        id={id}
-        type="button"
-        className="input flex items-center justify-between gap-2 text-left"
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        onClick={() => setOpen(!open)}
-      >
-        <span className={`truncate ${summary ? '' : 'text-slate-400'}`}>
-          {summary || `Select ${label.toLowerCase()}…`}
-        </span>
-        <span aria-hidden className="text-slate-400">
-          ▾
-        </span>
-      </button>
-
-      {open ? (
-        <div
-          ref={panel}
-          role="listbox"
-          aria-multiselectable
-          aria-label={label}
-          className="absolute z-10 mt-1 max-h-56 w-full space-y-1 overflow-y-auto rounded-md border border-slate-300 bg-white p-2 shadow-lg"
-        >
-          {options.length === 0 ? (
-            <p className="px-1 py-0.5 text-sm text-slate-500">Nothing to choose from</p>
-          ) : (
-            options.map((option) => (
-              <label
-                key={option.value}
-                className="flex cursor-pointer items-center gap-2 rounded px-1 py-0.5 text-sm hover:bg-slate-50"
-              >
-                <input
-                  type="checkbox"
-                  checked={selected.includes(option.value)}
-                  onChange={(event) =>
-                    onChange(
-                      event.target.checked
-                        ? [...selected, option.value]
-                        : selected.filter((entry) => entry !== option.value),
-                    )
-                  }
-                />
-                {option.label}
-              </label>
-            ))
-          )}
-        </div>
-      ) : null}
+    <div
+      id={id}
+      role="group"
+      aria-label={label}
+      className="max-h-56 space-y-0.5 overflow-y-auto rounded-md border border-slate-300 bg-white p-2"
+    >
+      {options.length === 0 ? (
+        <p className="px-1 py-0.5 text-sm text-slate-500">Nothing to choose from</p>
+      ) : (
+        options.map((option) => (
+          <label
+            key={option.value}
+            className="flex cursor-pointer items-center gap-2 rounded px-1 py-1 text-sm hover:bg-slate-50"
+          >
+            <input
+              type="checkbox"
+              checked={selected.includes(option.value)}
+              onChange={(event) =>
+                onChange(
+                  event.target.checked
+                    ? [...selected, option.value]
+                    : selected.filter((entry) => entry !== option.value),
+                )
+              }
+            />
+            <span className="flex-1">{option.label}</span>
+            {option.hint ? (
+              <span className="shrink-0 text-xs text-slate-500">{option.hint}</span>
+            ) : null}
+          </label>
+        ))
+      )}
     </div>
   );
 }

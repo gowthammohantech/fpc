@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ROLE_KEYS, ROLE_LABELS, type RoleKey } from '@fpc/shared';
+import { ROLE_KEYS, ROLE_LABELS, ROLE_PERMISSIONS, type RoleKey } from '@fpc/shared';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDate, humanize } from '@/lib/format';
@@ -311,8 +311,11 @@ export function UsersPage() {
             options: ROLE_KEYS.map((role) => ({
               value: role,
               label: ROLE_LABELS[role as RoleKey],
+              // The same count the Roles screen shows, so the weight of a role
+              // is visible at the moment it is granted.
+              hint: `${ROLE_PERMISSIONS[role as RoleKey].length} permissions`,
             })),
-            help: 'Permissions are the union of the selected roles.',
+            help: 'Permissions are the union of the selected roles. See Roles for what each one grants.',
           },
           {
             name: 'companyIds',
