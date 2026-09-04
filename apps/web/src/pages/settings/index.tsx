@@ -215,6 +215,7 @@ export function VendorsPage() {
         { name: 'notes', label: 'Notes' },
       ]}
       defaults={{ paymentTermsDays: 30 }}
+      formColumns={2}
     />
   );
 }
@@ -312,12 +313,23 @@ export function UsersPage() {
             help: 'Leave blank to create the account as invited with a generated password.',
           },
           {
+            name: 'status',
+            label: 'Status',
+            type: 'select',
+            options: [
+              { value: 'ACTIVE', label: 'Active' },
+              { value: 'INVITED', label: 'Invited — cannot sign in yet' },
+              { value: 'SUSPENDED', label: 'Suspended' },
+            ],
+            help: 'Only an active account can sign in.',
+          },
+          {
             name: 'roleKeys',
             label: 'Roles',
             type: 'multiselect',
-            // A handful of roles, compared against each other — two columns
+            // A handful of roles, compared against each other — three columns
             // show all of them without a scrollbar.
-            columns: 2,
+            columns: 3,
             required: true,
             options: (roles?.items ?? [])
               .filter((role) => role.active)
@@ -334,24 +346,15 @@ export function UsersPage() {
             name: 'companyIds',
             label: 'Companies',
             type: 'multiselect',
+            columns: 2,
             options: (companies?.items ?? []).map((company) => ({
               value: company.id,
               label: company.name,
             })),
             help: 'Leave empty for access to every company in the tenant.',
           },
-          {
-            name: 'status',
-            label: 'Status',
-            type: 'select',
-            options: [
-              { value: 'ACTIVE', label: 'Active' },
-              { value: 'INVITED', label: 'Invited — cannot sign in yet' },
-              { value: 'SUSPENDED', label: 'Suspended' },
-            ],
-            help: 'Only an active account can sign in.',
-          },
         ]}
+        formColumns={2}
         defaults={{ roleKeys: [], companyIds: companyId ? [companyId] : [] }}
         toFormValues={(row) => ({
           name: row.name,

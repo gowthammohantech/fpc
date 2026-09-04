@@ -17,8 +17,8 @@ export interface FieldDefinition {
   label: string;
   type?: 'text' | 'email' | 'number' | 'select' | 'multiselect' | 'checkbox';
   options?: Array<{ value: string; label: string; hint?: string }>;
-  /** Lay a multiselect out in two columns instead of one scrolling list. */
-  columns?: 2;
+  /** Lay a multiselect out in columns instead of one scrolling list. */
+  columns?: 2 | 3;
   required?: boolean;
   help?: string;
   /** Hidden when editing (e.g. companyId, which cannot move). */
@@ -59,6 +59,7 @@ export function CrudPage<T extends { id: string }>({
   defaults,
   toFormValues,
   rowActions,
+  formColumns,
 }: {
   title: string;
   subtitle?: string;
@@ -75,6 +76,8 @@ export function CrudPage<T extends { id: string }>({
   defaults?: Record<string, unknown>;
   toFormValues?(row: T): Record<string, unknown>;
   rowActions?(row: T): CrudRowAction[];
+  /** Lay the create/edit form out in two columns, for records with many fields. */
+  formColumns?: 2;
 }) {
   const { companyId, can } = useAuth();
   const queryClient = useQueryClient();
@@ -194,6 +197,7 @@ export function CrudPage<T extends { id: string }>({
             editing === 'new' ? `Add ${title.replace(/s$/, '')}` : `Edit ${title.replace(/s$/, '')}`
           }
           fields={fields.filter((field) => editing === 'new' || !field.createOnly)}
+          formColumns={formColumns}
           initial={
             editing === 'new'
               ? { companyId, ...defaults }
@@ -228,6 +232,7 @@ function RecordForm({
   onClose,
   onSubmit,
   onDelete,
+  formColumns,
 }: {
   title: string;
   fields: FieldDefinition[];
@@ -235,6 +240,7 @@ function RecordForm({
   onClose(): void;
   onSubmit(values: Record<string, unknown>): Promise<void>;
   onDelete?(): Promise<void>;
+  formColumns?: 2;
 }) {
   const [values, setValues] = useState<Record<string, unknown>>(initial);
 
@@ -255,10 +261,13 @@ function RecordForm({
 
   const del = useMutation({ mutationFn: () => onDelete!() });
 
+  const twoUp = formColumns === 2;
+
   return (
     <Modal
       title={title}
       onClose={onClose}
+      wide={twoUp}
       footer={
         <>
           {onDelete ? (
@@ -279,9 +288,17 @@ function RecordForm({
         </>
       }
     >
-      <div className="space-y-4">
+      {/*
+        A long record — a vendor carries contact, tax and bank details — is
+        laid out two-up so the whole form is on screen at once instead of
+        scrolling. Wide controls still take the full row.
+      */}
+      <div className={twoUp ? 'grid gap-x-5 gap-y-4 sm:grid-cols-2' : 'space-y-4'}>
         {fields.map((field) => (
-          <div key={field.name}>
+          <div
+            key={field.name}
+            className={twoUp && field.type === 'multiselect' ? 'sm:col-span-2' : ''}
+          >
             <label className="label" htmlFor={field.name}>
               {field.label}
               {field.required ? <span className="text-red-600"> *</span> : null}
@@ -351,10 +368,10 @@ function RecordForm({
  *
  * Roles and companies are each a small, fixed set that the administrator has
  * to compare before choosing — a role means nothing without its permission
- * count beside it — so every option is on screen with its own checkbox rather
- * than hidden behind a dropdown. A field with a fixed, short list asks for
- * columns and gets every option at once; the rest fall back to a single list
- * that scrolls, so an unbounded set cannot push the form below the fold.
+ * count under it — so every option is on screen with its own checkbox rather
+ * than hidden behind a dropdown. A field with a fixed, short list asks for a
+ * column count and gets every option at once; the rest fall back to a single
+ * list that scrolls, so an unbounded set cannot push the form below the fold.
  */
 function CheckboxGroup({
   id,
@@ -367,7 +384,7 @@ function CheckboxGroup({
   id: string;
   label: string;
   options: Array<{ value: string; label: string; hint?: string }>;
-  columns?: 2;
+  columns?: 2 | 3;
   selected: string[];
   onChange(next: string[]): void;
 }) {
@@ -377,7 +394,9 @@ function CheckboxGroup({
       role="group"
       aria-label={label}
       className={`rounded-md border border-slate-300 bg-white p-2 ${
-        columns === 2 ? 'grid grid-cols-2 gap-x-4' : 'max-h-56 space-y-0.5 overflow-y-auto'
+        columns
+          ? `grid gap-x-4 ${columns === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`
+          : 'max-h-56 space-y-0.5 overflow-y-auto'
       }`}
     >
       {options.length === 0 ? (
@@ -386,10 +405,11 @@ function CheckboxGroup({
         options.map((option) => (
           <label
             key={option.value}
-            className="flex cursor-pointer items-center gap-2 rounded px-1 py-1 text-sm hover:bg-slate-50"
+            className="flex cursor-pointer items-start gap-2 rounded px-1 py-1 text-sm hover:bg-slate-50"
           >
             <input
               type="checkbox"
+              className="mt-1"
               checked={selected.includes(option.value)}
               onChange={(event) =>
                 onChange(
@@ -399,10 +419,14 @@ function CheckboxGroup({
                 )
               }
             />
-            <span className="flex-1">{option.label}</span>
-            {option.hint ? (
-              <span className="shrink-0 text-xs text-slate-500">{option.hint}</span>
-            ) : null}
+            <span className="min-w-0 flex-1">
+              <span className="block">{option.label}</span>
+              {/* The hint sits under the name, so a narrow column does not
+                  squeeze the two onto one line. */}
+              {option.hint ? (
+                <span className="block text-xs text-slate-500">{option.hint}</span>
+              ) : null}
+            </span>
           </label>
         ))
       )}

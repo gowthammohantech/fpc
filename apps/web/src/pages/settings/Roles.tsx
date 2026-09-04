@@ -270,7 +270,7 @@ function PermissionPicker({
     );
 
   return (
-    <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {PERMISSION_GROUPS.map((group) => {
         const chosen = group.permissions.filter((permission) => selected.includes(permission));
         const all = chosen.length === group.permissions.length;
@@ -350,6 +350,9 @@ function CreateRoleModal({
   return (
     <Modal
       title="Create role"
+      // The permission grid needs the width to lay out in columns; at the
+      // narrow size it collapses to one long list.
+      wide
       onClose={onClose}
       footer={
         <>

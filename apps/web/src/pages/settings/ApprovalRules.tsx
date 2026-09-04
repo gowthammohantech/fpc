@@ -223,7 +223,7 @@ function RuleEditor({ rule, onClose }: { rule: ApprovalRuleView | 'new'; onClose
       }
     >
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="sm:col-span-2">
+        <div>
           <label className="label" htmlFor="name">
             Rule name
           </label>
@@ -235,7 +235,7 @@ function RuleEditor({ rule, onClose }: { rule: ApprovalRuleView | 'new'; onClose
             placeholder="Above ₹10L — Department Head, Finance Head, CFO"
           />
         </div>
-        <div className="sm:col-span-2">
+        <div>
           <label className="label" htmlFor="description">
             Description
           </label>
