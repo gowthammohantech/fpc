@@ -3,9 +3,13 @@ import { env } from './config/env.js';
 import { logger } from './config/logger.js';
 import { createApp } from './app.js';
 import { startScheduler, stopScheduler } from './jobs/scheduler.js';
+import { seedOnStartup } from './seed/startup.js';
 
 async function main(): Promise<void> {
   await connectDatabase();
+
+  // A failed seed leaves a usable, if empty, API rather than a crash loop.
+  await seedOnStartup().catch((error) => logger.error({ err: error }, 'startup seed failed'));
 
   const app = createApp();
   startScheduler();

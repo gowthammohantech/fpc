@@ -148,14 +148,25 @@ const reconciliationSchema = new Schema<ReconciliationDoc>(
 );
 
 // One live match per transaction, and one per obligation: a payment cannot be
-// reconciled against two different bank lines.
+// reconciled against two different bank lines. Both need an explicit name: the
+// field-level `index: true` above already owns the default `<field>_1` name, and
+// Mongo rejects a second index that reuses a name with different options -- which
+// silently left these uniqueness guards uncreated.
 reconciliationSchema.index(
   { bankTransactionId: 1 },
-  { unique: true, partialFilterExpression: { status: 'MATCHED' } },
+  {
+    unique: true,
+    partialFilterExpression: { status: 'MATCHED' },
+    name: 'bankTransactionId_1_matched_unique',
+  },
 );
 reconciliationSchema.index(
   { obligationId: 1 },
-  { unique: true, partialFilterExpression: { status: 'MATCHED' } },
+  {
+    unique: true,
+    partialFilterExpression: { status: 'MATCHED' },
+    name: 'obligationId_1_matched_unique',
+  },
 );
 
 export const Reconciliation = model<ReconciliationDoc>('Reconciliation', reconciliationSchema);

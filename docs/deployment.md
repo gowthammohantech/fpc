@@ -48,6 +48,9 @@ The app is then on <http://localhost:8080>. Demo data:
 docker exec server node dist/seed/run.js
 ```
 
+Or set `-e SEED_ON_STARTUP=true` on the API container and it seeds itself the
+first time it boots — see [Seeding](#seeding).
+
 ## Railway setup
 
 Three services in one project.
@@ -61,11 +64,25 @@ through a variable reference below.
 
 Point it at this repository, then in **Settings**:
 
-- **Root Directory** — leave as `/`. The Docker build context has to be the
-  whole workspace; setting it to `apps/server` breaks the pnpm install.
-- **Config-as-code path** — `apps/server/railway.json`. That file selects the
-  Dockerfile builder, the `/health` check and the watch paths, so the service
-  only rebuilds when the API or the shared packages change.
+- **Root Directory** — leave it **empty**. This is the setting that most often
+  gets this deploy wrong; see [Root Directory must stay
+  empty](#root-directory-must-stay-empty) below.
+- **Branch** — whichever branch actually carries this work.
+- **Deploy → Healthcheck Path** — `/health`.
+- **Build → Watch Paths** — `apps/server/**`, `packages/**`, `pnpm-lock.yaml`,
+  `tsconfig.base.json`. Without a root directory Railway rebuilds on every
+  push, and these narrow it back down.
+
+There is no Dockerfile at the repository root, so Railway's autodetection falls
+through to Railpack, which looks for a start command in the workspace manifest
+and fails. Point it at the right file with a service variable:
+
+```
+RAILWAY_DOCKERFILE_PATH=/apps/server/Dockerfile
+```
+
+The path is relative to the repository root and the build context stays the
+repository root, which is exactly what these images need.
 
 Variables (see `.env.example` for the full set — everything else has a working
 default):
@@ -94,10 +111,12 @@ public HTTPS URL on this service and registered on the Azure app.
 
 ### 3. Web service
 
-Same repository, same **Root Directory** `/`, with **Config-as-code path**
-`apps/web/railway.json`.
+Same repository, **Root Directory** empty again, **Deploy → Healthcheck Path**
+`/healthz`, and **Build → Watch Paths** `apps/web/**`, `packages/**`,
+`pnpm-lock.yaml`, `tsconfig.base.json`.
 
 ```
+RAILWAY_DOCKERFILE_PATH=/apps/web/Dockerfile
 API_URL=http://${{server.RAILWAY_PRIVATE_DOMAIN}}:4000
 ```
 
@@ -108,12 +127,53 @@ Railway sets `PORT` itself; nginx picks it up from the config template.
 
 ### Seeding
 
-Once both services are up, from the API service shell (`railway ssh` or the
-dashboard terminal):
+Set `SEED_ON_STARTUP=true` on the API service and it builds the demo dataset
+while it boots, which is the only option on a plan with no shell. It runs only
+when the database is empty, so redeploys and restarts leave a seeded database
+alone; to reseed, drop the data first. It never resets by itself.
+
+Otherwise seed by hand once both services are up, from the API service shell
+(`railway ssh` or the dashboard terminal):
 
 ```bash
 node dist/seed/run.js          # --reset to wipe first
 ```
+
+## Root Directory must stay empty
+
+Pointing a service's root directory at `apps/server` or `apps/web` is the
+natural thing to do in a monorepo, and it breaks the build. That setting is the
+Docker **build context**, and both images need the whole workspace: the
+lockfile, `packages/`, and every `package.json` the lockfile refers to.
+
+The failure is confusing because Railway still finds the Dockerfile — the
+config path is resolved separately from the context — so the build starts and
+then dies on a file it should obviously have:
+
+```
+failed to compute cache key: failed to calculate checksum of ref ...:
+  "/apps/server/fixtures": not found
+```
+
+or, for the web service, `"/apps/web/nginx.conf.template": not found`. Only the
+first missing path is reported, so the message points at whichever file
+BuildKit happened to check first rather than at the real cause.
+
+Clear the field in **Settings → Source → Root Directory** and redeploy.
+`RAILWAY_DOCKERFILE_PATH` is unaffected: it is always relative to the
+repository root.
+
+A cleared root directory has a second symptom worth recognising. If the build
+log says `using build driver railpack-v0.39.0` and then `No start command
+detected`, the context is right but `RAILWAY_DOCKERFILE_PATH` is missing, so
+Railway never found a Dockerfile and fell back to autodetection. A build that
+is correctly configured says `load build definition from apps/server/Dockerfile`
+instead.
+
+Railway's own `railway.json` config-as-code would have carried the Dockerfile
+path, healthcheck and watch paths as files in this repository, but it was
+deprecated on 2026-08-28 and services that never used it cannot opt in, so
+these settings live in the dashboard instead.
 
 ## Things worth knowing
 

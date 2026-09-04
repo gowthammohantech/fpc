@@ -89,6 +89,12 @@ const schema = z.object({
   OUTLOOK_OAUTH_TENANT: z.string().default('common'),
   OUTLOOK_REDIRECT_URI: z.string().default('http://localhost:4000/api/auth/outlook/callback'),
 
+  /**
+   * Seeds the demo dataset during boot, for deployments with no shell to run
+   * the seed script from. Only ever fires against an empty database.
+   */
+  SEED_ON_STARTUP: booleanFlag(false),
+
   JOBS_ENABLED: booleanFlag(true),
   MAIL_POLL_CRON: z.string().default('*/1 * * * *'),
   EXTRACTION_POLL_CRON: z.string().default('*/1 * * * *'),
