@@ -305,12 +305,7 @@ function UploadStatementModal({ onClose }: { onClose(): void }) {
           <label className="label" htmlFor="file">
             Statement file
           </label>
-          <FileField
-            id="file"
-            file={file}
-            accept=".xlsx,.xls,.csv"
-            onChange={setFile}
-          />
+          <FileField id="file" file={file} accept=".xlsx,.xls,.csv" onChange={setFile} />
           <p className="mt-1 text-xs text-slate-500">
             Columns are detected automatically. Re-uploading an overlapping period is safe — rows
             already held are skipped.

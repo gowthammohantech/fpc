@@ -59,7 +59,12 @@ export function CompanySwitcher({
   useEffect(() => {
     if (!open) return;
     setQuery('');
-    setCursor(Math.max(0, companies.findIndex((company) => company.id === value)));
+    setCursor(
+      Math.max(
+        0,
+        companies.findIndex((company) => company.id === value),
+      ),
+    );
     const frame = requestAnimationFrame(() => {
       if (searchable) searchRef.current?.focus();
       else listRef.current?.focus();
