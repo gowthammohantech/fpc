@@ -1,0 +1,28 @@
+# The build context for both apps/server/Dockerfile and apps/web/Dockerfile is
+# the repository root: pnpm needs the whole workspace to install from the
+# lockfile. Everything the images rebuild for themselves is excluded here.
+.git
+.github
+node_modules
+**/node_modules
+dist
+**/dist
+build
+**/build
+coverage
+**/coverage
+*.tsbuildinfo
+**/*.tsbuildinfo
+
+# Local state and secrets must never be baked into an image.
+.data
+.env
+.env.local
+*.log
+
+.expo
+.turbo
+.DS_Store
+docs
+README.md
+docker-compose.yml

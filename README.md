@@ -266,6 +266,21 @@ pnpm seed           # demo data (--reset to wipe first,
 `apps/mobile` is not part of `pnpm build` — Expo bundles at start or EAS build
 time — but it is covered by `typecheck` and `lint`.
 
+## Deploying
+
+The API and the web app each ship as a Docker image, both built from the
+repository root:
+
+```bash
+docker build -f apps/server/Dockerfile -t fpc-server .
+docker build -f apps/web/Dockerfile    -t fpc-web .
+```
+
+The web image serves the Vite build through nginx and reverse-proxies `/api`
+to the API, so the browser sees a single origin and the API needs no public
+domain. [docs/deployment.md](docs/deployment.md) walks through a Railway
+deployment.
+
 ## Tests
 
 ```bash
