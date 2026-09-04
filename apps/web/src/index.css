@@ -91,6 +91,11 @@
   .label {
     @apply mb-1.5 block text-sm font-medium text-ink-700;
   }
+  /* Keycap for shortcut hints — sized to sit inside a control without growing it. */
+  .kbd {
+    @apply inline-flex h-5 items-center rounded border border-ink-200 bg-ink-50 px-1.5
+           text-[11px] font-medium leading-none text-ink-500;
+  }
   /* ink-500 is 4.76:1 — the floor for muted text. Never use ink-400 for copy. */
   .muted {
     @apply text-ink-500;

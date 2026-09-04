@@ -1,160 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import {
-  ArrowLeftRight,
-  Bell,
-  Building2,
-  ChartColumn,
-  ChevronDown,
-  CircleCheck,
-  CreditCard,
-  FileText,
-  GitBranch,
-  Landmark,
-  Layers,
-  LayoutDashboard,
-  LogOut,
-  MapPin,
-  Menu,
-  Network,
-  Plus,
-  RefreshCcw,
-  ScrollText,
-  SendHorizontal,
-  ShieldCheck,
-  Store,
-  UserCog,
-  Users,
-  Wallet,
-  type LucideIcon,
-} from 'lucide-react';
-import { ROLE_LABELS, type Permission, type RoleKey } from '@fpc/shared';
+import { Bell, Building2, ChevronDown, LogOut, Menu, Plus } from 'lucide-react';
+import { ROLE_LABELS, type RoleKey } from '@fpc/shared';
 import { api } from '@/lib/api';
 import { formatCompactINR } from '@/lib/format';
 import { useAuth } from '@/hooks/useAuth';
+import { NAV_GROUPS } from '@/lib/navigation';
 import { GlobalSearch } from './GlobalSearch';
-
-interface NavItem {
-  to: string;
-  label: string;
-  icon: LucideIcon;
-  /** Hidden unless the user holds one of these. */
-  permissions: Permission[];
-}
-
-/**
- * Navigation groups follow PRD §39 exactly: internal modules are not exposed
- * as menu items, and every entry is gated on the same permission the API
- * enforces, so the menu can never offer an action that would be refused.
- */
-const NAV_GROUPS: Array<{ title: string | null; items: NavItem[] }> = [
-  {
-    title: null,
-    items: [
-      {
-        to: '/dashboard',
-        label: 'Dashboard',
-        icon: LayoutDashboard,
-        permissions: ['dashboard:read'],
-      },
-    ],
-  },
-  {
-    title: 'Operations',
-    items: [
-      { to: '/invoices', label: 'Invoices', icon: FileText, permissions: ['invoice:read'] },
-      {
-        to: '/approvals',
-        label: 'Approvals',
-        icon: CircleCheck,
-        permissions: ['approval:read', 'approval:read_all'],
-      },
-      { to: '/payables', label: 'Payables', icon: Wallet, permissions: ['payable:read'] },
-      { to: '/payroll', label: 'Payroll', icon: Users, permissions: ['payroll:read'] },
-    ],
-  },
-  {
-    title: 'Treasury',
-    items: [
-      {
-        to: '/payments',
-        label: 'Payment Queue',
-        icon: SendHorizontal,
-        permissions: ['obligation:read'],
-      },
-      {
-        to: '/payments/batches',
-        label: 'Payment Batches',
-        icon: Layers,
-        permissions: ['payment_batch:read'],
-      },
-      {
-        to: '/banking/statements',
-        label: 'Bank Statements',
-        icon: Landmark,
-        permissions: ['bank_statement:read'],
-      },
-      {
-        to: '/banking/transactions',
-        label: 'Bank Transactions',
-        icon: ArrowLeftRight,
-        permissions: ['bank_transaction:read'],
-      },
-      {
-        to: '/reconciliation',
-        label: 'Reconciliation',
-        icon: RefreshCcw,
-        permissions: ['reconciliation:read'],
-      },
-    ],
-  },
-  {
-    title: 'Insights',
-    items: [
-      { to: '/reports', label: 'Reports', icon: ChartColumn, permissions: ['report:read'] },
-      { to: '/audit', label: 'Audit Trail', icon: ScrollText, permissions: ['audit:read'] },
-    ],
-  },
-  {
-    title: 'Administration',
-    items: [
-      {
-        to: '/settings/companies',
-        label: 'Companies',
-        icon: Building2,
-        permissions: ['company:read'],
-      },
-      {
-        to: '/settings/locations',
-        label: 'Locations',
-        icon: MapPin,
-        permissions: ['location:read'],
-      },
-      {
-        to: '/settings/departments',
-        label: 'Departments',
-        icon: Network,
-        permissions: ['department:read'],
-      },
-      { to: '/settings/vendors', label: 'Vendors', icon: Store, permissions: ['vendor:read'] },
-      {
-        to: '/settings/bank-accounts',
-        label: 'Bank Accounts',
-        icon: CreditCard,
-        permissions: ['bank_account:read'],
-      },
-      { to: '/settings/users', label: 'Users', icon: UserCog, permissions: ['user:read'] },
-      { to: '/settings/roles', label: 'Roles', icon: ShieldCheck, permissions: ['role:read'] },
-      {
-        to: '/settings/approvals',
-        label: 'Approval Rules',
-        icon: GitBranch,
-        permissions: ['approval_rule:read'],
-      },
-    ],
-  },
-];
 
 /** Survives a reload so the rail is a preference, not a per-page accident. */
 const COLLAPSED_KEY = 'fpc.sidebar.collapsed';
@@ -420,80 +273,94 @@ export function Layout() {
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-ink-200 bg-white px-4 py-3 sm:px-6">
-          <button
-            className="btn-icon lg:hidden"
-            onClick={() => setNavOpen(true)}
-            aria-label="Open navigation"
-          >
-            <Menu className="h-5 w-5" aria-hidden="true" />
-          </button>
-
-          <div className="mr-auto hidden min-w-0 md:block">
-            <p className="truncate text-base font-semibold text-ink-900">
-              Welcome back, {firstName(user?.name)}
-            </p>
-            <p className="truncate text-xs text-ink-500">Here is where the money stands today.</p>
-          </div>
-
-          <GlobalSearch />
-
-          <NavLink
-            to="/notifications"
-            className="btn-icon"
-            aria-label={
-              unread && unread.count > 0 ? `Notifications, ${unread.count} unread` : 'Notifications'
-            }
-          >
-            <Bell className="h-5 w-5" aria-hidden="true" />
-            {unread && unread.count > 0 ? (
-              <span className="absolute -right-0.5 -top-0.5 min-w-[18px] rounded-full bg-red-600 px-1 text-[10px] font-semibold leading-[18px] text-white ring-2 ring-white">
-                {unread.count > 99 ? '99+' : unread.count}
-              </span>
-            ) : null}
-          </NavLink>
-
-          {can('invoice:create') ? (
-            <NavLink to="/invoices?upload=1" className="btn-primary hidden sm:inline-flex">
-              <Plus className="h-4 w-4" aria-hidden="true" />
-              Upload invoice
-            </NavLink>
-          ) : null}
-
-          <div className="relative" ref={menuRef}>
+          {/* Left and right flanks share a basis of 0, so the palette trigger
+              between them lands on the centre line rather than wherever the
+              greeting happens to end. */}
+          <div className="flex min-w-0 flex-1 items-center gap-3">
             <button
-              className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 text-sm transition-colors hover:bg-ink-50"
-              onClick={() => setMenuOpen((open) => !open)}
-              aria-haspopup="menu"
-              aria-expanded={menuOpen}
+              className="btn-icon shrink-0 lg:hidden"
+              onClick={() => setNavOpen(true)}
+              aria-label="Open navigation"
             >
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-800">
-                {initials(user?.name)}
-              </span>
-              <span className="hidden text-left xl:block">
-                <span className="block font-medium leading-tight text-ink-900">{user?.name}</span>
-                <span className="block text-xs leading-tight text-ink-500">
-                  {user?.roleKeys.map((role) => ROLE_LABELS[role as RoleKey]).join(', ')}
-                </span>
-              </span>
+              <Menu className="h-5 w-5" aria-hidden="true" />
             </button>
 
-            {menuOpen ? (
-              <div className="menu absolute right-0 z-20 mt-1 w-48">
-                <NavLink to="/account" className="menu-item" onClick={() => setMenuOpen(false)}>
-                  Your account
-                </NavLink>
-                <button
-                  className="menu-item flex items-center gap-2"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    void logout().then(() => navigate('/login'));
-                  }}
-                >
-                  <LogOut className="h-4 w-4" aria-hidden="true" />
-                  Sign out
-                </button>
-              </div>
+            <div className="hidden min-w-0 md:block">
+              <p className="truncate text-base font-semibold text-ink-900">
+                Welcome back, {firstName(user?.name)}
+              </p>
+              <p className="truncate text-xs text-ink-500">Here is where the money stands today.</p>
+            </div>
+          </div>
+
+          <div className="order-last w-full min-w-0 sm:order-none sm:w-auto sm:max-w-md sm:flex-1">
+            <GlobalSearch />
+          </div>
+
+          <div className="flex min-w-0 flex-1 items-center justify-end gap-3">
+            <NavLink
+              to="/notifications"
+              className="btn-icon shrink-0"
+              aria-label={
+                unread && unread.count > 0
+                  ? `Notifications, ${unread.count} unread`
+                  : 'Notifications'
+              }
+            >
+              <Bell className="h-5 w-5" aria-hidden="true" />
+              {unread && unread.count > 0 ? (
+                <span className="absolute -right-0.5 -top-0.5 min-w-[18px] rounded-full bg-red-600 px-1 text-[10px] font-semibold leading-[18px] text-white ring-2 ring-white">
+                  {unread.count > 99 ? '99+' : unread.count}
+                </span>
+              ) : null}
+            </NavLink>
+
+            {can('invoice:create') ? (
+              <NavLink
+                to="/invoices?upload=1"
+                className="btn-primary hidden shrink-0 sm:inline-flex"
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Upload invoice
+              </NavLink>
             ) : null}
+
+            <div className="relative shrink-0" ref={menuRef}>
+              <button
+                className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 text-sm transition-colors hover:bg-ink-50"
+                onClick={() => setMenuOpen((open) => !open)}
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+              >
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-800">
+                  {initials(user?.name)}
+                </span>
+                <span className="hidden text-left xl:block">
+                  <span className="block font-medium leading-tight text-ink-900">{user?.name}</span>
+                  <span className="block text-xs leading-tight text-ink-500">
+                    {user?.roleKeys.map((role) => ROLE_LABELS[role as RoleKey]).join(', ')}
+                  </span>
+                </span>
+              </button>
+
+              {menuOpen ? (
+                <div className="menu absolute right-0 z-20 mt-1 w-48">
+                  <NavLink to="/account" className="menu-item" onClick={() => setMenuOpen(false)}>
+                    Your account
+                  </NavLink>
+                  <button
+                    className="menu-item flex items-center gap-2"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      void logout().then(() => navigate('/login'));
+                    }}
+                  >
+                    <LogOut className="h-4 w-4" aria-hidden="true" />
+                    Sign out
+                  </button>
+                </div>
+              ) : null}
+            </div>
           </div>
         </header>
 
