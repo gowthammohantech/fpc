@@ -317,46 +317,9 @@ export function Layout() {
       </nav>
 
       <div className={`shrink-0 border-t border-ink-100 ${rail ? 'px-2 py-3' : 'px-5 py-4'}`}>
-        {switcher ? (
-          rail ? (
-            <button
-              type="button"
-              className="nav-item w-full justify-center px-0"
-              onClick={toggleCollapsed}
-              title={switcher.find((company) => company.id === companyId)?.name ?? 'Company'}
-            >
-              <Building2 className="h-4 w-4 shrink-0" aria-hidden="true" />
-              <span className="sr-only">Change company</span>
-            </button>
-          ) : (
-            <div className="relative">
-              <Building2
-                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400"
-                aria-hidden="true"
-              />
-              <select
-                className="input appearance-none pl-9 pr-9"
-                value={companyId ?? ''}
-                onChange={(event) => setCompanyId(event.target.value)}
-                aria-label="Company"
-              >
-                {switcher.map((company) => (
-                  <option key={company.id} value={company.id}>
-                    {company.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown
-                className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400"
-                aria-hidden="true"
-              />
-            </div>
-          )
-        ) : null}
-
-        {/* Quick stats sit last: they are the read-out, not the navigation. */}
+        {/* Quick stats are the read-out, not the navigation, so they follow it. */}
         {summary && !rail ? (
-          <div className={switcher ? 'mt-4' : ''}>
+          <div>
             <p className="nav-group-title px-0">Quick stats</p>
             <div className="space-y-3 pt-1">
               <Meter
@@ -383,12 +346,50 @@ export function Layout() {
             ) : null}
           </div>
         ) : null}
+
+        {/* The company switcher anchors the very bottom — it scopes everything above it. */}
+        {switcher ? (
+          rail ? (
+            <button
+              type="button"
+              className="nav-item w-full justify-center px-0"
+              onClick={toggleCollapsed}
+              title={switcher.find((company) => company.id === companyId)?.name ?? 'Company'}
+            >
+              <Building2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span className="sr-only">Change company</span>
+            </button>
+          ) : (
+            <div className={`relative ${summary ? 'mt-4' : ''}`}>
+              <Building2
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400"
+                aria-hidden="true"
+              />
+              <select
+                className="input appearance-none pl-9 pr-9"
+                value={companyId ?? ''}
+                onChange={(event) => setCompanyId(event.target.value)}
+                aria-label="Company"
+              >
+                {switcher.map((company) => (
+                  <option key={company.id} value={company.id}>
+                    {company.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400"
+                aria-hidden="true"
+              />
+            </div>
+          )
+        ) : null}
       </div>
     </>
   );
 
   return (
-    <div className="flex min-h-screen bg-ink-50">
+    <div className="flex h-screen overflow-hidden bg-ink-50">
       <aside
         className={`hidden shrink-0 flex-col border-r border-ink-200 bg-white transition-[width] duration-200 lg:flex ${
           collapsed ? 'w-20' : 'w-72'
@@ -417,8 +418,8 @@ export function Layout() {
         {renderSidebar(false)}
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex flex-wrap items-center gap-3 border-b border-ink-200 bg-white px-4 py-3 sm:px-6">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-ink-200 bg-white px-4 py-3 sm:px-6">
           <button
             className="btn-icon lg:hidden"
             onClick={() => setNavOpen(true)}

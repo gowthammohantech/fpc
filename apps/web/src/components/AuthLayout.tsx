@@ -23,14 +23,12 @@ export function AuthLayout({
   return (
     <div className="grid min-h-screen bg-white lg:grid-cols-2">
       <div className="hidden flex-col bg-brand-800 p-10 text-white lg:flex">
-        <div className="flex items-center">
-          <img
-            src="/elixir-logo.png"
-            alt="Elixir Finance Ops"
-            width={169}
-            height={56}
-            className="h-9 w-auto"
-          />
+        <div>
+          <img src="/elixir-logo.png" alt="Elixir" width={169} height={56} className="h-9 w-auto" />
+          {/* Peridot is a 1.31:1 disaster on white but reads cleanly on brand-800. */}
+          <span className="mt-2 block text-sm font-semibold uppercase tracking-[0.2em] text-peridot-400">
+            Finance Ops
+          </span>
         </div>
 
         <div className="flex flex-1 flex-col items-center justify-center">
