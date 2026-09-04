@@ -21,13 +21,13 @@ let app: Express;
 // database has to be reachable at module scope. Connecting inside `beforeAll`
 // would leave `available` false at collection time and skip the whole suite
 // even when a database is there.
-const available = (await startTestDatabase()) !== null;
+const available = (await startTestDatabase('rbac')) !== null;
 
 beforeAll(async () => {
   if (!available) return;
   app = createApp();
   await seed({ reset: true });
-}, 120_000);
+}, 180_000);
 
 afterAll(async () => {
   if (available) await stopTestDatabase();

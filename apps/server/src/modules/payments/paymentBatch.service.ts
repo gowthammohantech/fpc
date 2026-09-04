@@ -5,10 +5,12 @@ import {
   ObligationType,
   PaymentBatchStatus,
   PaymentStatus,
+  PayrollBatchStatus,
   formatINR,
   invoiceMachine,
   obligationPaymentMachine,
   paymentBatchMachine,
+  payrollBatchMachine,
   type BankFileFormat,
 } from '@fpc/shared';
 import { ApiError } from '../../core/errors.js';
@@ -19,6 +21,7 @@ import { DocumentFile } from '../../models/documentFile.model.js';
 import { Invoice } from '../../models/invoice.model.js';
 import { PaymentBatch, PaymentBatchItem } from '../../models/paymentBatch.model.js';
 import { PaymentObligation } from '../../models/paymentObligation.model.js';
+import { PayrollBatch } from '../../models/payroll.model.js';
 import { Vendor } from '../../models/vendor.model.js';
 import { audit, type AuditContext } from '../audit/audit.service.js';
 import { generateBankFile, transactionTypeFor } from './bankFormats/index.js';
@@ -106,6 +109,7 @@ export async function createBatch(input: CreateBatchInput, context: AuditContext
   }
 
   await advanceInvoices(obligations, InvoiceStatus.PAYMENT_BATCHED, batch._id);
+  await advancePayrollBatches(obligations, PayrollBatchStatus.PAYMENT_BATCHED, batch._id);
 
   await audit.record(
     {
@@ -239,6 +243,7 @@ export async function exportBatch(
     await obligation.save();
   }
   await advanceInvoices(obligations, InvoiceStatus.PAYMENT_PROCESSING, batch._id);
+  await advancePayrollBatches(obligations, PayrollBatchStatus.PAYMENT_PROCESSING, batch._id);
 
   await audit.record(
     {
@@ -303,6 +308,7 @@ export async function removeFromBatch(
     await obligation.save();
   }
   await advanceInvoices(obligations, InvoiceStatus.PAYMENT_PENDING, undefined);
+  await advancePayrollBatches(obligations, PayrollBatchStatus.PAYMENT_PENDING, undefined);
 
   const remaining = await PaymentObligation.find({ paymentBatchId: batch._id }).lean();
   Object.assign(batch, totalsOf(remaining));
@@ -383,6 +389,37 @@ async function advanceInvoices(
     invoice.status = to;
     invoice.paymentBatchId = paymentBatchId;
     await invoice.save();
+  }
+}
+
+/**
+ * Moves the payroll batches behind payroll obligations along their own
+ * lifecycle, the way `advanceInvoices` does for vendor invoices.
+ *
+ * Without this a payroll batch stays at PAYMENT_PENDING while its obligations
+ * are batched, exported and paid, and `settlePayrollEmployee` can then never
+ * roll it to PAID because PAYMENT_PENDING has no legal edge to it.
+ */
+async function advancePayrollBatches(
+  obligations: Array<{ type: string; sourceBatchId?: Types.ObjectId }>,
+  to: PayrollBatchStatus,
+  paymentBatchId: Types.ObjectId | undefined,
+): Promise<void> {
+  const batchIds = [
+    ...new Set(
+      obligations
+        .filter((entry) => entry.type === ObligationType.PAYROLL && entry.sourceBatchId)
+        .map((entry) => String(entry.sourceBatchId)),
+    ),
+  ];
+  if (!batchIds.length) return;
+
+  const batches = await PayrollBatch.find({ _id: { $in: batchIds } });
+  for (const batch of batches) {
+    if (!payrollBatchMachine.canTransition(batch.status, to)) continue;
+    batch.status = to;
+    batch.paymentBatchId = paymentBatchId;
+    await batch.save();
   }
 }
 

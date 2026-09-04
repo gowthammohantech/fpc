@@ -64,19 +64,31 @@ must run before anything else on a fresh checkout. `pnpm test` and
 `pnpm typecheck` build the shared packages themselves, so those two work
 directly.
 
-Open http://localhost:5173 and sign in. Every seeded account uses the
-password `FinanceOps@2026`:
+Open http://localhost:5173 and sign in. Every account below uses the password
+`FinanceOps@2026`:
 
 | Sign in as | Role | What it demonstrates |
 |---|---|---|
 | `ravi@nova.example.com` | Finance Executive | Prepares work; cannot approve, cannot see payroll |
 | `ithead@nova.example.com` | Approver | First approver on the large invoice |
+| `opshead@nova.example.com` | Approver | Operations Head, first approver on the Pune chain |
 | `financemanager@nova.example.com` | Finance Manager | Finance Head in the chain; releases bank files |
 | `cfo@nova.example.com` | CFO | Final approver, sees payroll and the full position |
 | `payroll@nova.example.com` | Payroll User | Payroll only, no invoice access |
 | `auditor@nova.example.com` | Auditor | Read-only, including the audit trail |
 | `admin@nova.example.com` | Platform Admin | Everything |
 | `companyadmin@nova.example.com` | Company Admin | Master data and users |
+| `apclerk@nova.example.com` | AP Clerk *(tenant role)* | A role the tenant defined for itself, enforced like any built-in |
+| `treasury@nova.example.com` | Treasury Viewer + Auditor | Two roles at once; grants are the union |
+| `chennai.ap@nova.example.com` | Finance Executive | Scoped to one location, so the filter is applied rather than offered |
+| `techfinance@nova.example.com` | Finance Manager | Nova Technologies, the second company |
+| `techapprover@nova.example.com` | Approver | Head of the Nova Technologies engineering department |
+| `techpayroll@nova.example.com` | Payroll User | Nova Technologies payroll |
+
+Two more accounts exist and deliberately **cannot** sign in:
+`joining@nova.example.com` is invited but not yet activated, and
+`suspended@nova.example.com` is suspended — kept because the audit trail
+refers to it.
 
 New accounts are created without a password and are **invited** rather than
 active: the administrator gets a one-time link, and the recipient sets their
@@ -85,6 +97,34 @@ account cannot sign in until that happens.
 
 Nothing external is required to run any of this: blob storage, the invoice
 mailbox and document extraction all default to local drivers.
+
+### What else the seed leaves behind
+
+The two demos below are the point of the dataset, but the rest of it exists so
+that no screen opens empty. On a fresh `pnpm seed` you also get:
+
+- **A second company.** Nova Technologies has its own vendors, its own
+  two-tier approval ladder, invoices and payroll, so the company switcher
+  leads somewhere rather than to a blank app.
+- **Two tenant-defined roles**, one of them held by a real user, alongside the
+  eight built-ins on Settings → Roles.
+- **Every reconciliation tab populated** — matched, suggested, unmatched and
+  ignored — from a statement the seeded matcher actually scored.
+- **Payment batches resting in each status the product leaves them in**: draft,
+  with the bank, partially reconciled, and fully reconciled.
+- **Payroll history.** Last month's run is carried all the way through —
+  approved, fanned out to one obligation per employee, paid by bank file and
+  reconciled — which is where the CFO's month-on-month figure comes from. This
+  is most of the seed's runtime; `pnpm seed -- --skip-payroll-history` omits it.
+- **Invoices in every terminal state** (rejected, duplicate, cancelled, failed),
+  each with the findings that put them there, plus one approved invoice that
+  cannot be paid because its vendor has no bank account on file.
+- **A real PDF behind every invoice**, so the review screen's document pane has
+  something to show, and an attributed audit trail and notification list.
+
+`apps/server/src/seed/coverage.integration.test.ts` asserts that coverage, so a
+new status cannot quietly go unseeded. It also records the handful of enum
+values the product has no way to rest in, with the reason for each.
 
 ## Demo: a vendor invoice, end to end
 
@@ -219,7 +259,8 @@ pnpm test           # all tests
 pnpm typecheck      # all packages
 pnpm lint           # ESLint + Prettier check
 pnpm lint:fix       # fix and format
-pnpm seed           # demo data (--reset to wipe first)
+pnpm seed           # demo data (--reset to wipe first,
+                    #            --skip-payroll-history to go faster)
 ```
 
 `apps/mobile` is not part of `pnpm build` — Expo bundles at start or EAS build
@@ -237,9 +278,10 @@ lifecycle state machines, the reconciliation scorer, duplicate detection,
 payroll import validation (including a full 850-employee run), bank file
 generation, statement parsing and dedupe, and money arithmetic.
 
-Integration tests drive both flagship journeys and the RBAC matrix through the
-real API against MongoDB. They obtain a database from `mongodb-memory-server`
-where it can download a binary; otherwise point them at a real instance:
+Integration tests drive both flagship journeys, the RBAC matrix and the seed's
+coverage contract through the real API against MongoDB. They obtain a database
+from `mongodb-memory-server` where it can download a binary; otherwise point
+them at a real instance, and each suite takes its own database under that name:
 
 ```bash
 MONGO_TEST_URI=mongodb://localhost:27017/fpc-test pnpm --filter @fpc/server test

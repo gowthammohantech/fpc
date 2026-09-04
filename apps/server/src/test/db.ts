@@ -12,10 +12,19 @@ import mongoose from 'mongoose';
 let memoryServer: { getUri(): string; stop(): Promise<boolean> } | null = null;
 let skipReason: string | null = null;
 
-export async function startTestDatabase(): Promise<string | null> {
+/**
+ * @param name  Distinguishes this suite's database. Vitest runs files in
+ *   parallel workers and every integration suite seeds with `reset: true`, so
+ *   pointing them all at one MONGO_TEST_URI database would have them wipe each
+ *   other mid-run. The in-memory path already isolates them by starting a
+ *   server per file.
+ */
+export async function startTestDatabase(name = 'default'): Promise<string | null> {
   if (process.env.MONGO_TEST_URI) {
-    await mongoose.connect(process.env.MONGO_TEST_URI);
-    return process.env.MONGO_TEST_URI;
+    const uri = process.env.MONGO_TEST_URI;
+    const base = new URL(uri.replace(/^mongodb(\+srv)?:\/\//, 'http://')).pathname.slice(1);
+    await mongoose.connect(uri, { dbName: `${base || 'fpc-test'}-${name}` });
+    return uri;
   }
 
   try {

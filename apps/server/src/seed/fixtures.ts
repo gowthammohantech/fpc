@@ -1,7 +1,11 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import ExcelJS from 'exceljs';
+import { fromMinor } from '@fpc/shared';
 import { env } from '../config/env.js';
+import { COMPANIES } from './data.org.js';
+import { PAYROLL } from './data.payroll.js';
+import { buildPayrollEmployees, type PayrollRow } from './payrollRows.js';
 
 /**
  * Writes the demo input files.
@@ -9,6 +13,10 @@ import { env } from '../config/env.js';
  * The invoice fixture is a minimal but genuinely valid PDF carrying a real
  * text layer, so the credential-free extractor reads actual fields from it
  * rather than the demo depending on a hand-written extraction result.
+ *
+ * The payroll workbook is generated from the same row builder as the seeded
+ * database batch, so uploading it reproduces the register that is already
+ * there rather than a lookalike with different names and account numbers.
  */
 export async function writeFixtures(): Promise<void> {
   await writeInvoicePdf(`${env.MAIL_FIXTURE_DIR}/INV-9930.pdf`);
@@ -82,15 +90,21 @@ export function buildPdf(lines: string[]): Buffer {
   return Buffer.from(pdf, 'latin1');
 }
 
-export async function writePayrollWorkbook(path: string): Promise<void> {
-  await mkdir(dirname(path), { recursive: true });
-
+/**
+ * Renders a payroll register as the workbook an HR system would export.
+ *
+ * A title block sits above the header, exactly as those exports do — the
+ * importer has to find the real header row underneath.
+ */
+export async function buildPayrollWorkbook(
+  rows: PayrollRow[],
+  companyKey: string,
+): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet('Payroll');
+  const company = COMPANIES.find((entry) => entry.key === companyKey);
 
-  // A title block above the header, exactly as HR systems export it — the
-  // importer must find the real header row underneath.
-  sheet.addRow(['Nova Engineering Pvt Ltd']);
+  sheet.addRow([company?.name ?? 'Payroll register']);
   sheet.addRow(['Payroll register']);
   sheet.addRow([]);
   sheet.addRow([
@@ -103,47 +117,30 @@ export async function writePayrollWorkbook(path: string): Promise<void> {
     'Location',
   ]);
 
-  const locations = [
-    { name: 'Chennai', count: 320 },
-    { name: 'Bengaluru', count: 280 },
-    { name: 'Pune', count: 250 },
-  ];
-  const TARGET_TOTAL = 6_20_00_000;
-  const headcount = locations.reduce((sum, location) => sum + location.count, 0);
-  const mean = TARGET_TOTAL / headcount;
-
-  // Vary salaries so the file looks real, then put the rounding residual on
-  // the last row — the batch total has to land on the PRD's ₹6.20 Cr rather
-  // than drifting by whatever the jitter happens to sum to.
-  const salaries: number[] = [];
-  for (let index = 0; index < headcount; index += 1) {
-    salaries.push(Math.round(mean + ((index % 11) - 5) * 1000));
-  }
-  const residual = TARGET_TOTAL - salaries.reduce((sum, value) => sum + value, 0);
-  salaries[salaries.length - 1] = (salaries.at(-1) ?? 0) + residual;
-
-  let index = 0;
-  for (const location of locations) {
-    for (let i = 0; i < location.count; i += 1) {
-      sheet.addRow([
-        `EMP${String(index + 1).padStart(4, '0')}`,
-        `Employee ${index + 1}`,
-        `501000${String(1000000 + index).slice(-7)}`,
-        ['HDFC0001234', 'ICIC0000221', 'SBIN0004567'][index % 3],
-        salaries[index],
-        index % 3 === 0 ? 'Engineering' : index % 3 === 1 ? 'Operations' : 'Finance',
-        location.name,
-      ]);
-      index += 1;
-    }
+  for (const row of rows) {
+    sheet.addRow([
+      row.employeeCode,
+      row.employeeName,
+      row.bankAccountNumber,
+      row.ifsc,
+      fromMinor(row.netAmount),
+      row.departmentName,
+      row.locationName,
+    ]);
   }
 
-  await workbook.xlsx.writeFile(path);
+  return Buffer.from(await workbook.xlsx.writeBuffer());
 }
 
-export async function writeStatementWorkbook(path: string): Promise<void> {
+export async function writePayrollWorkbook(path: string): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
+  await writeFile(
+    path,
+    await buildPayrollWorkbook(buildPayrollEmployees(PAYROLL), PAYROLL.company),
+  );
+}
 
+export async function buildStatementWorkbook(): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet('Statement');
 
@@ -168,6 +165,10 @@ export async function writeStatementWorkbook(path: string): Promise<void> {
 
   // Deliberately mixed: lines that should match cleanly, a bank charge that
   // should be ignored, and a credit that is not ours to reconcile.
+  //
+  // The row count is asserted by `fixtures.test.ts` (four debits, one credit),
+  // and the amounts are load-bearing for the flagship journey — see the
+  // reconciliation-ambiguity note in `data.invoices.ts` before changing any.
   let balance = 8_92_00_000;
   const rows: Array<[string, string, string, number | '', number | '']> = [
     [stamp(-1), 'NEFT TECHZONE SOLUTIONS', 'N2026090512345', 35_40_000, ''],
@@ -183,5 +184,10 @@ export async function writeStatementWorkbook(path: string): Promise<void> {
     sheet.addRow([date, narration, reference, debit, credit, balance]);
   }
 
-  await workbook.xlsx.writeFile(path);
+  return Buffer.from(await workbook.xlsx.writeBuffer());
+}
+
+export async function writeStatementWorkbook(path: string): Promise<void> {
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, await buildStatementWorkbook());
 }

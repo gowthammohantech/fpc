@@ -31,7 +31,7 @@ let companyId: string;
 
 // Connected at module scope, not in `beforeAll`: vitest collects the suites —
 // and so evaluates `RUN()` — before any hook runs.
-const available = (await startTestDatabase()) !== null;
+const available = (await startTestDatabase('journeys')) !== null;
 
 beforeAll(async () => {
   if (!available) return;
@@ -46,7 +46,7 @@ beforeAll(async () => {
   app = createApp();
   const result = await seed({ reset: true });
   companyId = String(result.companyIds.engineering);
-}, 120_000);
+}, 180_000);
 
 afterAll(async () => {
   if (!available) return;
@@ -187,7 +187,11 @@ RUN()('vendor invoice journey (PRD §37)', () => {
       .get('/api/settings/bank-accounts')
       .query({ companyId })
       .set('authorization', `Bearer ${cfo}`);
-    const bankAccountId = accounts.body.items[0].id as string;
+    // Selected by account number, not by position: the list sorts by label and
+    // the tenant has more than one account per company.
+    const bankAccountId = (accounts.body.items as Array<Record<string, string>>).find(
+      (entry) => entry.accountNumber === '00600350001234',
+    )!.id;
 
     const imported = await request(app)
       .post('/api/banking/statements')
@@ -244,7 +248,7 @@ RUN()('vendor invoice journey (PRD §37)', () => {
     expect(events).toEqual(
       expect.arrayContaining(['invoice.submitted', 'invoice.approved', 'invoice.paid']),
     );
-  }, 120_000);
+  }, 180_000);
 });
 
 RUN()('payroll journey (PRD §38)', () => {

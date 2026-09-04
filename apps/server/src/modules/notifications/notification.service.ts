@@ -28,7 +28,16 @@ const EMAIL_WORTHY = new Set<NotificationType>([
   NotificationType.PAYMENT_BATCH_EXPORTED,
 ]);
 
+/**
+ * Idempotent: the API server, the seed script and the integration tests all
+ * register handlers, and subscribing twice would write every notification
+ * twice.
+ */
+let registered = false;
+
 export function registerNotificationHandlers(): void {
+  if (registered) return;
+  registered = true;
   eventBus.subscribe(handleDomainEvent);
   logger.info('notification handlers registered');
 }

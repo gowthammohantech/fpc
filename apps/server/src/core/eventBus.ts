@@ -33,6 +33,9 @@ export interface DomainEvent {
 }
 
 class DomainEventBus extends EventEmitter {
+  /** Handler promises still running, so a caller can wait for them. */
+  private readonly inFlight = new Set<Promise<unknown>>();
+
   publish(event: DomainEvent): void {
     logger.debug({ type: event.type, entityId: event.entityId }, 'domain event published');
     // Handlers must never break the request that produced the event.
@@ -47,10 +50,30 @@ class DomainEventBus extends EventEmitter {
 
   subscribe(handler: (event: DomainEvent) => void | Promise<void>): void {
     this.on('domain-event', (event: DomainEvent) => {
-      Promise.resolve(handler(event)).catch((error) =>
+      const task = Promise.resolve(handler(event)).catch((error) =>
         logger.error({ err: error, event: event.type }, 'domain event handler failed'),
       );
+      this.inFlight.add(task);
+      void task.finally(() => this.inFlight.delete(task));
     });
+  }
+
+  /**
+   * Waits until every published event has been handled.
+   *
+   * Publishing defers to `setImmediate` and handlers are asynchronous, so a
+   * caller that needs the resulting rows — the seed, which has to settle the
+   * notification queue it just filled — cannot simply await `publish`. Each
+   * pass lets the deferred emits run, then awaits whatever they started, and
+   * repeats because a handler may itself publish.
+   */
+  async flush(): Promise<void> {
+    for (let pass = 0; pass < 20; pass += 1) {
+      await new Promise((resolve) => setImmediate(resolve));
+      if (!this.inFlight.size) return;
+      await Promise.allSettled([...this.inFlight]);
+    }
+    logger.warn('event bus did not settle after 20 passes');
   }
 }
 
