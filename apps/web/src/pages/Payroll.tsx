@@ -10,6 +10,7 @@ import {
   ConfirmWithReason,
   EmptyState,
   ErrorState,
+  FileField,
   Money,
   PageHeader,
   Pagination,
@@ -187,16 +188,18 @@ export function PayrollImportPage() {
           <h2 className="font-semibold">1. Choose file</h2>
           <p className="mt-1 text-sm text-slate-500">Excel or CSV, one row per employee.</p>
 
-          <input
-            type="file"
-            accept=".xlsx,.xls,.csv"
-            className="input mt-4"
-            onChange={(event) => {
-              setFile(event.target.files?.[0] ?? null);
-              setPreview(null);
-              setMapping({});
-            }}
-          />
+          <div className="mt-4">
+            <FileField
+              id="payroll-file"
+              file={file}
+              accept=".xlsx,.xls,.csv"
+              onChange={(next) => {
+                setFile(next);
+                setPreview(null);
+                setMapping({});
+              }}
+            />
+          </div>
 
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div>

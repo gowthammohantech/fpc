@@ -8,6 +8,7 @@ import {
   ConfirmWithReason,
   EmptyState,
   ErrorState,
+  FileField,
   Modal,
   Money,
   PageHeader,
@@ -304,12 +305,11 @@ function UploadStatementModal({ onClose }: { onClose(): void }) {
           <label className="label" htmlFor="file">
             Statement file
           </label>
-          <input
+          <FileField
             id="file"
-            type="file"
+            file={file}
             accept=".xlsx,.xls,.csv"
-            className="input"
-            onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+            onChange={setFile}
           />
           <p className="mt-1 text-xs text-slate-500">
             Columns are detected automatically. Re-uploading an overlapping period is safe — rows

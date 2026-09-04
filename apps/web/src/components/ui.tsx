@@ -1,9 +1,11 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
+  FileText,
   TrendingDown,
   TrendingUp,
+  UploadCloud,
   X,
   type LucideIcon,
 } from 'lucide-react';
@@ -473,5 +475,140 @@ export function ConfidenceBadge({ value }: { value: number }) {
     <span data-tone={tone} className={`${BADGE[tone]} rounded-md px-1.5`}>
       {percent}%
     </span>
+  );
+}
+
+/** Bytes as a person reads them — one decimal, never more than it earns. */
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  const units = ['KB', 'MB', 'GB'];
+  let value = bytes / 1024;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  return `${value >= 10 ? Math.round(value) : value.toFixed(1)} ${units[unit]}`;
+}
+
+/** `.xlsx,.xls,.csv` and `image/png` alike, spelled the way the hint should read. */
+function describeAccept(accept?: string): string | null {
+  if (!accept) return null;
+  const names = accept
+    .split(',')
+    .map((token) => token.trim())
+    .filter(Boolean)
+    .map((token) => (token.startsWith('.') ? token.slice(1) : token.split('/').pop() ?? token))
+    .map((token) => (token === 'jpeg' ? 'JPG' : token.toUpperCase()));
+  return names.length ? [...new Set(names)].join(' · ') : null;
+}
+
+/**
+ * File picker as a drop zone.
+ *
+ * The native control renders a browser-drawn "Choose File" button whose label,
+ * type and metrics no stylesheet can touch, and which says nothing about what
+ * the screen will accept. The input is still the input — kept in the page,
+ * focusable, and the thing the label points at — but it is visually replaced by
+ * a target that states the formats, takes a drag, and reports what was chosen.
+ */
+export function FileField({
+  id,
+  file,
+  onChange,
+  accept,
+  hint,
+  disabled = false,
+}: {
+  id: string;
+  file: File | null;
+  onChange: (file: File | null) => void;
+  accept?: string;
+  /** Overrides the formats line — say the size or row limits here. */
+  hint?: string;
+  disabled?: boolean;
+}) {
+  const [dragging, setDragging] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const formats = hint ?? describeAccept(accept);
+
+  // Re-picking the same file after a clear fires no change event unless the
+  // input's value is reset, so every path back to empty goes through here.
+  const clear = () => {
+    if (inputRef.current) inputRef.current.value = '';
+    onChange(null);
+  };
+
+  return (
+    <div>
+      <input
+        ref={inputRef}
+        id={id}
+        type="file"
+        accept={accept}
+        disabled={disabled}
+        className="peer sr-only"
+        onChange={(event) => onChange(event.target.files?.[0] ?? null)}
+      />
+
+      {file ? (
+        <div className="flex items-center gap-3 rounded-xl border border-ink-200 bg-white p-3">
+          <span className="chip-brand h-9 w-9">
+            <FileText className="h-4 w-4" aria-hidden="true" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-medium text-ink-900">{file.name}</span>
+            <span className="block text-xs text-ink-500">{formatBytes(file.size)}</span>
+          </span>
+          <label
+            htmlFor={id}
+            className="cursor-pointer rounded-full px-2.5 py-1 text-xs font-semibold text-brand-700
+                       hover:bg-brand-50 peer-focus-visible:ring-2 peer-focus-visible:ring-brand-500"
+          >
+            Replace
+          </label>
+          <button
+            type="button"
+            className="rounded-full p-1.5 text-ink-400 hover:bg-ink-100 hover:text-ink-900"
+            onClick={clear}
+            aria-label={`Remove ${file.name}`}
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+      ) : (
+        <label
+          htmlFor={id}
+          className={`flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed
+                      px-4 py-6 text-center transition-colors
+                      peer-focus-visible:ring-2 peer-focus-visible:ring-brand-500
+                      peer-disabled:cursor-not-allowed peer-disabled:opacity-60 ${
+                        dragging
+                          ? 'border-brand-500 bg-brand-50'
+                          : 'border-ink-300 bg-ink-50/60 hover:border-brand-400 hover:bg-brand-50/40'
+                      }`}
+          onDragOver={(event) => {
+            event.preventDefault();
+            if (!disabled) setDragging(true);
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(event) => {
+            event.preventDefault();
+            setDragging(false);
+            if (disabled) return;
+            const dropped = event.dataTransfer.files?.[0];
+            if (dropped) onChange(dropped);
+          }}
+        >
+          <span className="chip-brand h-10 w-10">
+            <UploadCloud className="h-5 w-5" aria-hidden="true" />
+          </span>
+          <span className="text-sm text-ink-700">
+            <span className="font-semibold text-brand-700">Choose a file</span> or drag it here
+          </span>
+          {formats ? <span className="text-xs text-ink-500">{formats}</span> : null}
+        </label>
+      )}
+    </div>
   );
 }

@@ -8,6 +8,7 @@ import { formatDate, humanize, isOverdue } from '@/lib/format';
 import {
   EmptyState,
   ErrorState,
+  FileField,
   Modal,
   Money,
   PageHeader,
@@ -219,11 +220,11 @@ function UploadInvoiceModal({ onClose }: { onClose(): void }) {
         PDF, JPG or PNG. Extraction starts automatically; the invoice will appear in the review
         queue once its fields have been read.
       </p>
-      <input
-        type="file"
+      <FileField
+        id="invoice-file"
+        file={file}
         accept="application/pdf,image/jpeg,image/png"
-        className="input"
-        onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+        onChange={setFile}
       />
       {mutation.error ? (
         <div className="mt-3">
