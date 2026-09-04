@@ -17,6 +17,8 @@ export interface FieldDefinition {
   label: string;
   type?: 'text' | 'email' | 'number' | 'select' | 'multiselect' | 'checkbox';
   options?: Array<{ value: string; label: string; hint?: string }>;
+  /** Lay a multiselect out in two columns instead of one scrolling list. */
+  columns?: 2;
   required?: boolean;
   help?: string;
   /** Hidden when editing (e.g. companyId, which cannot move). */
@@ -304,6 +306,7 @@ function RecordForm({
                 id={field.name}
                 label={field.label}
                 options={field.options ?? []}
+                columns={field.columns}
                 selected={(values[field.name] as string[] | undefined) ?? []}
                 onChange={(next) => setValues({ ...values, [field.name]: next })}
               />
@@ -349,19 +352,22 @@ function RecordForm({
  * Roles and companies are each a small, fixed set that the administrator has
  * to compare before choosing — a role means nothing without its permission
  * count beside it — so every option is on screen with its own checkbox rather
- * than hidden behind a dropdown. The list scrolls once it grows past a few
- * options, which keeps the rest of the form above the fold.
+ * than hidden behind a dropdown. A field with a fixed, short list asks for
+ * columns and gets every option at once; the rest fall back to a single list
+ * that scrolls, so an unbounded set cannot push the form below the fold.
  */
 function CheckboxGroup({
   id,
   label,
   options,
+  columns,
   selected,
   onChange,
 }: {
   id: string;
   label: string;
   options: Array<{ value: string; label: string; hint?: string }>;
+  columns?: 2;
   selected: string[];
   onChange(next: string[]): void;
 }) {
@@ -370,7 +376,9 @@ function CheckboxGroup({
       id={id}
       role="group"
       aria-label={label}
-      className="max-h-56 space-y-0.5 overflow-y-auto rounded-md border border-slate-300 bg-white p-2"
+      className={`rounded-md border border-slate-300 bg-white p-2 ${
+        columns === 2 ? 'grid grid-cols-2 gap-x-4' : 'max-h-56 space-y-0.5 overflow-y-auto'
+      }`}
     >
       {options.length === 0 ? (
         <p className="px-1 py-0.5 text-sm text-slate-500">Nothing to choose from</p>
