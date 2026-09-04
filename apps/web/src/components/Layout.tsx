@@ -286,7 +286,7 @@ export function Layout() {
         </button>
       </div>
 
-      <nav className={`flex-1 overflow-y-auto pb-4 ${rail ? 'px-2' : 'px-3'}`}>
+      <nav className={`scrollbar-none flex-1 overflow-y-auto pb-4 ${rail ? 'px-2' : 'px-3'}`}>
         {visibleGroups.map((group) => (
           <div key={group.title ?? 'root'} className="mb-5">
             {group.title ? (
