@@ -118,20 +118,21 @@ export function CompanySwitcher({
     <div className="relative" ref={rootRef} onKeyDown={onKeyDown}>
       <button
         type="button"
-        className="flex w-full items-center gap-2.5 rounded-xl border border-ink-200 bg-white p-2
+        className="flex w-full items-center gap-2 rounded-xl border border-ink-200 bg-white p-2
                    text-left transition-colors hover:border-ink-300 hover:bg-ink-50"
         onClick={() => setOpen((value) => !value)}
         aria-haspopup="listbox"
         aria-expanded={open}
+        title={selected?.name ?? undefined}
       >
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-100 text-[11px] font-semibold text-brand-800">
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-brand-100 text-[11px] font-semibold text-brand-800">
           {initials(selected?.name ?? '')}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-400">
+          <span className="block text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-400">
             Company
           </span>
-          <span className="block truncate text-sm font-medium leading-tight text-ink-900">
+          <span className="block truncate text-[13px] font-medium leading-tight text-ink-900">
             {selected?.name ?? 'Select a company'}
           </span>
         </span>
@@ -139,7 +140,7 @@ export function CompanySwitcher({
       </button>
 
       {open ? (
-        <div className="menu absolute bottom-full left-0 right-0 z-30 mb-2 py-0">
+        <div className="menu absolute bottom-full left-0 z-30 mb-2 w-[min(19rem,calc(100vw-1.5rem))] min-w-full py-0">
           {searchable ? (
             <div className="relative border-b border-ink-100 p-2">
               <Search

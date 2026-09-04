@@ -171,7 +171,7 @@ export function Layout() {
         ))}
       </nav>
 
-      <div className={`shrink-0 border-t border-ink-100 ${rail ? 'px-2 py-3' : 'px-5 py-4'}`}>
+      <div className={`shrink-0 border-t border-ink-100 ${rail ? 'px-2 py-3' : 'px-3 py-4'}`}>
         {/* Quick stats are the read-out, not the navigation, so they follow it. */}
         {summary && !rail ? (
           <div>
