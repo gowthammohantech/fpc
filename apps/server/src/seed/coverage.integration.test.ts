@@ -75,7 +75,7 @@ RUN()('seed coverage', () => {
         InvoiceStatus.REVIEW_REQUIRED,
         InvoiceStatus.PENDING_APPROVAL,
         InvoiceStatus.ACCOUNTING_VERIFICATION,
-        InvoiceStatus.TRUSTEE_APPROVAL,
+        InvoiceStatus.TREASURY_APPROVAL,
         InvoiceStatus.APPROVED,
         InvoiceStatus.PAYMENT_PENDING,
         InvoiceStatus.PAYMENT_BATCHED,
@@ -132,9 +132,9 @@ RUN()('seed coverage', () => {
     expect(missing).toBe(0);
   });
 
-  it('leaves a trustee request waiting to be decided', async () => {
+  it('leaves a treasury request waiting to be decided', async () => {
     const pending = await FinanceRequest.findOne({ status: 'PENDING' }).lean();
-    expect(pending, 'the trustee inbox should not open empty').toBeTruthy();
+    expect(pending, 'the Treasury inbox should not open empty').toBeTruthy();
     expect(pending!.reference).toMatch(/^FR-\d{4}-\d{6}$/);
     expect(['P1', 'P2']).toContain(pending!.priority);
     expect(pending!.remarks.length).toBeGreaterThan(0);

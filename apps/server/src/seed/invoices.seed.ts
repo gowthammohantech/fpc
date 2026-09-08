@@ -316,7 +316,7 @@ async function walk(
 }
 
 /**
- * Drives the accounting and trustee stages for a seeded invoice.
+ * Drives the accounting and Treasury stages for a seeded invoice.
  *
  * Uses the real services rather than assigning statuses, so the seeded rows
  * carry the same audit trail, TDS figures and obligations a live invoice
@@ -332,12 +332,12 @@ async function runAccountingStage(
   const accountant = user(context, ACCOUNTING_EMAIL);
   const accountantContext = actor(context, ACCOUNTING_EMAIL);
 
-  if (definition.stopAt === 'TRUSTEE_APPROVAL') {
+  if (definition.stopAt === 'TREASURY_APPROVAL') {
     await financeRequests.open(
       {
         invoice,
-        priority: definition.trusteePriority ?? 'P2',
-        remarks: definition.trusteeRemarks ?? 'Escalated for a trustee decision.',
+        priority: definition.treasuryPriority ?? 'P2',
+        remarks: definition.treasuryRemarks ?? 'Escalated for a Treasury decision.',
         requestedByUserId: accountant.id,
         requestedByName: accountant.name,
       },

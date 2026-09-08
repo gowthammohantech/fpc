@@ -311,7 +311,7 @@ RUN()('organisation scope', () => {
   /**
    * Endpoints that must narrow on the caller's org grant.
    *
-   * Every list a vertical-scoped finance user can actually reach. The trustee
+   * Every list a vertical-scoped finance user can actually reach. The Treasury
    * queue is absent because no vertically-scoped seeded user holds
    * `finance_request:read` — its permission gate is covered by the matrix
    * above, and its narrowing shares `applyOrgScope` with these.

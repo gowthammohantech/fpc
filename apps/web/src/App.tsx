@@ -19,6 +19,7 @@ import { ReportsPage } from '@/pages/Reports';
 import { AuditPage } from '@/pages/Audit';
 import { NotificationsPage } from '@/pages/Notifications';
 import { AccountPage } from '@/pages/Account';
+import { CookbookPage } from '@/pages/Cookbook';
 import {
   BankAccountsPage,
   BusinessUnitsPage,
@@ -248,6 +249,9 @@ export function App() {
           }
         />
         <Route path="/account" element={<AccountPage />} />
+        {/* The handbook names no permission: it documents refusals as much as
+            actions, so a user who cannot take a step still needs to read it. */}
+        <Route path="/cookbook" element={<CookbookPage />} />
         <Route
           path="/notifications"
           element={

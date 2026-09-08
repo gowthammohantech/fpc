@@ -331,14 +331,14 @@ export const USERS: UserSeed[] = [
     email: 'accounts@nova.example.com',
     roles: [RoleKey.ACCOUNTS_TEAM],
     companies: ['engineering', 'technologies'],
-    note: 'Accounting team — verifies approved invoices, sets TDS, escalates to the trustee',
+    note: 'Accounting team — verifies approved invoices, sets TDS, escalates to Treasury',
   },
   {
     name: 'Ramesh Gupta',
-    email: 'trustee@nova.example.com',
-    roles: [RoleKey.TRUSTEE],
+    email: 'treasury.approver@nova.example.com',
+    roles: [RoleKey.TREASURY],
     companies: ['engineering', 'technologies'],
-    note: 'Trustee — decides escalations; read-only everywhere else, including the bank',
+    note: 'Treasury — decides escalations; read-only everywhere else, including the bank',
   },
   {
     name: 'Aditya Sharma',

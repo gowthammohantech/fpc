@@ -6,7 +6,7 @@ import { ROLE_LABELS, type RoleKey } from '@fpc/shared';
 import { api } from '@/lib/api';
 import { formatCompactINR } from '@/lib/format';
 import { useAuth } from '@/hooks/useAuth';
-import { NAV_GROUPS } from '@/lib/navigation';
+import { NAV_GROUPS, navItemVisible } from '@/lib/navigation';
 import { CompanySwitcher } from './CompanySwitcher';
 import { GlobalSearch } from './GlobalSearch';
 
@@ -84,7 +84,7 @@ export function Layout() {
 
   const visibleGroups = NAV_GROUPS.map((group) => ({
     ...group,
-    items: group.items.filter((item) => canAny(...item.permissions)),
+    items: group.items.filter((item) => navItemVisible(item, canAny)),
   })).filter((group) => group.items.length > 0);
 
   const toggleCollapsed = () => {

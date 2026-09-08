@@ -3,7 +3,7 @@ import { CornerDownLeft, Search, type LucideIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { NAV_GROUPS } from '@/lib/navigation';
+import { NAV_GROUPS, navItemVisible } from '@/lib/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { Money } from './ui';
 
@@ -97,7 +97,7 @@ function CommandPalette({ onClose }: { onClose(): void }) {
     const needle = term.trim().toLowerCase();
     return NAV_GROUPS.flatMap((group) =>
       group.items
-        .filter((item) => canAny(...item.permissions))
+        .filter((item) => navItemVisible(item, canAny))
         .filter(
           (item) =>
             !needle ||

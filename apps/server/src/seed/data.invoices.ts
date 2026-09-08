@@ -31,8 +31,8 @@ export type InvoiceStop =
   | 'REJECTED'
   /** Business approval cleared; sitting with the accounting team. */
   | 'ACCOUNTING_VERIFICATION'
-  /** Escalated by accounting; sitting with the trustee. */
-  | 'TRUSTEE_APPROVAL'
+  /** Escalated by accounting; sitting with the Treasury team. */
+  | 'TREASURY_APPROVAL'
   /** Verified, cleared for payment, obligation created. */
   | 'APPROVED';
 
@@ -74,9 +74,9 @@ export interface InvoiceSeed {
   decisionComment?: string;
   /** Reason recorded on the audit trail, for CANCELLED rows. */
   cancelReason?: string;
-  /** Priority and note for rows that rest at TRUSTEE_APPROVAL. */
-  trusteePriority?: 'P1' | 'P2';
-  trusteeRemarks?: string;
+  /** Priority and note for rows that rest at TREASURY_APPROVAL. */
+  treasuryPriority?: 'P1' | 'P2';
+  treasuryRemarks?: string;
   findings?: FindingSeed[];
   /** Replaces the default high-confidence extraction block. */
   extraction?: 'DEFAULT' | 'SPARSE' | 'NONE';
@@ -131,7 +131,7 @@ export const INVOICES: InvoiceSeed[] = [
     stopAt: 'ACCOUNTING_VERIFICATION',
   },
 
-  // ── Escalated to the trustee, P1 ─────────────────────────
+  // ── Escalated to the Treasury team, P1 ─────────────────────────
   {
     company: 'engineering',
     vendor: 'ABCCONS',
@@ -147,9 +147,9 @@ export const INVOICES: InvoiceSeed[] = [
     tax: 72_000,
     total: 4_72_000,
     description: 'Transaction advisory — acquisition due diligence',
-    stopAt: 'TRUSTEE_APPROVAL',
-    trusteePriority: 'P1',
-    trusteeRemarks: 'Payment required before 10 Sep to hold the closing date.',
+    stopAt: 'TREASURY_APPROVAL',
+    treasuryPriority: 'P1',
+    treasuryRemarks: 'Payment required before 10 Sep to hold the closing date.',
   },
 
   // ── Raised by HR rather than finance, to show departmental intake ──

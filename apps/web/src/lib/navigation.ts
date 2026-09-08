@@ -1,6 +1,7 @@
 import {
   ArrowLeftRight,
   Blocks,
+  BookOpen,
   Boxes,
   Building2,
   Calculator,
@@ -34,8 +35,22 @@ export interface NavItem {
   to: string;
   label: string;
   icon: LucideIcon;
-  /** Hidden unless the user holds one of these. */
+  /**
+   * Hidden unless the user holds one of these.
+   *
+   * Empty means unrestricted — the same convention organisation scope uses —
+   * and is reserved for pages that hold no data of their own, such as the
+   * handbook.
+   */
   permissions: Permission[];
+}
+
+/** Whether a signed-in user may see a menu entry at all. */
+export function navItemVisible(
+  item: NavItem,
+  canAny: (...permissions: Permission[]) => boolean,
+): boolean {
+  return item.permissions.length === 0 || canAny(...item.permissions);
 }
 
 export interface NavGroup {
@@ -199,6 +214,14 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: GitBranch,
         permissions: ['approval_rule:read'],
       },
+    ],
+  },
+  {
+    title: 'Help',
+    items: [
+      // No permission: the handbook explains the refusals too, so it is for
+      // everyone who can sign in.
+      { to: '/cookbook', label: 'Cookbook', icon: BookOpen, permissions: [] },
     ],
   },
 ];
