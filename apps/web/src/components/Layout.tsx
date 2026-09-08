@@ -22,7 +22,8 @@ function readCollapsed(): boolean {
 }
 
 export function Layout() {
-  const { user, logout, can, canAny, companyId, setCompanyId } = useAuth();
+  const { user, logout, can, canAny, companyId, setCompanyId, verticalId, setVerticalId } =
+    useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -36,6 +37,14 @@ export function Layout() {
     enabled: !!user,
   });
 
+  // Only fetched when the user can see verticals at all, so the filter simply
+  // does not exist for a tenant that has not set any up.
+  const { data: verticals } = useQuery({
+    queryKey: ['verticals', 'for-shell', companyId],
+    queryFn: () => api.settings.verticals({ companyId, pageSize: 100 }),
+    enabled: !!user && can('vertical:read'),
+  });
+
   const { data: unread } = useQuery({
     queryKey: ['notifications', 'unread'],
     queryFn: () => api.notifications.unreadCount(),
@@ -46,8 +55,8 @@ export function Layout() {
   // The same key the dashboard uses, so on /dashboard this costs no request at
   // all and elsewhere it is one cheap summary shared by every screen.
   const { data: summary } = useQuery({
-    queryKey: ['dashboard', companyId],
-    queryFn: () => api.dashboard.summary({ companyId }),
+    queryKey: ['dashboard', companyId, verticalId],
+    queryFn: () => api.dashboard.summary({ companyId, verticalId }),
     enabled: !!user && can('dashboard:read'),
   });
 
@@ -91,6 +100,9 @@ export function Layout() {
   };
 
   const switcher = companies && companies.items.length > 1 ? companies.items : null;
+  // Offered only when there is a choice to make: one vertical is already the
+  // whole view, and none means the tenant does not use them.
+  const verticalChoices = verticals && verticals.items.length > 1 ? verticals.items : null;
 
   /**
    * `rail` is the collapsed, icon-only sidebar. It is a parameter rather than
@@ -223,6 +235,29 @@ export function Layout() {
               />
             </div>
           )
+        ) : null}
+
+        {/*
+          The vertical lens, directly under the company it belongs to. A view
+          filter only — the server already refuses a vertical this user was not
+          granted, so this narrows what they see rather than what they may see.
+        */}
+        {verticalChoices && !rail ? (
+          <label className="mt-2 block">
+            <span className="sr-only">Vertical</span>
+            <select
+              className="input text-sm"
+              value={verticalId ?? ''}
+              onChange={(event) => setVerticalId(event.target.value || undefined)}
+            >
+              <option value="">All verticals</option>
+              {verticalChoices.map((vertical) => (
+                <option key={vertical.id} value={vertical.id}>
+                  {vertical.name}
+                </option>
+              ))}
+            </select>
+          </label>
         ) : null}
       </div>
     </>

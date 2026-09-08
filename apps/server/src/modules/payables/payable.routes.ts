@@ -6,15 +6,24 @@ import { paginate } from '../../core/paginate.js';
 import { query, validateQuery } from '../../core/validate.js';
 import { requirePrincipal } from '../../middleware/authenticate.js';
 import { requirePermission } from '../../middleware/requirePermission.js';
-import { applyLocationScope, scopeFilter } from '../../middleware/tenantScope.js';
+import { applyOrgScope, scopeFilter } from '../../middleware/tenantScope.js';
 import { toApi } from '../../models/base.js';
 import { Invoice } from '../../models/invoice.model.js';
 
 export const payableRouter: Router = Router();
 
-/** Invoices that represent money still owed — everything approved but unpaid. */
+/**
+ * Invoices that represent money still owed.
+ *
+ * Everything from the moment it is with an approver to the moment it is paid,
+ * which now includes the accounting and trustee stages — an invoice sitting
+ * with accounting is every bit as much a liability as one sitting with an
+ * approver.
+ */
 const OPEN_STATUSES: InvoiceStatus[] = [
   InvoiceStatus.PENDING_APPROVAL,
+  InvoiceStatus.ACCOUNTING_VERIFICATION,
+  InvoiceStatus.TRUSTEE_APPROVAL,
   InvoiceStatus.APPROVED,
   InvoiceStatus.PAYMENT_PENDING,
   InvoiceStatus.PAYMENT_BATCHED,
@@ -37,7 +46,7 @@ payableRouter.get(
     const q = query<typeof schemas.payableListQuery>(req);
 
     const filter = scopeFilter(principal, q.companyId) as Record<string, unknown>;
-    applyLocationScope(principal, filter, q.locationId);
+    applyOrgScope(principal, filter, q);
     if (q.vendorId) filter.vendorId = new Types.ObjectId(q.vendorId);
     Object.assign(filter, viewFilter(q.view));
 
@@ -67,6 +76,7 @@ payableRouter.get(
     const principal = requirePrincipal(req);
     const q = query<typeof schemas.scopeQuery>(req);
     const base = scopeFilter(principal, q.companyId) as Record<string, unknown>;
+    applyOrgScope(principal, base, q);
 
     const views: Array<schemas.PayableListQuery['view']> = [
       'ALL',
@@ -101,6 +111,7 @@ payableRouter.get(
     const principal = requirePrincipal(req);
     const q = query<typeof schemas.scopeQuery>(req);
     const filter = { ...scopeFilter(principal, q.companyId), status: { $in: OPEN_STATUSES } };
+    applyOrgScope(principal, filter, q);
 
     const buckets = await Invoice.aggregate<{
       _id: string;

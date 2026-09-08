@@ -292,6 +292,138 @@ RUN()('permission matrix', () => {
   }
 });
 
+/**
+ * Organisation scope, enforced rather than merely offered.
+ *
+ * `tech.vertical@nova.example.com` is granted exactly one vertical. Two things
+ * have to hold on every scoped endpoint, and the second is the one that
+ * matters: the earlier `applyLocationScope` narrowed by whatever the caller
+ * asked for *without checking it*, so a scoped user could read another unit's
+ * work simply by naming it in the query string.
+ *
+ * A new list endpoint that forgets `applyOrgScope` fails (a); one that trusts
+ * its query fails (b). Both assert over the response body, so no registry or
+ * type trick can substitute for them.
+ */
+RUN()('organisation scope', () => {
+  const SCOPED_USER = 'tech.vertical@nova.example.com';
+
+  /**
+   * Endpoints that must narrow on the caller's org grant.
+   *
+   * Every list a vertical-scoped finance user can actually reach. The trustee
+   * queue is absent because no vertically-scoped seeded user holds
+   * `finance_request:read` — its permission gate is covered by the matrix
+   * above, and its narrowing shares `applyOrgScope` with these.
+   */
+  const scopedEndpoints = [
+    { path: '/api/invoices', why: 'the invoice register' },
+    { path: '/api/payables', why: 'accounts payable' },
+    { path: '/api/payments/queue', why: 'the payment queue' },
+  ];
+
+  async function verticalsOf(token: string): Promise<{ mine: string; other: string }> {
+    const all = await request(app)
+      .get('/api/settings/verticals')
+      .set('authorization', `Bearer ${await signIn('admin@nova.example.com')}`);
+    const items = all.body.items as Array<{ id: string; code: string }>;
+    const visible = await request(app)
+      .get('/api/settings/verticals')
+      .set('authorization', `Bearer ${token}`);
+    const mine = (visible.body.items as Array<{ id: string }>)[0]!.id;
+    const other = items.find((entry) => entry.id !== mine)!.id;
+    return { mine, other };
+  }
+
+  it('shows a vertical-scoped user only their own vertical in the master', async () => {
+    const token = await signIn(SCOPED_USER);
+    const response = await request(app)
+      .get('/api/settings/verticals')
+      .set('authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.items).toHaveLength(1);
+  });
+
+  for (const endpoint of scopedEndpoints) {
+    it(`narrows ${endpoint.path} to the caller's vertical (${endpoint.why})`, async () => {
+      const token = await signIn(SCOPED_USER);
+      const { mine } = await verticalsOf(token);
+
+      const response = await request(app)
+        .get(endpoint.path)
+        .set('authorization', `Bearer ${token}`);
+      expect(response.status, JSON.stringify(response.body)).toBe(200);
+
+      for (const item of response.body.items as Array<Record<string, unknown>>) {
+        expect(
+          item.verticalId ? String(item.verticalId) : null,
+          `${endpoint.path} returned a row outside the caller's vertical`,
+        ).toBe(mine);
+      }
+    });
+
+    it(`refuses a vertical the caller does not hold on ${endpoint.path}`, async () => {
+      const token = await signIn(SCOPED_USER);
+      const { other } = await verticalsOf(token);
+
+      const separator = endpoint.path.includes('?') ? '&' : '?';
+      const response = await request(app)
+        .get(`${endpoint.path}${separator}verticalId=${other}`)
+        .set('authorization', `Bearer ${token}`);
+
+      // 403, never 200-with-data: asking for someone else's vertical is a
+      // permission answer, not an empty result.
+      expect(response.status, JSON.stringify(response.body)).toBe(403);
+    });
+  }
+
+  it('hides an invoice outside the vertical even when asked for by id', async () => {
+    const adminToken = await signIn('admin@nova.example.com');
+    const scopedToken = await signIn(SCOPED_USER);
+    const { mine } = await verticalsOf(scopedToken);
+
+    const all = await request(app)
+      .get('/api/invoices')
+      .query({ pageSize: 100 })
+      .set('authorization', `Bearer ${adminToken}`);
+    const outside = (all.body.items as Array<Record<string, unknown>>).find(
+      (item) => item.verticalId && String(item.verticalId) !== mine,
+    );
+    expect(outside, 'the seed should contain an invoice in another vertical').toBeTruthy();
+
+    const direct = await request(app)
+      .get(`/api/invoices/${String(outside!.id)}`)
+      .set('authorization', `Bearer ${scopedToken}`);
+    expect(direct.status).toBe(404);
+  });
+
+  it('keeps a classified business unit out of an ordinary list', async () => {
+    // Ravi is unrestricted below company level, which is exactly the case a
+    // vertical grant would not cover: classified units stay hidden unless
+    // named, or unless the caller administers the master.
+    const token = await signIn('ravi@nova.example.com');
+    const response = await request(app)
+      .get('/api/settings/business-units')
+      .set('authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    for (const item of response.body.items as Array<Record<string, unknown>>) {
+      expect(item.kind).not.toBe('CLASSIFIED');
+    }
+
+    const asAdmin = await request(app)
+      .get('/api/settings/business-units')
+      .set('authorization', `Bearer ${await signIn('companyadmin@nova.example.com')}`);
+    expect(
+      (asAdmin.body.items as Array<Record<string, unknown>>).some(
+        (item) => item.kind === 'CLASSIFIED',
+      ),
+      'an administrator must still be able to maintain a classified unit',
+    ).toBe(true);
+  });
+});
+
 RUN()('payroll confidentiality', () => {
   it('shows payroll as one aggregate line to a caller without payroll access', async () => {
     const cfoToken = await signIn('cfo@nova.example.com');

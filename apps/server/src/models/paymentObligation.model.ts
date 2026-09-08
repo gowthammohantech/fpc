@@ -5,7 +5,7 @@ import type {
   PaymentStatus,
   ReconciliationStatus,
 } from '@fpc/shared';
-import { baseSchemaOptions, scopedFields } from './base.js';
+import { baseSchemaOptions, orgScopedFields, scopedFields } from './base.js';
 
 /**
  * A payment obligation — the platform's central financial concept (PRD §20).
@@ -21,6 +21,10 @@ import { baseSchemaOptions, scopedFields } from './base.js';
 export interface PaymentObligationDoc {
   tenantId: Types.ObjectId;
   companyId: Types.ObjectId;
+  groupId?: Types.ObjectId;
+  regionId?: Types.ObjectId;
+  verticalId?: Types.ObjectId;
+  businessUnitId?: Types.ObjectId;
   locationId?: Types.ObjectId;
   departmentId?: Types.ObjectId;
   type: ObligationType;
@@ -51,8 +55,7 @@ export interface PaymentObligationDoc {
 const schema = new Schema<PaymentObligationDoc>(
   {
     ...scopedFields(),
-    locationId: { type: Schema.Types.ObjectId, ref: 'Location', index: true },
-    departmentId: { type: Schema.Types.ObjectId, ref: 'Department' },
+    ...orgScopedFields(),
     type: { type: String, enum: ['VENDOR', 'PAYROLL'], required: true, index: true },
     sourceId: { type: Schema.Types.ObjectId, required: true, index: true },
     sourceBatchId: { type: Schema.Types.ObjectId, index: true },

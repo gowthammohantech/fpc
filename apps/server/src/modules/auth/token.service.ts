@@ -1,16 +1,24 @@
 import { createHash, randomBytes } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import { env } from '../../config/env.js';
+import { ORG_SCOPE_FIELDS, type OrgScopeField } from '../../middleware/types.js';
 
-export interface AccessClaims {
+/** Org scope as it travels on the wire: ids as strings. */
+export type ScopeClaims = Record<OrgScopeField, string[]>;
+
+export interface AccessClaims extends ScopeClaims {
   sub: string;
   tenantId: string;
   email: string;
   name: string;
   roleKeys: string[];
-  companyIds: string[];
-  locationIds: string[];
-  departmentIds: string[];
+}
+
+/** Every axis unrestricted. Used by the TTL probe and by tests. */
+export function emptyScopeClaims(): ScopeClaims {
+  return Object.fromEntries(
+    ORG_SCOPE_FIELDS.map((field) => [field, [] as string[]]),
+  ) as ScopeClaims;
 }
 
 export interface RefreshClaims {
@@ -65,9 +73,7 @@ export function accessTokenTtlSeconds(): number {
       email: 'ttl@probe',
       name: 'ttl',
       roleKeys: [],
-      companyIds: [],
-      locationIds: [],
-      departmentIds: [],
+      ...emptyScopeClaims(),
     }),
   ) as { exp?: number; iat?: number } | null;
   return decoded?.exp && decoded.iat ? decoded.exp - decoded.iat : 900;

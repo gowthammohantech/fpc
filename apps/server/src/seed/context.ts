@@ -22,7 +22,11 @@ export interface SeedUser {
  */
 export interface SeedContext {
   tenantId: Types.ObjectId;
+  groupIds: Record<string, Types.ObjectId>;
   companyIds: Record<string, Types.ObjectId>;
+  regionIds: Record<string, Types.ObjectId>;
+  verticalIds: Record<string, Types.ObjectId>;
+  businessUnitIds: Record<string, Types.ObjectId>;
   locationIds: Record<string, Types.ObjectId>;
   departmentIds: Record<string, Types.ObjectId>;
   vendorIds: Record<string, Types.ObjectId>;
@@ -115,7 +119,13 @@ export async function buildActors(
       name: seeded.name,
       roleKeys: seeded.roleKeys,
       permissions,
+      // The seed acts as an unrestricted administrator on every axis below
+      // company; scope is exercised by the seeded users, not by the seeder.
       companyIds: seeded.companyIds,
+      groupIds: [],
+      regionIds: [],
+      verticalIds: [],
+      businessUnitIds: [],
       locationIds: [],
       departmentIds: [],
     };

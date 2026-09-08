@@ -1,5 +1,5 @@
 import { Schema, Types, model } from 'mongoose';
-import { normalizeName } from '@fpc/shared';
+import { TDS_SECTIONS, normalizeName, type TdsSection } from '@fpc/shared';
 import { baseSchemaOptions, scopedFields } from './base.js';
 
 /** Lightweight vendor master — PRD §10. No KYC workflow by design. */
@@ -13,6 +13,15 @@ export interface VendorDoc {
   email?: string;
   phone?: string;
   gstin?: string;
+  pan?: string;
+  /**
+   * Whether TDS is withheld from this vendor's invoices by default. Only a
+   * default: the accounting team decides per invoice and can override it.
+   */
+  tdsApplicable: boolean;
+  tdsSection?: TdsSection;
+  /** Integer basis points — 10% is 1000. Never a float; see `money.ts`. */
+  tdsRateBasisPoints?: number;
   bankAccountNumber?: string;
   ifsc?: string;
   beneficiaryName?: string;
@@ -30,6 +39,10 @@ const schema = new Schema<VendorDoc>(
     email: { type: String, trim: true, lowercase: true },
     phone: { type: String, trim: true },
     gstin: { type: String, trim: true, uppercase: true },
+    pan: { type: String, trim: true, uppercase: true },
+    tdsApplicable: { type: Boolean, default: false },
+    tdsSection: { type: String, enum: [...TDS_SECTIONS, null] },
+    tdsRateBasisPoints: { type: Number, min: 0, max: 10_000 },
     bankAccountNumber: { type: String, trim: true },
     ifsc: { type: String, trim: true, uppercase: true },
     beneficiaryName: { type: String, trim: true },

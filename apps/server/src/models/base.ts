@@ -30,6 +30,24 @@ export function scopedFields() {
   } as const;
 }
 
+/**
+ * The organisation axes a business document is filed under.
+ *
+ * Optional, indexed, and denormalised rather than reached through parent
+ * links: `applyOrgScope` narrows a query with a flat `$in` on these fields, so
+ * scoping never needs a join or a `$graphLookup`.
+ */
+export function orgScopedFields() {
+  return {
+    groupId: { type: Schema.Types.ObjectId, ref: 'Group', index: true },
+    regionId: { type: Schema.Types.ObjectId, ref: 'Region', index: true },
+    verticalId: { type: Schema.Types.ObjectId, ref: 'Vertical', index: true },
+    businessUnitId: { type: Schema.Types.ObjectId, ref: 'BusinessUnit', index: true },
+    locationId: { type: Schema.Types.ObjectId, ref: 'Location', index: true },
+    departmentId: { type: Schema.Types.ObjectId, ref: 'Department', index: true },
+  } as const;
+}
+
 /** Converts a lean document to the API shape (`_id` → `id`, dates → ISO). */
 export function toApi(doc: unknown): Record<string, unknown> | null {
   if (!doc || typeof doc !== 'object') return null;

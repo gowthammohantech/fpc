@@ -20,12 +20,22 @@ import {
 } from '@/components/ui';
 
 type View =
-  'ALL' | 'REVIEW' | 'PENDING_APPROVAL' | 'APPROVED' | 'PAYMENT_PENDING' | 'PAID' | 'OVERDUE';
+  | 'ALL'
+  | 'REVIEW'
+  | 'PENDING_APPROVAL'
+  | 'ACCOUNTING'
+  | 'TRUSTEE'
+  | 'APPROVED'
+  | 'PAYMENT_PENDING'
+  | 'PAID'
+  | 'OVERDUE';
 
 const VIEWS: Array<{ key: View; label: string }> = [
   { key: 'ALL', label: 'All' },
   { key: 'REVIEW', label: 'Needs review' },
   { key: 'PENDING_APPROVAL', label: 'Pending approval' },
+  { key: 'ACCOUNTING', label: 'With accounting' },
+  { key: 'TRUSTEE', label: 'With the trustee' },
   { key: 'APPROVED', label: 'Approved' },
   { key: 'PAYMENT_PENDING', label: 'Payment pending' },
   { key: 'PAID', label: 'Paid' },
@@ -34,7 +44,7 @@ const VIEWS: Array<{ key: View; label: string }> = [
 
 /** Invoice register and review queue — PRD §36 `/invoices`, `/invoices/review`. */
 export function InvoicesPage({ initialView = 'ALL' }: { initialView?: View }) {
-  const { companyId, can } = useAuth();
+  const { companyId, verticalId, can } = useAuth();
   const [params, setParams] = useSearchParams();
   // Opened by the shell's "Upload invoice" action, which can only reach this
   // page-local state through the URL.
@@ -46,10 +56,11 @@ export function InvoicesPage({ initialView = 'ALL' }: { initialView?: View }) {
   const status = params.get('status') ?? '';
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['invoices', companyId, view, page, search, status],
+    queryKey: ['invoices', companyId, verticalId, view, page, search, status],
     queryFn: () =>
       api.invoices.list({
         companyId,
+        verticalId,
         view,
         page,
         pageSize: 25,
@@ -137,6 +148,7 @@ export function InvoicesPage({ initialView = 'ALL' }: { initialView?: View }) {
             <Table>
               <thead className="thead">
                 <tr>
+                  <th className="th">Tracking ID</th>
                   <th className="th">Invoice</th>
                   <th className="th">Vendor</th>
                   <th className="th">Invoice date</th>
@@ -149,6 +161,14 @@ export function InvoicesPage({ initialView = 'ALL' }: { initialView?: View }) {
               <tbody className="tbody">
                 {data.items.map((invoice) => (
                   <tr key={invoice.id} className="hover:bg-slate-50">
+                    <td className="td">
+                      <Link
+                        className="font-mono text-xs text-brand-700"
+                        to={`/invoices/${invoice.id}`}
+                      >
+                        {invoice.trackingId}
+                      </Link>
+                    </td>
                     <td className="td">
                       <Link className="font-medium text-brand-700" to={`/invoices/${invoice.id}`}>
                         {invoice.invoiceNumber ?? invoice.documentFileName ?? 'Untitled'}

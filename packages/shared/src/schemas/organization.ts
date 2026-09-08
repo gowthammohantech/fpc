@@ -1,6 +1,7 @@
 import { z } from 'zod';
+import { BUSINESS_UNIT_KINDS, TDS_SECTIONS } from '../enums.js';
 import { PERMISSIONS } from '../permissions.js';
-import { bankAccountNumber, gstin, ifsc, objectId } from './common.js';
+import { bankAccountNumber, basisPoints, gstin, ifsc, objectId, pan } from './common.js';
 
 /**
  * A role key: the eight built into the product plus whatever a tenant defines.
@@ -19,6 +20,7 @@ export const permission = z.enum(PERMISSIONS);
 
 export const createCompanyRequest = z.object({
   name: z.string().trim().min(2).max(160),
+  groupId: objectId.optional().or(z.literal('')),
   legalName: z.string().trim().max(200).optional(),
   gstin: gstin.optional().or(z.literal('')),
   cin: z.string().trim().max(40).optional(),
@@ -29,6 +31,55 @@ export type CreateCompanyRequest = z.infer<typeof createCompanyRequest>;
 export const updateCompanyRequest = createCompanyRequest.partial().extend({
   active: z.boolean().optional(),
 });
+
+/**
+ * A group sits above the legal entity, so unlike every other org level it
+ * carries no `companyId`.
+ */
+export const createGroupRequest = z.object({
+  name: z.string().trim().min(2).max(160),
+  code: z.string().trim().min(1).max(20).toUpperCase(),
+});
+export type CreateGroupRequest = z.infer<typeof createGroupRequest>;
+export const updateGroupRequest = createGroupRequest
+  .partial()
+  .extend({ active: z.boolean().optional() });
+
+export const createRegionRequest = z.object({
+  companyId: objectId,
+  name: z.string().trim().min(2).max(120),
+  code: z.string().trim().min(1).max(20).toUpperCase(),
+});
+export type CreateRegionRequest = z.infer<typeof createRegionRequest>;
+export const updateRegionRequest = createRegionRequest
+  .omit({ companyId: true })
+  .partial()
+  .extend({ active: z.boolean().optional() });
+
+export const createVerticalRequest = z.object({
+  companyId: objectId,
+  name: z.string().trim().min(2).max(120),
+  code: z.string().trim().min(1).max(20).toUpperCase(),
+  headUserId: objectId.optional().or(z.literal('')),
+});
+export type CreateVerticalRequest = z.infer<typeof createVerticalRequest>;
+export const updateVerticalRequest = createVerticalRequest
+  .omit({ companyId: true })
+  .partial()
+  .extend({ active: z.boolean().optional() });
+
+export const createBusinessUnitRequest = z.object({
+  companyId: objectId,
+  verticalId: objectId,
+  name: z.string().trim().min(2).max(120),
+  code: z.string().trim().min(1).max(20).toUpperCase(),
+  kind: z.enum(BUSINESS_UNIT_KINDS as [string, ...string[]]).default('STANDARD'),
+});
+export type CreateBusinessUnitRequest = z.infer<typeof createBusinessUnitRequest>;
+export const updateBusinessUnitRequest = createBusinessUnitRequest
+  .omit({ companyId: true })
+  .partial()
+  .extend({ active: z.boolean().optional() });
 
 export const createLocationRequest = z.object({
   companyId: objectId,
@@ -45,6 +96,7 @@ export const updateLocationRequest = createLocationRequest
 
 export const createDepartmentRequest = z.object({
   companyId: objectId,
+  verticalId: objectId.optional().or(z.literal('')),
   name: z.string().trim().min(2).max(120),
   code: z.string().trim().min(1).max(20).toUpperCase(),
   headUserId: objectId.optional(),
@@ -60,9 +112,15 @@ export const createUserRequest = z.object({
   email: z.string().trim().toLowerCase().email(),
   password: z.string().min(10).optional(),
   roleKeys: z.array(roleKey).min(1, 'At least one role'),
-  companyIds: z.array(objectId).default([]),
-  locationIds: z.array(objectId).default([]),
-  departmentIds: z.array(objectId).default([]),
+  // An empty array on any axis means "unrestricted on that axis". Capped
+  // because every one of these arrays travels in the access token.
+  companyIds: z.array(objectId).max(200).default([]),
+  groupIds: z.array(objectId).max(200).default([]),
+  regionIds: z.array(objectId).max(200).default([]),
+  verticalIds: z.array(objectId).max(200).default([]),
+  businessUnitIds: z.array(objectId).max(200).default([]),
+  locationIds: z.array(objectId).max(200).default([]),
+  departmentIds: z.array(objectId).max(200).default([]),
 });
 export type CreateUserRequest = z.infer<typeof createUserRequest>;
 export const updateUserRequest = createUserRequest.partial().extend({
@@ -91,6 +149,13 @@ export const createVendorRequest = z.object({
   email: z.string().trim().toLowerCase().email().optional().or(z.literal('')),
   phone: z.string().trim().max(30).optional(),
   gstin: gstin.optional().or(z.literal('')),
+  pan: pan.optional().or(z.literal('')),
+  tdsApplicable: z.boolean().default(false),
+  tdsSection: z
+    .enum(TDS_SECTIONS as unknown as [string, ...string[]])
+    .optional()
+    .or(z.literal('')),
+  tdsRateBasisPoints: basisPoints.optional(),
   bankAccountNumber: bankAccountNumber.optional().or(z.literal('')),
   ifsc: ifsc.optional().or(z.literal('')),
   beneficiaryName: z.string().trim().max(200).optional(),

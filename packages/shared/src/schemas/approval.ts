@@ -3,7 +3,17 @@ import { ROLE_KEYS } from '../enums.js';
 import { objectId, paginationQuery } from './common.js';
 
 export const ruleCondition = z.object({
-  field: z.enum(['amount', 'vendorId', 'departmentId', 'locationId', 'currency', 'employeeCount']),
+  field: z.enum([
+    'amount',
+    'vendorId',
+    'departmentId',
+    'locationId',
+    'regionId',
+    'verticalId',
+    'businessUnitId',
+    'currency',
+    'employeeCount',
+  ]),
   operator: z.enum(['eq', 'ne', 'gt', 'gte', 'lt', 'lte', 'in', 'nin', 'between']),
   value: z.unknown(),
 });
@@ -11,7 +21,9 @@ export const ruleCondition = z.object({
 export const ruleStep = z
   .object({
     order: z.number().int().min(1),
-    approverType: z.enum(['ROLE', 'USER', 'DEPARTMENT_HEAD']),
+    // DEPARTMENT_HEAD and VERTICAL_HEAD resolve from the subject, so neither
+    // needs a roleKey or userId.
+    approverType: z.enum(['ROLE', 'USER', 'DEPARTMENT_HEAD', 'VERTICAL_HEAD']),
     roleKey: z.enum(ROLE_KEYS as [string, ...string[]]).optional(),
     userId: objectId.optional(),
     label: z.string().trim().max(120).optional(),

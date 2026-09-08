@@ -2,9 +2,11 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   TriangleAlert,
+  Calculator,
   CircleCheck,
   FileSearch,
   FileText,
+  Gavel,
   Layers,
   RefreshCcw,
   SendHorizontal,
@@ -41,18 +43,29 @@ const AGEING_BUCKETS: Array<{ key: string; label: string; colour: string }> = [
  * unreconciled.
  */
 export function DashboardPage() {
-  const { companyId, can } = useAuth();
+  const { companyId, verticalId, can } = useAuth();
   const { data, isLoading, error } = useQuery({
-    queryKey: ['dashboard', companyId],
-    queryFn: () => api.dashboard.summary({ companyId }),
+    queryKey: ['dashboard', companyId, verticalId],
+    queryFn: () => api.dashboard.summary({ companyId, verticalId }),
   });
 
   // Shares its key with the payables screen, so whichever loads second is free.
   const { data: ageing } = useQuery({
-    queryKey: ['payables', 'ageing', companyId],
-    queryFn: () => api.payables.ageing({ companyId }),
+    queryKey: ['payables', 'ageing', companyId, verticalId],
+    queryFn: () => api.payables.ageing({ companyId, verticalId }),
     enabled: can('payable:read'),
   });
+
+  // Names for the vertical breakdown; the summary returns ids, because the
+  // aggregation groups on the denormalised field rather than joining.
+  const { data: verticals } = useQuery({
+    queryKey: ['verticals', 'for-dashboard', companyId],
+    queryFn: () => api.settings.verticals({ companyId, pageSize: 200 }),
+    enabled: can('vertical:read'),
+  });
+
+  const verticalName = (id: string | null) =>
+    id ? verticals?.items.find((vertical) => vertical.id === id)?.name : null;
 
   if (isLoading) return <Spinner />;
   if (error) return <ErrorState error={error} />;
@@ -148,6 +161,24 @@ export function DashboardPage() {
                 sub={formatCompactINR(data.invoices.pendingApprovalAmount)}
                 tone={data.invoices.pendingApproval > 0 ? 'warning' : 'default'}
               />
+              {data.invoices.accountingVerification > 0 ? (
+                <StatCard
+                  label="With accounting"
+                  value={data.invoices.accountingVerification}
+                  icon={Calculator}
+                  sub={formatCompactINR(data.invoices.accountingVerificationAmount)}
+                  tone="warning"
+                />
+              ) : null}
+              {data.invoices.trusteeApproval > 0 ? (
+                <StatCard
+                  label="With the trustee"
+                  value={data.invoices.trusteeApproval}
+                  icon={Gavel}
+                  sub={formatCompactINR(data.invoices.trusteeApprovalAmount)}
+                  tone="warning"
+                />
+              ) : null}
               <StatCard
                 label="Approved / unpaid"
                 value={data.invoices.approvedUnpaid}
@@ -235,6 +266,30 @@ export function DashboardPage() {
                 </Link>
               </div>
               <Donut segments={segments} caption="open" emptyLabel="Nothing outstanding" />
+            </Card>
+          ) : null}
+
+          {/*
+            Vertical-wise outstanding, which is the question the group CFO asks
+            first and the reason the hierarchy exists at all. Gross, matching
+            the payables figures above rather than the cash block below.
+          */}
+          {can('vertical:read') && data.outstandingByVertical.length ? (
+            <Card>
+              <div className="panel-head">
+                <h2 className="font-semibold text-ink-900">Outstanding by vertical</h2>
+              </div>
+              <div className="divide-y divide-ink-100">
+                {data.outstandingByVertical.map((row) => (
+                  <Row
+                    key={row.id ?? 'unassigned'}
+                    label={`${verticalName(row.id) ?? 'Unassigned'} · ${row.count} invoice${
+                      row.count === 1 ? '' : 's'
+                    }`}
+                    value={row.amount}
+                  />
+                ))}
+              </div>
             </Card>
           ) : null}
 

@@ -5,7 +5,7 @@ import type { Invoice, ValidationFinding } from '@fpc/shared';
 import { api, apiClient } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDate, formatDateTime, humanize, rupeesToMinor } from '@/lib/format';
-import { fromMinor } from '@fpc/shared';
+import { formatBasisPoints, fromMinor } from '@fpc/shared';
 import {
   Card,
   ConfidenceBadge,
@@ -97,6 +97,8 @@ export function InvoiceDetailPage() {
         subtitle={
           <span className="flex flex-wrap items-center gap-3">
             <StatusBadge status={invoice.status} />
+            {/* The identifier a person quotes on the phone or in an email. */}
+            <span className="font-mono text-xs text-slate-500">{invoice.trackingId}</span>
             <span>{invoice.vendorName ?? 'Vendor not set'}</span>
             <span>·</span>
             <span>Received {formatDateTime(invoice.receivedAt)}</span>
@@ -451,6 +453,31 @@ function InvoiceFields({
         <Field label="GSTIN" confidence={confidence('gstin')}>
           <p className="text-sm">{invoice.gstin ?? '—'}</p>
         </Field>
+
+        {/*
+          Shown whenever a deduction applies, because "total" and "what the
+          bank pays" are then two different numbers and the reader has to see
+          both. Set by the accounting team, never edited here.
+        */}
+        {invoice.tdsApplicable ? (
+          <Field
+            label={`TDS${invoice.tdsSection ? ` (${invoice.tdsSection})` : ''}`}
+            confidence={undefined}
+          >
+            <p className="text-sm text-amber-700">
+              <Money minor={invoice.tdsAmount} />
+              {invoice.tdsRateBasisPoints
+                ? ` at ${formatBasisPoints(invoice.tdsRateBasisPoints)}`
+                : ''}
+            </p>
+          </Field>
+        ) : null}
+
+        {invoice.tdsAmount > 0 ? (
+          <Field label="Net payable" confidence={undefined}>
+            <Money minor={invoice.netPayable} className="font-semibold text-emerald-700" />
+          </Field>
+        ) : null}
       </div>
 
       {editable ? (

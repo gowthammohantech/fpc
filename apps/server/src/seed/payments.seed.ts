@@ -10,6 +10,7 @@ import {
 import { logger } from '../config/logger.js';
 import { BankStatement, BankTransaction, Reconciliation } from '../models/banking.model.js';
 import { Invoice } from '../models/invoice.model.js';
+import { REFERENCE_PREFIX, nextReference } from '../core/sequence.js';
 import { PaymentBatch, PaymentBatchItem } from '../models/paymentBatch.model.js';
 import { PaymentObligation } from '../models/paymentObligation.model.js';
 import { Vendor } from '../models/vendor.model.js';
@@ -184,6 +185,8 @@ export async function seedSettledPayment(context: SeedContext): Promise<number> 
   const invoice = await Invoice.create({
     tenantId,
     companyId,
+    trackingId: await nextReference(tenantId, REFERENCE_PREFIX.INVOICE),
+    groupId: context.groupIds.nova,
     vendorId: vendor._id,
     vendorName: vendor.name,
     invoiceNumber: reference,
@@ -193,6 +196,10 @@ export async function seedSettledPayment(context: SeedContext): Promise<number> 
     subtotal: toMinor(SETTLED_INVOICE.subtotal),
     taxAmount: toMinor(SETTLED_INVOICE.tax),
     totalAmount: amount,
+    // A settled historical invoice with no deduction: net equals gross.
+    tdsApplicable: false,
+    tdsAmount: 0,
+    netPayable: amount,
     status: InvoiceStatus.RECONCILED,
     source: 'UPLOAD',
     receivedAt: daysFromNow(-SETTLED_INVOICE.daysAgo),

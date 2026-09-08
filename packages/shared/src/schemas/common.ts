@@ -28,6 +28,19 @@ export const gstin = z
   .toUpperCase()
   .regex(/^\d{2}[A-Z]{5}\d{4}[A-Z]\dZ[A-Z\d]$/, 'Invalid GSTIN');
 
+export const pan = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .regex(/^[A-Z]{5}\d{4}[A-Z]$/, 'Invalid PAN');
+
+/** A rate in basis points: 1000 is 10.00%, 75 is 0.75%. Integers only. */
+export const basisPoints = z
+  .number()
+  .int('Rate must be an integer number of basis points')
+  .min(0)
+  .max(10_000, 'Rate cannot exceed 100%');
+
 export const bankAccountNumber = z
   .string()
   .trim()
@@ -43,9 +56,19 @@ export const paginationQuery = z.object({
 });
 export type PaginationQuery = z.infer<typeof paginationQuery>;
 
-/** Filter axes available on every operational screen (PRD §33). */
+/**
+ * Filter axes available on every operational screen (PRD §33).
+ *
+ * These double as the authorisation axes: `applyOrgScope` on the server
+ * refuses a value the caller is not scoped to, rather than silently returning
+ * nothing, so this list and the user's org scope stay the same vocabulary.
+ */
 export const scopeQuery = z.object({
   companyId: objectId.optional(),
+  groupId: objectId.optional(),
+  regionId: objectId.optional(),
+  verticalId: objectId.optional(),
+  businessUnitId: objectId.optional(),
   locationId: objectId.optional(),
   departmentId: objectId.optional(),
   dateFrom: z.string().optional(),

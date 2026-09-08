@@ -4,6 +4,8 @@ import { baseSchemaOptions, scopedFields } from './base.js';
 export interface DepartmentDoc {
   tenantId: Types.ObjectId;
   companyId: Types.ObjectId;
+  /** The vertical a department reports into, when the tenant uses verticals. */
+  verticalId?: Types.ObjectId;
   name: string;
   code: string;
   /** Resolved by DEPARTMENT_HEAD approval steps (PRD §15). */
@@ -14,6 +16,7 @@ export interface DepartmentDoc {
 const schema = new Schema<DepartmentDoc>(
   {
     ...scopedFields(),
+    verticalId: { type: Schema.Types.ObjectId, ref: 'Vertical', index: true },
     name: { type: String, required: true, trim: true },
     code: { type: String, required: true, trim: true, uppercase: true },
     headUserId: { type: Schema.Types.ObjectId, ref: 'User' },

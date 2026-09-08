@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { roleLabel } from '@fpc/shared';
+import { TDS_SECTIONS, formatBasisPoints, roleLabel } from '@fpc/shared';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDate, humanize } from '@/lib/format';
@@ -50,6 +50,208 @@ export function CompaniesPage() {
           help: 'A mailbox the platform monitors for everyone. To pull invoices from your own Outlook instead, use Invoice Mailbox under Operations.',
         },
       ]}
+    />
+  );
+}
+
+/**
+ * Groups — the only organisation level above the legal entity, so unlike every
+ * other master it carries no company.
+ */
+export function GroupsPage() {
+  return (
+    <CrudPage
+      title="Groups"
+      subtitle="Sits above the legal entity, so a CFO can see the whole group at once"
+      queryKey="settings-groups"
+      permissions={{
+        read: 'group:read',
+        create: 'group:create',
+        update: 'group:update',
+        delete: 'group:delete',
+      }}
+      list={(query) => api.settings.groups(query)}
+      create={(body) => api.settings.createGroup(body)}
+      update={(id, body) => api.settings.updateGroup(id, body)}
+      remove={(id) => api.settings.deleteGroup(id)}
+      columns={[
+        { header: 'Name', render: (row) => <span className="font-medium">{row.name}</span> },
+        { header: 'Code', render: (row) => <span className="font-mono text-xs">{row.code}</span> },
+        {
+          header: 'Status',
+          render: (row) => <StatusBadge status={row.active ? 'ACTIVE' : 'INACTIVE'} />,
+        },
+      ]}
+      fields={[
+        { name: 'name', label: 'Name', required: true },
+        { name: 'code', label: 'Code', required: true },
+      ]}
+    />
+  );
+}
+
+export function RegionsPage() {
+  return (
+    <CrudPage
+      title="Regions"
+      subtitle="Geographic grouping used to filter invoices, payments and reports"
+      queryKey="settings-regions"
+      permissions={{
+        read: 'region:read',
+        create: 'region:create',
+        update: 'region:update',
+        delete: 'region:delete',
+      }}
+      list={(query) => api.settings.regions(query)}
+      create={(body) => api.settings.createRegion(body)}
+      update={(id, body) => api.settings.updateRegion(id, body)}
+      remove={(id) => api.settings.deleteRegion(id)}
+      columns={[
+        { header: 'Name', render: (row) => <span className="font-medium">{row.name}</span> },
+        { header: 'Code', render: (row) => <span className="font-mono text-xs">{row.code}</span> },
+        {
+          header: 'Status',
+          render: (row) => <StatusBadge status={row.active ? 'ACTIVE' : 'INACTIVE'} />,
+        },
+      ]}
+      fields={[
+        { name: 'name', label: 'Name', required: true },
+        { name: 'code', label: 'Code', required: true },
+      ]}
+    />
+  );
+}
+
+/**
+ * Verticals — the first rung of the revised approval ladder.
+ *
+ * The head is load-bearing in the same way a department head is: VERTICAL_HEAD
+ * approval steps resolve through it.
+ */
+export function VerticalsPage() {
+  const { companyId } = useAuth();
+
+  const { data: users } = useQuery({
+    queryKey: ['users', 'for-verticals', companyId],
+    queryFn: () => api.settings.users({ companyId, pageSize: 200 }),
+  });
+
+  const userName = (id: string | undefined) => users?.items.find((user) => user.id === id)?.name;
+
+  return (
+    <CrudPage
+      title="Verticals"
+      subtitle="Business lines. Approval routes through the vertical head before finance."
+      queryKey="settings-verticals"
+      permissions={{
+        read: 'vertical:read',
+        create: 'vertical:create',
+        update: 'vertical:update',
+        delete: 'vertical:delete',
+      }}
+      list={(query) => api.settings.verticals(query)}
+      create={(body) => api.settings.createVertical(body)}
+      update={(id, body) => api.settings.updateVertical(id, body)}
+      remove={(id) => api.settings.deleteVertical(id)}
+      columns={[
+        { header: 'Name', render: (row) => <span className="font-medium">{row.name}</span> },
+        { header: 'Code', render: (row) => <span className="font-mono text-xs">{row.code}</span> },
+        {
+          header: 'Head',
+          render: (row) =>
+            row.headUserId ? (
+              (userName(row.headUserId) ?? 'Unknown user')
+            ) : (
+              <span className="text-amber-700">Not set — approvals fall back to any head</span>
+            ),
+        },
+        {
+          header: 'Status',
+          render: (row) => <StatusBadge status={row.active ? 'ACTIVE' : 'INACTIVE'} />,
+        },
+      ]}
+      fields={[
+        { name: 'name', label: 'Name', required: true },
+        { name: 'code', label: 'Code', required: true },
+        {
+          name: 'headUserId',
+          label: 'Vertical head',
+          type: 'select',
+          options: (users?.items ?? []).map((user) => ({ value: user.id, label: user.name })),
+          help: 'Approval rules with a "Vertical head" step route to this person.',
+        },
+      ]}
+      toFormValues={(row) => ({ name: row.name, code: row.code, headUserId: row.headUserId ?? '' })}
+    />
+  );
+}
+
+export function BusinessUnitsPage() {
+  const { companyId } = useAuth();
+
+  const { data: verticals } = useQuery({
+    queryKey: ['verticals', 'for-business-units', companyId],
+    queryFn: () => api.settings.verticals({ companyId, pageSize: 200 }),
+  });
+
+  const verticalName = (id: string | undefined) =>
+    verticals?.items.find((vertical) => vertical.id === id)?.name;
+
+  return (
+    <CrudPage
+      title="Business units"
+      subtitle="Units within a vertical. A classified unit is visible only to users granted it by name."
+      queryKey="settings-business-units"
+      permissions={{
+        read: 'business_unit:read',
+        create: 'business_unit:create',
+        update: 'business_unit:update',
+        delete: 'business_unit:delete',
+      }}
+      list={(query) => api.settings.businessUnits(query)}
+      create={(body) => api.settings.createBusinessUnit(body)}
+      update={(id, body) => api.settings.updateBusinessUnit(id, body)}
+      remove={(id) => api.settings.deleteBusinessUnit(id)}
+      columns={[
+        { header: 'Name', render: (row) => <span className="font-medium">{row.name}</span> },
+        { header: 'Code', render: (row) => <span className="font-mono text-xs">{row.code}</span> },
+        { header: 'Vertical', render: (row) => verticalName(row.verticalId) ?? '—' },
+        { header: 'Visibility', render: (row) => <StatusBadge status={row.kind} /> },
+        {
+          header: 'Status',
+          render: (row) => <StatusBadge status={row.active ? 'ACTIVE' : 'INACTIVE'} />,
+        },
+      ]}
+      fields={[
+        { name: 'name', label: 'Name', required: true },
+        { name: 'code', label: 'Code', required: true },
+        {
+          name: 'verticalId',
+          label: 'Vertical',
+          type: 'select',
+          required: true,
+          options: (verticals?.items ?? []).map((vertical) => ({
+            value: vertical.id,
+            label: vertical.name,
+          })),
+        },
+        {
+          name: 'kind',
+          label: 'Visibility',
+          type: 'select',
+          options: [
+            { value: 'STANDARD', label: 'Standard' },
+            { value: 'CLASSIFIED', label: 'Classified' },
+          ],
+          help: 'A classified unit stays hidden unless a user is granted it by name — holding the vertical above it is not enough.',
+        },
+      ]}
+      toFormValues={(row) => ({
+        name: row.name,
+        code: row.code,
+        verticalId: row.verticalId,
+        kind: row.kind,
+      })}
     />
   );
 }
@@ -105,7 +307,14 @@ export function DepartmentsPage() {
     queryFn: () => api.settings.users({ companyId, pageSize: 200 }),
   });
 
+  const { data: verticals } = useQuery({
+    queryKey: ['verticals', 'for-departments', companyId],
+    queryFn: () => api.settings.verticals({ companyId, pageSize: 200 }),
+  });
+
   const userName = (id: string | undefined) => users?.items.find((user) => user.id === id)?.name;
+  const verticalName = (id: string | undefined) =>
+    verticals?.items.find((vertical) => vertical.id === id)?.name;
 
   return (
     <CrudPage
@@ -125,6 +334,7 @@ export function DepartmentsPage() {
       columns={[
         { header: 'Name', render: (row) => <span className="font-medium">{row.name}</span> },
         { header: 'Code', render: (row) => <span className="font-mono text-xs">{row.code}</span> },
+        { header: 'Vertical', render: (row) => verticalName(row.verticalId) ?? '—' },
         {
           header: 'Head',
           render: (row) =>
@@ -143,6 +353,19 @@ export function DepartmentsPage() {
         { name: 'name', label: 'Name', required: true },
         { name: 'code', label: 'Code', required: true, help: 'Short code used in payroll files.' },
         {
+          name: 'verticalId',
+          label: 'Vertical',
+          type: 'select',
+          options: [
+            { value: '', label: '—' },
+            ...(verticals?.items ?? []).map((vertical) => ({
+              value: vertical.id,
+              label: vertical.name,
+            })),
+          ],
+          help: 'Which business line this department reports into.',
+        },
+        {
           name: 'headUserId',
           label: 'Department head',
           type: 'select',
@@ -150,7 +373,12 @@ export function DepartmentsPage() {
           help: 'Approval rules with a "Department head" step route to this person.',
         },
       ]}
-      toFormValues={(row) => ({ name: row.name, code: row.code, headUserId: row.headUserId ?? '' })}
+      toFormValues={(row) => ({
+        name: row.name,
+        code: row.code,
+        verticalId: row.verticalId ?? '',
+        headUserId: row.headUserId ?? '',
+      })}
     />
   );
 }
@@ -190,6 +418,18 @@ export function VendorsPage() {
               <span className="text-amber-700">Missing — cannot be paid</span>
             ),
         },
+        {
+          header: 'TDS',
+          render: (row) =>
+            row.tdsApplicable ? (
+              <span>
+                {row.tdsSection ?? '—'} ·{' '}
+                {row.tdsRateBasisPoints ? formatBasisPoints(row.tdsRateBasisPoints) : '—'}
+              </span>
+            ) : (
+              <span className="text-slate-400">None</span>
+            ),
+        },
         { header: 'Terms', render: (row) => `${row.paymentTermsDays} days` },
         { header: 'Status', render: (row) => <StatusBadge status={row.status} /> },
       ]}
@@ -204,6 +444,36 @@ export function VendorsPage() {
         },
         { name: 'phone', label: 'Phone' },
         { name: 'gstin', label: 'GSTIN' },
+        {
+          name: 'pan',
+          label: 'PAN',
+          help: 'Required before TDS can be deducted — withholding needs an identified payee.',
+        },
+        {
+          name: 'tdsApplicable',
+          label: 'Deduct TDS',
+          type: 'select',
+          options: [
+            { value: 'false', label: 'No' },
+            { value: 'true', label: 'Yes' },
+          ],
+          help: 'A default only. The accounting team confirms or overrides it on each invoice.',
+        },
+        {
+          name: 'tdsSection',
+          label: 'TDS section',
+          type: 'select',
+          options: [
+            { value: '', label: '—' },
+            ...TDS_SECTIONS.map((section) => ({ value: section, label: section })),
+          ],
+        },
+        {
+          name: 'tdsRateBasisPoints',
+          label: 'TDS rate (basis points)',
+          type: 'number',
+          help: '1000 is 10%, 75 is 0.75%. Stored as an integer so the deduction never drifts.',
+        },
         {
           name: 'beneficiaryName',
           label: 'Beneficiary name',

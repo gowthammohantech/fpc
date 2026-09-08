@@ -29,6 +29,11 @@ export type InvoiceStop =
   | 'PENDING_APPROVAL'
   | 'PARTIALLY_APPROVED'
   | 'REJECTED'
+  /** Business approval cleared; sitting with the accounting team. */
+  | 'ACCOUNTING_VERIFICATION'
+  /** Escalated by accounting; sitting with the trustee. */
+  | 'TRUSTEE_APPROVAL'
+  /** Verified, cleared for payment, obligation created. */
   | 'APPROVED';
 
 export interface FindingSeed {
@@ -50,6 +55,10 @@ export interface InvoiceSeed {
   vendor?: string;
   department?: string;
   location?: string;
+  /** Company-qualified codes, e.g. `TECH`. Defaults follow the department. */
+  vertical?: string;
+  businessUnit?: string;
+  region?: string;
   invoiceNumber?: string;
   daysAgo: number;
   dueInDays?: number;
@@ -65,6 +74,9 @@ export interface InvoiceSeed {
   decisionComment?: string;
   /** Reason recorded on the audit trail, for CANCELLED rows. */
   cancelReason?: string;
+  /** Priority and note for rows that rest at TRUSTEE_APPROVAL. */
+  trusteePriority?: 'P1' | 'P2';
+  trusteeRemarks?: string;
   findings?: FindingSeed[];
   /** Replaces the default high-confidence extraction block. */
   extraction?: 'DEFAULT' | 'SPARSE' | 'NONE';
@@ -96,6 +108,65 @@ export const INVOICES: InvoiceSeed[] = [
     description: 'Enterprise software licences and support',
     stopAt: 'REVIEW_REQUIRED',
     findings: [LOW_CONFIDENCE_TAX],
+  },
+
+  // ── The TDS demonstration, resting with the accounting team ──
+  // ₹1,00,000 of professional services + 18% GST = ₹1,18,000 billed; 10% TDS
+  // under 194J on the taxable value = ₹10,000; ₹1,08,000 actually paid.
+  {
+    company: 'engineering',
+    vendor: 'ABCCONS',
+    department: 'FIN',
+    vertical: 'TECH',
+    businessUnit: 'PLAT',
+    location: 'MAA',
+    region: 'SOUTH',
+    invoiceNumber: 'INV-4471',
+    daysAgo: 5,
+    dueInDays: 12,
+    subtotal: 1_00_000,
+    tax: 18_000,
+    total: 1_18_000,
+    description: 'Statutory advisory retainer — September',
+    stopAt: 'ACCOUNTING_VERIFICATION',
+  },
+
+  // ── Escalated to the trustee, P1 ─────────────────────────
+  {
+    company: 'engineering',
+    vendor: 'ABCCONS',
+    department: 'ADMIN',
+    vertical: 'OPS',
+    businessUnit: 'FAC',
+    location: 'PNQ',
+    region: 'WEST',
+    invoiceNumber: 'INV-4482',
+    daysAgo: 7,
+    dueInDays: 3,
+    subtotal: 4_00_000,
+    tax: 72_000,
+    total: 4_72_000,
+    description: 'Transaction advisory — acquisition due diligence',
+    stopAt: 'TRUSTEE_APPROVAL',
+    trusteePriority: 'P1',
+    trusteeRemarks: 'Payment required before 10 Sep to hold the closing date.',
+  },
+
+  // ── Raised by HR rather than finance, to show departmental intake ──
+  {
+    company: 'engineering',
+    vendor: 'PRIMEFAC',
+    department: 'HR',
+    vertical: 'OPS',
+    location: 'BLR',
+    invoiceNumber: 'INV-4490',
+    daysAgo: 9,
+    dueInDays: 15,
+    subtotal: 2_20_000,
+    tax: 39_600,
+    total: 2_59_600,
+    description: 'Recruitment services — Q3 placements',
+    stopAt: 'ACCOUNTING_VERIFICATION',
   },
 
   // ── Approved and waiting in the payment queue ────────────

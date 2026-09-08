@@ -22,16 +22,29 @@ interface AuthState {
   /** The company the user is currently working in. */
   companyId: string | undefined;
   setCompanyId(id: string): void;
+  /**
+   * The vertical the user has narrowed to, if any.
+   *
+   * A view filter, not a permission: the server already restricts a scoped
+   * user to their own verticals, and refuses one they were not granted. This
+   * lets someone with several pick a lens to work through.
+   */
+  verticalId: string | undefined;
+  setVerticalId(id: string | undefined): void;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
 const COMPANY_KEY = 'fpc.companyId';
+const VERTICAL_KEY = 'fpc.verticalId';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Principal | null>(null);
   const [loading, setLoading] = useState(hasStoredSession());
   const [companyId, setCompanyIdState] = useState<string | undefined>(
     () => localStorage.getItem(COMPANY_KEY) ?? undefined,
+  );
+  const [verticalId, setVerticalIdState] = useState<string | undefined>(
+    () => localStorage.getItem(VERTICAL_KEY) ?? undefined,
   );
 
   // Restore the session on load. Permissions come from the server rather than
@@ -65,6 +78,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const setCompanyId = useCallback((id: string) => {
     localStorage.setItem(COMPANY_KEY, id);
     setCompanyIdState(id);
+    // Verticals belong to a company, so a stale one would filter everything
+    // away after a switch.
+    localStorage.removeItem(VERTICAL_KEY);
+    setVerticalIdState(undefined);
+  }, []);
+
+  const setVerticalId = useCallback((id: string | undefined) => {
+    if (id) localStorage.setItem(VERTICAL_KEY, id);
+    else localStorage.removeItem(VERTICAL_KEY);
+    setVerticalIdState(id);
   }, []);
 
   const value = useMemo<AuthState>(
@@ -79,8 +102,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       hasRole: (role) => !!user?.roleKeys.includes(role),
       companyId,
       setCompanyId,
+      verticalId,
+      setVerticalId,
     }),
-    [user, loading, login, logout, companyId, setCompanyId],
+    [user, loading, login, logout, companyId, setCompanyId, verticalId, setVerticalId],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

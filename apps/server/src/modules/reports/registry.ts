@@ -3,7 +3,15 @@ import { InvoiceStatus, fromMinor, type Permission } from '@fpc/shared';
 import { ApprovalRequest } from '../../models/approvalRequest.model.js';
 import { AuditEvent } from '../../models/auditEvent.model.js';
 import { BankTransaction, Reconciliation } from '../../models/banking.model.js';
+import { BusinessUnit } from '../../models/businessUnit.model.js';
+import { Company } from '../../models/company.model.js';
+import { Department } from '../../models/department.model.js';
+import { FinanceRequest } from '../../models/financeRequest.model.js';
+import { Group } from '../../models/group.model.js';
 import { Invoice } from '../../models/invoice.model.js';
+import { Location } from '../../models/location.model.js';
+import { Region } from '../../models/region.model.js';
+import { Vertical } from '../../models/vertical.model.js';
 import { PaymentBatch, PaymentBatchItem } from '../../models/paymentBatch.model.js';
 import { PaymentObligation } from '../../models/paymentObligation.model.js';
 import { PayrollBatch } from '../../models/payroll.model.js';
@@ -22,6 +30,11 @@ export interface ReportFilters {
   tenantId: Types.ObjectId;
   companyIds?: Types.ObjectId[];
   companyId?: Types.ObjectId;
+  /**
+   * Organisation narrowing, already reconciled against the caller's own grant
+   * by the route — a report must never widen what its runner can see.
+   */
+  org?: Record<string, unknown>;
   locationId?: Types.ObjectId;
   dateFrom?: Date;
   dateTo?: Date;
@@ -44,18 +57,44 @@ export interface ReportDefinition {
   description: string;
   permission: Permission;
   /** Filters this report understands, for the UI to render. */
-  filters: Array<'company' | 'location' | 'dateRange' | 'status' | 'vendor'>;
+  filters: Array<
+    'company' | 'location' | 'dateRange' | 'status' | 'vendor' | 'vertical' | 'businessUnit'
+  >;
   columns: ReportColumn[];
+  /**
+   * An optional second worksheet totalling the rows by these dimensions.
+   *
+   * ExcelJS cannot emit a native pivot table, so the export ships the flat
+   * sheet a pivot is built from plus this ready-made summary — which is what
+   * the figures are actually read off in practice.
+   */
+  summary?: { by: string[]; measures: string[] };
   run(filters: ReportFilters, limit: number): Promise<Array<Record<string, unknown>>>;
 }
 
-/** Applies tenant/company scope consistently to every report query. */
+/**
+ * Applies tenant, company and organisation scope consistently to every report
+ * query.
+ *
+ * The org clause carries the caller's own grant, so a report cannot be used to
+ * read around the scope its runner is subject to on every other screen.
+ */
 function scope(filters: ReportFilters): Record<string, unknown> {
-  const query: Record<string, unknown> = { tenantId: filters.tenantId };
+  const query: Record<string, unknown> = { tenantId: filters.tenantId, ...(filters.org ?? {}) };
   if (filters.companyId) query.companyId = filters.companyId;
   else if (filters.companyIds?.length) query.companyId = { $in: filters.companyIds };
   if (filters.locationId) query.locationId = filters.locationId;
   return query;
+}
+
+/**
+ * Scope for collections that live at company level — bank transactions,
+ * reconciliations, payment batches, audit events. They carry no vertical or
+ * department, so narrowing them on those axes would return nothing rather than
+ * the right subset.
+ */
+function companyScope(filters: ReportFilters): Record<string, unknown> {
+  return scope({ ...filters, org: undefined, locationId: undefined });
 }
 
 function dateRange(filters: ReportFilters): Record<string, unknown> | undefined {
@@ -79,7 +118,9 @@ const invoiceRegister: ReportDefinition = {
     { key: 'dueDate', header: 'Due Date', format: 'date', width: 14 },
     { key: 'subtotal', header: 'Subtotal', format: 'money', width: 16 },
     { key: 'taxAmount', header: 'Tax', format: 'money', width: 14 },
-    { key: 'totalAmount', header: 'Total', format: 'money', width: 16 },
+    { key: 'totalAmount', header: 'Gross', format: 'money', width: 16 },
+    { key: 'tdsAmount', header: 'TDS', format: 'money', width: 14 },
+    { key: 'netPayable', header: 'Net Payable', format: 'money', width: 16 },
     { key: 'status', header: 'Status', format: 'status', width: 20 },
     { key: 'source', header: 'Source', width: 12 },
     { key: 'receivedAt', header: 'Received', format: 'date', width: 14 },
@@ -313,8 +354,7 @@ const bankTransactions: ReportDefinition = {
     { key: 'reconciliationStatus', header: 'Reconciliation', format: 'status', width: 18 },
   ],
   async run(filters, limit) {
-    const query = scope(filters);
-    delete query.locationId; // transactions are not location-scoped
+    const query = companyScope(filters); // transactions are not org-scoped
     const range = dateRange(filters);
     if (range) query.transactionDate = range;
     if (filters.status) query.reconciliationStatus = filters.status;
@@ -339,8 +379,7 @@ const reconciliationReport: ReportDefinition = {
     { key: 'status', header: 'Status', format: 'status', width: 14 },
   ],
   async run(filters, limit) {
-    const query = scope(filters);
-    delete query.locationId;
+    const query = companyScope(filters);
     const range = dateRange(filters);
     if (range) query.confirmedAt = range;
 
@@ -386,8 +425,7 @@ const auditReport: ReportDefinition = {
     { key: 'ip', header: 'IP', width: 16 },
   ],
   async run(filters, limit) {
-    const query = scope(filters);
-    delete query.locationId;
+    const query = companyScope(filters);
     const range = dateRange(filters);
     if (range) query.timestamp = range;
     return AuditEvent.find(query).sort({ timestamp: -1 }).limit(limit).lean();
@@ -410,8 +448,7 @@ const batchItems: ReportDefinition = {
     { key: 'reconciliationStatus', header: 'Reconciliation', format: 'status', width: 18 },
   ],
   async run(filters, limit) {
-    const query = scope(filters);
-    delete query.locationId;
+    const query = companyScope(filters);
 
     const items = await PaymentBatchItem.find(query).sort({ createdAt: -1 }).limit(limit).lean();
     const batches = await PaymentBatch.find({
@@ -430,9 +467,138 @@ const batchItems: ReportDefinition = {
 };
 
 /** All ten PRD §32 reports, keyed for the generic route. */
+/**
+ * The consolidated payables extract — PRD §32.9.
+ *
+ * One row per invoice carrying every organisation dimension, the gross / TDS /
+ * net split and the state of each workflow stage. Flat and fully denormalised
+ * on purpose: this is the sheet a finance team drops a pivot table onto, so
+ * every axis someone might group by has to be a column rather than a lookup.
+ */
+const consolidatedPayables: ReportDefinition = {
+  key: 'consolidated-payables',
+  name: 'Consolidated Payables',
+  description:
+    'Every invoice across company, vertical and department with TDS, approval and payment status. Built for pivoting.',
+  permission: 'invoice:read',
+  filters: ['company', 'vertical', 'businessUnit', 'location', 'dateRange', 'status', 'vendor'],
+  columns: [
+    { key: 'trackingId', header: 'Tracking ID', width: 22 },
+    { key: 'companyName', header: 'Company', width: 28 },
+    { key: 'groupName', header: 'Group', width: 20 },
+    { key: 'regionName', header: 'Region', width: 18 },
+    { key: 'verticalName', header: 'Vertical', width: 22 },
+    { key: 'businessUnitName', header: 'Business Unit', width: 22 },
+    { key: 'departmentName', header: 'Department', width: 20 },
+    { key: 'locationName', header: 'Location', width: 18 },
+    { key: 'vendorName', header: 'Vendor', width: 30 },
+    { key: 'invoiceNumber', header: 'Invoice No', width: 18 },
+    { key: 'invoiceDate', header: 'Invoice Date', format: 'date', width: 14 },
+    { key: 'dueDate', header: 'Due Date', format: 'date', width: 14 },
+    { key: 'totalAmount', header: 'Gross Amount', format: 'money', width: 16 },
+    { key: 'taxAmount', header: 'Tax', format: 'money', width: 14 },
+    { key: 'tdsSection', header: 'TDS Section', width: 13 },
+    { key: 'tdsAmount', header: 'TDS', format: 'money', width: 14 },
+    { key: 'netPayable', header: 'Net Payable', format: 'money', width: 16 },
+    { key: 'approvalStatus', header: 'Business Approval', format: 'status', width: 18 },
+    { key: 'accountingStatus', header: 'Accounting', format: 'status', width: 16 },
+    { key: 'trusteeStatus', header: 'Trustee', format: 'status', width: 16 },
+    { key: 'status', header: 'Invoice Status', format: 'status', width: 22 },
+    { key: 'paymentStatus', header: 'Payment', format: 'status', width: 16 },
+    { key: 'reconciliationStatus', header: 'Reconciliation', format: 'status', width: 18 },
+    { key: 'paymentBatchReference', header: 'Payment Batch', width: 20 },
+  ],
+  summary: {
+    by: ['companyName', 'verticalName'],
+    measures: ['totalAmount', 'tdsAmount', 'netPayable'],
+  },
+  async run(filters, limit) {
+    const query = scope(filters);
+    const range = dateRange(filters);
+    if (range) query.invoiceDate = range;
+    if (filters.status) query.status = filters.status;
+    if (filters.vendorId) query.vendorId = filters.vendorId;
+
+    const invoices = await Invoice.find(query).sort({ receivedAt: -1 }).limit(limit).lean();
+    if (!invoices.length) return [];
+
+    const [names, obligations, requests] = await Promise.all([
+      orgNames(filters.tenantId),
+      PaymentObligation.find({
+        tenantId: filters.tenantId,
+        sourceId: { $in: invoices.map((invoice) => invoice._id) },
+      })
+        .select('sourceId paymentStatus reconciliationStatus paymentBatchReference')
+        .lean(),
+      FinanceRequest.find({
+        tenantId: filters.tenantId,
+        invoiceId: { $in: invoices.map((invoice) => invoice._id) },
+      })
+        .select('invoiceId status')
+        .sort({ createdAt: -1 })
+        .lean(),
+    ]);
+
+    const obligationBySource = new Map(obligations.map((row) => [String(row.sourceId), row]));
+    // Most recent first, so the first write per invoice is the latest outcome.
+    const trusteeByInvoice = new Map<string, string>();
+    for (const request of requests) {
+      const key = String(request.invoiceId);
+      if (!trusteeByInvoice.has(key)) trusteeByInvoice.set(key, request.status);
+    }
+
+    return invoices.map((invoice) => {
+      const obligation = obligationBySource.get(String(invoice._id));
+      return {
+        ...invoice,
+        companyName: names.get(String(invoice.companyId)) ?? '',
+        groupName: names.get(String(invoice.groupId ?? '')) ?? '',
+        regionName: names.get(String(invoice.regionId ?? '')) ?? '',
+        verticalName: names.get(String(invoice.verticalId ?? '')) ?? '',
+        businessUnitName: names.get(String(invoice.businessUnitId ?? '')) ?? '',
+        departmentName: names.get(String(invoice.departmentId ?? '')) ?? '',
+        locationName: names.get(String(invoice.locationId ?? '')) ?? '',
+        accountingStatus: invoice.accounting?.verifiedAt
+          ? 'VERIFIED'
+          : invoice.status === InvoiceStatus.ACCOUNTING_VERIFICATION
+            ? 'PENDING'
+            : '',
+        trusteeStatus: trusteeByInvoice.get(String(invoice._id)) ?? '',
+        paymentStatus: obligation?.paymentStatus ?? '',
+        reconciliationStatus: obligation?.reconciliationStatus ?? '',
+        paymentBatchReference: obligation?.paymentBatchReference ?? '',
+      };
+    });
+  },
+};
+
+/**
+ * Every organisation unit's name in one map.
+ *
+ * Seven small collections read once beats seven `$lookup` stages per row, and
+ * the whole hierarchy of a tenant comfortably fits in memory.
+ */
+async function orgNames(tenantId: Types.ObjectId): Promise<Map<string, string>> {
+  /** The narrow slice of a Mongoose model this lookup actually needs. */
+  type NamedModel = {
+    find(filter: Record<string, unknown>): {
+      select(fields: string): { lean(): Promise<Array<{ _id: Types.ObjectId; name: string }>> };
+    };
+  };
+
+  const collections = [Company, Group, Region, Vertical, BusinessUnit, Location, Department];
+  const results = await Promise.all(
+    collections.map((model) =>
+      (model as unknown as NamedModel).find({ tenantId }).select('name').lean(),
+    ),
+  );
+  return new Map(results.flat().map((row) => [String(row._id), row.name]));
+}
+
 export const REPORTS: Record<string, ReportDefinition> = Object.fromEntries(
   [
     invoiceRegister,
+    consolidatedPayables,
     pendingApproval,
     approvedInvoices,
     apAgeing,

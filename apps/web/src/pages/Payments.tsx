@@ -26,7 +26,7 @@ import {
  * individual salaries.
  */
 export function PaymentQueuePage() {
-  const { companyId, can } = useAuth();
+  const { companyId, verticalId, can } = useAuth();
   const [page, setPage] = useState(1);
   const [type, setType] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -45,10 +45,11 @@ export function PaymentQueuePage() {
   });
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['payment-queue', companyId, page, type, status],
+    queryKey: ['payment-queue', companyId, verticalId, page, type, status],
     queryFn: () =>
       api.payments.queue({
         companyId,
+        verticalId,
         page,
         pageSize: 50,
         type: type || undefined,

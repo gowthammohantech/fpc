@@ -1,5 +1,6 @@
 import { Schema, Types, model } from 'mongoose';
 import {
+  APPROVER_TYPES,
   ROLE_KEYS,
   type ApprovalSubjectType,
   type RuleCondition,
@@ -39,7 +40,7 @@ const conditionSchema = new Schema<RuleCondition>(
 const stepSchema = new Schema<RuleStepDefinition>(
   {
     order: { type: Number, required: true },
-    approverType: { type: String, enum: ['ROLE', 'USER', 'DEPARTMENT_HEAD'], required: true },
+    approverType: { type: String, enum: APPROVER_TYPES, required: true },
     roleKey: { type: String, enum: ROLE_KEYS },
     userId: { type: Schema.Types.ObjectId, ref: 'User' },
     label: String,

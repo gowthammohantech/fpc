@@ -5,6 +5,7 @@ import { isTest } from '../../config/env.js';
 import { asyncHandler } from '../../core/asyncHandler.js';
 import { query, validateBody, validateQuery } from '../../core/validate.js';
 import { authenticate, requirePrincipal } from '../../middleware/authenticate.js';
+import { ORG_SCOPE_FIELDS } from '../../middleware/types.js';
 import { auditContext } from '../audit/audit.service.js';
 import * as authService from './auth.service.js';
 import * as outlookService from '../integrations/outlook/outlook.service.js';
@@ -98,9 +99,7 @@ authRouter.get(
       roleKeys: principal.roleKeys,
       // Already resolved by `authenticate`, custom roles included.
       permissions: principal.permissions,
-      companyIds: principal.companyIds.map(String),
-      locationIds: principal.locationIds.map(String),
-      departmentIds: principal.departmentIds.map(String),
+      ...Object.fromEntries(ORG_SCOPE_FIELDS.map((field) => [field, principal[field].map(String)])),
     });
   }),
 );

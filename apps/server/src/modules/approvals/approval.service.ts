@@ -12,6 +12,7 @@ import {
 import { logger } from '../../config/logger.js';
 import { ApiError } from '../../core/errors.js';
 import { eventBus } from '../../core/eventBus.js';
+import { REFERENCE_PREFIX, nextReference } from '../../core/sequence.js';
 import {
   ApprovalRequest,
   type ApprovalRequestDoc,
@@ -19,6 +20,7 @@ import {
 } from '../../models/approvalRequest.model.js';
 import { ApprovalRule } from '../../models/approvalRule.model.js';
 import { Department } from '../../models/department.model.js';
+import { Vertical } from '../../models/vertical.model.js';
 import { User } from '../../models/user.model.js';
 import { audit, type AuditContext } from '../audit/audit.service.js';
 import { customGrants } from '../organization/role.service.js';
@@ -33,6 +35,10 @@ export interface StartApprovalInput {
   /** Minor units. */
   amount: number;
   requestedByUserId: Types.ObjectId;
+  groupId?: Types.ObjectId;
+  regionId?: Types.ObjectId;
+  verticalId?: Types.ObjectId;
+  businessUnitId?: Types.ObjectId;
   departmentId?: Types.ObjectId;
   locationId?: Types.ObjectId;
   vendorId?: Types.ObjectId;
@@ -72,6 +78,9 @@ export async function startApproval(
     vendorId: input.vendorId ? String(input.vendorId) : undefined,
     departmentId: input.departmentId ? String(input.departmentId) : undefined,
     locationId: input.locationId ? String(input.locationId) : undefined,
+    regionId: input.regionId ? String(input.regionId) : undefined,
+    verticalId: input.verticalId ? String(input.verticalId) : undefined,
+    businessUnitId: input.businessUnitId ? String(input.businessUnitId) : undefined,
     employeeCount: input.employeeCount,
   };
 
@@ -103,6 +112,15 @@ export async function startApproval(
   const request = await ApprovalRequest.create({
     tenantId: input.tenantId,
     companyId: input.companyId,
+    reference: await nextReference(input.tenantId, REFERENCE_PREFIX.APPROVAL),
+    // Denormalised so the approvals inbox can be scoped without a join back
+    // to the invoice.
+    groupId: input.groupId,
+    regionId: input.regionId,
+    verticalId: input.verticalId,
+    businessUnitId: input.businessUnitId,
+    locationId: input.locationId,
+    departmentId: input.departmentId,
     subjectType: input.subjectType,
     subjectId: input.subjectId,
     subjectLabel: input.subjectLabel,
@@ -187,6 +205,18 @@ async function materializeSteps(
         // approver role rather than blocking the invoice entirely.
         candidateUserIds = await usersWithRole(input, 'APPROVER');
         label ||= 'Department Head';
+      }
+    } else if (definition.approverType === 'VERTICAL_HEAD') {
+      const vertical = input.verticalId ? await Vertical.findById(input.verticalId).lean() : null;
+      if (vertical?.headUserId) {
+        candidateUserIds = [vertical.headUserId];
+        label ||= `${vertical.name} Head`;
+      } else {
+        // A headless vertical falls back to people who head a vertical
+        // somewhere, rather than to the generic approver pool — the point of
+        // the step is that a vertical owner signs off.
+        candidateUserIds = await usersWithRole(input, 'VERTICAL_HEAD');
+        label ||= 'Vertical Head';
       }
     } else if (definition.approverType === 'ROLE' && definition.roleKey) {
       candidateUserIds = await usersWithRole(input, definition.roleKey as RoleKey);

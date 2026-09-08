@@ -71,6 +71,7 @@ RUN()('vendor invoice journey (PRD §37)', () => {
     const itHead = await token('ithead@nova.example.com');
     const financeHead = await token('financemanager@nova.example.com');
     const cfo = await token('cfo@nova.example.com');
+    const accountant = await token('accounts@nova.example.com');
 
     // ── The invoice is waiting in the review queue ─────────
     const review = await request(app)
@@ -126,11 +127,48 @@ RUN()('vendor invoice journey (PRD §37)', () => {
       expect(acted.status, JSON.stringify(acted.body)).toBe(200);
     }
 
-    // ── Approved → accounts payable → payment queue ────────
+    // ── Business approval hands over to accounting, not to the bank ──
     const afterApproval = await request(app)
       .get(`/api/invoices/${invoiceId}`)
       .set('authorization', `Bearer ${ravi}`);
-    expect(afterApproval.body.status).toBe(InvoiceStatus.PAYMENT_PENDING);
+    expect(afterApproval.body.status).toBe(InvoiceStatus.ACCOUNTING_VERIFICATION);
+    expect(afterApproval.body.approvalStatus).toBe('APPROVED');
+    expect(afterApproval.body.trackingId).toMatch(/^FIN-INV-\d{4}-\d{6}$/);
+
+    // Nothing is payable until accounting has verified it.
+    const earlyQueue = await request(app)
+      .get('/api/payments/queue')
+      .query({ companyId, type: 'VENDOR' })
+      .set('authorization', `Bearer ${ravi}`);
+    expect(
+      (earlyQueue.body.items as Array<Record<string, unknown>>).some(
+        (entry) => entry.reference === 'INV-9821',
+      ),
+      'an unverified invoice must not reach the payment queue',
+    ).toBe(false);
+
+    // Finance prepares work but does not run the accounting stage.
+    const verifyAsPreparer = await request(app)
+      .post(`/api/invoices/${invoiceId}/verify`)
+      .set('authorization', `Bearer ${ravi}`)
+      .send({ action: 'RELEASE', tdsApplicable: false });
+    expect(verifyAsPreparer.status).toBe(403);
+
+    // ── Accounting verification → accounts payable ─────────
+    // TechZone is not a TDS vendor, so the net payable is the gross bill.
+    const verified = await request(app)
+      .post(`/api/invoices/${invoiceId}/verify`)
+      .set('authorization', `Bearer ${accountant}`)
+      .send({
+        action: 'RELEASE',
+        tdsApplicable: false,
+        glCode: '5100',
+        notes: 'Licences verified against the renewal quote.',
+      });
+    expect(verified.status, JSON.stringify(verified.body)).toBe(200);
+    expect(verified.body.status).toBe(InvoiceStatus.PAYMENT_PENDING);
+    expect(verified.body.netPayable).toBe(toMinor(35_40_000));
+    expect(verified.body.tdsAmount).toBe(0);
 
     const queue = await request(app)
       .get('/api/payments/queue')
@@ -143,6 +181,19 @@ RUN()('vendor invoice journey (PRD §37)', () => {
     // The account number is masked everywhere it is returned.
     expect(String(obligation!.beneficiaryAccount)).toMatch(/^X+\d{4}$/);
 
+    // The account the batch debits, and later the account the statement is
+    // imported against — a batch must name one, and it must belong to this
+    // company.
+    const accounts = await request(app)
+      .get('/api/settings/bank-accounts')
+      .query({ companyId })
+      .set('authorization', `Bearer ${cfo}`);
+    // Selected by account number, not by position: the list sorts by label and
+    // the tenant has more than one account per company.
+    const bankAccountId = (accounts.body.items as Array<Record<string, string>>).find(
+      (entry) => entry.accountNumber === '00600350001234',
+    )!.id;
+
     // ── Create and export the payment batch ───────────────
     const batch = await request(app)
       .post('/api/payments/batches')
@@ -150,6 +201,7 @@ RUN()('vendor invoice journey (PRD §37)', () => {
       .send({
         companyId,
         paymentDate: new Date().toISOString(),
+        bankAccountId,
         obligationIds: [obligation!.id],
       });
     expect(batch.status, JSON.stringify(batch.body)).toBe(201);
@@ -182,16 +234,6 @@ RUN()('vendor invoice journey (PRD §37)', () => {
     // ── The bank statement arrives the next day ───────────
     const statementPath = join(directory, 'statement.xlsx');
     await writeStatementWorkbook(statementPath);
-
-    const accounts = await request(app)
-      .get('/api/settings/bank-accounts')
-      .query({ companyId })
-      .set('authorization', `Bearer ${cfo}`);
-    // Selected by account number, not by position: the list sorts by label and
-    // the tenant has more than one account per company.
-    const bankAccountId = (accounts.body.items as Array<Record<string, string>>).find(
-      (entry) => entry.accountNumber === '00600350001234',
-    )!.id;
 
     const imported = await request(app)
       .post('/api/banking/statements')
@@ -245,8 +287,18 @@ RUN()('vendor invoice journey (PRD §37)', () => {
       .get(`/api/audit/entity/INVOICE/${invoiceId}`)
       .set('authorization', `Bearer ${cfo}`);
     const events = (trail.body.items as Array<{ event: string }>).map((entry) => entry.event);
+    // Every stage the invoice passed through is on the trail by name, so the
+    // handover from business approval to accounting to the bank is readable
+    // rather than inferred from status changes.
     expect(events).toEqual(
-      expect.arrayContaining(['invoice.submitted', 'invoice.approved', 'invoice.paid']),
+      expect.arrayContaining([
+        'invoice.submitted',
+        'invoice.business_approved',
+        'invoice.awaiting_accounting',
+        'invoice.tds_recorded',
+        'invoice.cleared_for_payment',
+        'invoice.paid',
+      ]),
     );
   }, 180_000);
 });

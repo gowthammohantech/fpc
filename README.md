@@ -17,9 +17,17 @@ single **payment obligation**, and everything downstream is shared:
 ```
   Vendor invoice          Payroll import
         │                       │
+        ▼                       │
+  Business approval             │
+  (vertical head,               │
+   finance head)                │
+        ▼                       │
+  Accounting                    │
+  (verify, TDS)                 │
+        ▼                       │
+  Trustee  ── optional          │
+        │                       │
         └──────────┬────────────┘
-                   ▼
-               Approval
                    ▼
           Payment obligation
                    ▼
@@ -44,6 +52,12 @@ One consequence is worth stating up front: **there is no "mark as paid"
 button anywhere in the product.** `PAID` is reachable only by confirming a
 match against a real bank transaction, because the statement is the evidence
 that money actually moved.
+
+A second: **business approval is not permission to pay.** Clearing the
+approval chain hands the invoice to the accounting team, who verify it and
+deduct TDS; only then does it become an obligation. So the vendor's bill and
+the bank's debit are two different numbers, and the product keeps them apart
+everywhere — gross is what was invoiced, net is what leaves the account.
 
 ## Getting started
 
@@ -70,9 +84,12 @@ Open http://localhost:5173 and sign in. Every account below uses the password
 | Sign in as | Role | What it demonstrates |
 |---|---|---|
 | `ravi@nova.example.com` | Finance Executive | Prepares work; cannot approve, cannot see payroll |
+| `verticalhead@nova.example.com` | Vertical Head | First approver in the revised ladder, for the Technology vertical |
 | `ithead@nova.example.com` | Approver | First approver on the large invoice |
 | `opshead@nova.example.com` | Approver | Operations Head, first approver on the Pune chain |
 | `financemanager@nova.example.com` | Finance Manager | Finance Head in the chain; releases bank files |
+| `accounts@nova.example.com` | Accounting Team | Verifies approved invoices, sets TDS, escalates to the trustee |
+| `trustee@nova.example.com` | Trustee | Decides escalations; read-only everywhere else, bank included |
 | `cfo@nova.example.com` | CFO | Final approver, sees payroll and the full position |
 | `payroll@nova.example.com` | Payroll User | Payroll only, no invoice access |
 | `auditor@nova.example.com` | Auditor | Read-only, including the audit trail |
@@ -81,6 +98,7 @@ Open http://localhost:5173 and sign in. Every account below uses the password
 | `apclerk@nova.example.com` | AP Clerk *(tenant role)* | A role the tenant defined for itself, enforced like any built-in |
 | `treasury@nova.example.com` | Treasury Viewer + Auditor | Two roles at once; grants are the union |
 | `chennai.ap@nova.example.com` | Finance Executive | Scoped to one location, so the filter is applied rather than offered |
+| `tech.vertical@nova.example.com` | Finance Executive | Scoped to one vertical; asking for another returns 403, not an empty list |
 | `techfinance@nova.example.com` | Finance Manager | Nova Technologies, the second company |
 | `techapprover@nova.example.com` | Approver | Head of the Nova Technologies engineering department |
 | `techpayroll@nova.example.com` | Payroll User | Nova Technologies payroll |
@@ -106,6 +124,12 @@ that no screen opens empty. On a fresh `pnpm seed` you also get:
 - **A second company.** Nova Technologies has its own vendors, its own
   two-tier approval ladder, invoices and payroll, so the company switcher
   leads somewhere rather than to a blank app.
+- **A populated hierarchy.** A group over both companies, regions, verticals
+  with heads (and one deliberately headless), business units including a
+  classified one, and departments — HR and Admin among them — that raise
+  invoices of their own.
+- **Invoices in the accounting and trustee stages**, one of them with a real
+  194J deduction, plus an open P1 trustee request with its remark thread.
 - **Two tenant-defined roles**, one of them held by a real user, alongside the
   eight built-ins on Settings → Roles.
 - **Every reconciliation tab populated** — matched, suggested, unmatched and
@@ -141,16 +165,29 @@ state.
    approve their own invoice.
 3. **Approve** — sign in as `ithead`, then `financemanager`, then `cfo`. Each
    step activates only in order.
-4. **Pay** — as `ravi`, Payment Queue → select TechZone → create a batch.
-   Try to export it as `ravi`: maker–checker refuses. Export as
-   `financemanager` and download the HDFC-format file.
-5. **Reconcile** — Bank Statements → upload
+4. **Verify** — the invoice is now with accounting, not in the payment queue;
+   check the queue as `ravi` and it is not there. Sign in as `accounts`, open
+   Accounting → To verify, and release it. TechZone has no TDS, so gross and
+   net match; **INV-4471 from ABC Consulting** in the same queue does, and
+   shows ₹1,18,000 billed against ₹1,08,000 payable.
+5. **Pay** — as `ravi`, Payment Queue → select TechZone → create a batch,
+   choosing the debit account. Try to export it as `ravi`: maker–checker
+   refuses. Export as `financemanager` and download the HDFC-format file.
+6. **Reconcile** — Bank Statements → upload
    `apps/server/fixtures/statements/HDFC-Statement.xlsx`. The ₹35.4L debit is
    suggested against the payment, with the individual signals shown. Confirm
    it.
-6. **Confirm the result** — the invoice is now `RECONCILED`, the vendor's
+7. **Confirm the result** — the invoice is now `RECONCILED`, the vendor's
    payment confirmation is in Mailpit at http://localhost:8025, and the audit
-   trail on the invoice shows every step and who took it.
+   trail on the invoice shows every step and who took it, by name.
+
+### Demo: the trustee stage
+
+**INV-4482** rests with the trustee on an open P1 request. Sign in as
+`trustee`, open Trustee Requests, and you get the gross/TDS/net breakdown, the
+remark finance left, and three outcomes: approve (which clears it for
+payment), return (back to accounting for rework), or reject. Try it as
+`accounts` first — whoever raised a request cannot decide it.
 
 ### Email intake
 
@@ -197,11 +234,59 @@ Three layers, all required, none skippable by a service that forgets:
    catalogue in `packages/shared`. The clients gate their navigation on that
    same table, so the interface cannot offer an action the API will refuse.
 3. **Data scoping** — a mandatory tenant/company filter that every query
-   merges in.
+   merges in, plus an organisation filter on every axis below it.
 
-Two domain rules sit on top: payroll permissions are disjoint from AP
-permissions, so salary data is invisible to the rest of the finance team; and
-a submitter can never approve their own item, at any level.
+Scope is granted per axis, and an empty grant means "unrestricted on that
+axis" — which is how a platform admin reaches every company. Asking for a unit
+you were not granted is a **403, not an empty list**: a scoped user naming
+another vertical in the query string gets a permission answer, not its rows.
+`rbac.integration.test.ts` asserts both halves over the response body, so a new
+endpoint that forgets to narrow fails a test rather than leaking.
+
+Three domain rules sit on top: payroll permissions are disjoint from AP
+permissions, so salary data is invisible to the rest of the finance team; a
+submitter can never approve their own item, at any level, and whoever raises a
+trustee request cannot decide it; and a business unit marked classified is
+invisible unless a user is granted it by name, so holding the vertical above it
+is not enough.
+
+### Organisation
+
+```
+Tenant
+ └── Group
+      └── Company / legal entity
+           ├── Region
+           ├── Vertical ── Business unit (standard or classified)
+           ├── Location
+           └── Department ── reports into a vertical
+```
+
+Every level is its own collection, and every axis is denormalised onto the
+invoices and obligations filed under it rather than walked through parent
+links — so narrowing a query stays a flat indexed lookup, and the consolidated
+export has every dimension as a column rather than a join.
+
+### TDS
+
+The vendor bills a gross amount, tax is withheld, and the bank pays the
+remainder. All three are kept apart:
+
+| | |
+|---|---|
+| `totalAmount` | gross — what the vendor invoiced |
+| `tdsAmount`   | withheld, on the taxable value rather than on the GST over it |
+| `netPayable`  | `totalAmount - tdsAmount`, and what the payment obligation carries |
+
+Rates are integer **basis points** (10% is `1000`) for the same reason amounts
+are integer paise: a `7.5` percent multiplied against a paise figure is exactly
+the drift the money module exists to prevent. `computeTds` is pure and unit
+tested, including the boundary where a mis-keyed rate would otherwise produce a
+negative payment.
+
+Invoice-side figures across the product are gross; payment- and cash-side
+figures are net. The difference between the two is the tax withheld, not a
+discrepancy.
 
 ### Money
 
@@ -223,6 +308,21 @@ data, and the evaluator is a pure function — no database, clock or ORM — whi
 is why the boundary cases at exactly ₹1,00,000 and ₹10,00,000 are directly
 unit-tested. Settings → Approval Rules includes a simulator that answers "who
 would approve ₹35.4L?" before a rule is saved.
+
+A step names a role, a specific user, or a *position* — department head or
+vertical head — which resolves through the master data. A vertical with no head
+falls back to whoever holds the Vertical Head role, rather than stranding the
+invoice; the seed leaves one vertical headless to exercise that.
+
+### Tracking identifiers
+
+Every tracked entity gets one, allocated from a per-tenant counter: invoices
+`FIN-INV-2026-000001` at intake, approvals `APR-2026-…` when the chain starts,
+trustee requests `FR-2026-…` when raised, reconciliations `REC-2026-…` when a
+match is confirmed, and payment batches `PB-20260908-001`, which keep their
+date-stamped form. The year is part of both the counter key and the printed
+reference, so numbering restarts each January and a reference says when it was
+issued. Invoice tracking IDs are searchable from the command palette.
 
 ### Reconciliation
 
@@ -291,10 +391,13 @@ Unit tests cover the parts where a mistake costs money and run with no
 database: the approval rule engine including both band boundaries, the
 lifecycle state machines, the reconciliation scorer, duplicate detection,
 payroll import validation (including a full 850-employee run), bank file
-generation, statement parsing and dedupe, and money arithmetic.
+generation, statement parsing and dedupe, money arithmetic, and the TDS
+calculation — including the boundary where a mis-keyed rate would otherwise
+produce a negative payment.
 
-Integration tests drive both flagship journeys, the RBAC matrix and the seed's
-coverage contract through the real API against MongoDB. They obtain a database
+Integration tests drive both flagship journeys, the RBAC matrix, the
+organisation-scope matrix and the seed's coverage contract through the real API
+against MongoDB. They obtain a database
 from `mongodb-memory-server` where it can download a binary; otherwise point
 them at a real instance, and each suite takes its own database under that name:
 
@@ -311,8 +414,15 @@ otherwise indistinguishable from a pass.
 
 ## Deliberately out of scope
 
-No vendor onboarding or KYC, no GST or bank-account verification, no purchase
-orders, GRN or 2/3/4-way matching, no reimbursements, no payroll calculation,
-no direct bank APIs or automated UTR retrieval, no ERP or accounting posting,
-no GST/TDS filing, no budgeting. The platform owns the financial operations
+No vendor onboarding or KYC, no GST or PAN verification, no bank-account
+verification, no purchase orders, GRN or 2/3/4-way matching, no reimbursements,
+no payroll calculation, no direct bank APIs or automated UTR retrieval, no ERP
+or accounting posting, no budgeting. The platform owns the financial operations
 workflow and hands off at both ends.
+
+TDS is deducted and recorded here, but **not filed**: no challans, no returns,
+no certificates. The consolidated export carries the section, rate and amount
+per invoice, which is what a filing agent needs — and Excel is where the
+handover happens, because ExcelJS cannot emit a native pivot table. The export
+ships the flat, pivot-ready sheet plus a summary sheet totalled by company and
+vertical.

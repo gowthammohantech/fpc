@@ -3,6 +3,8 @@ import { baseSchemaOptions } from './base.js';
 
 export interface CompanyDoc {
   tenantId: Types.ObjectId;
+  /** The group this legal entity belongs to, when the tenant uses groups. */
+  groupId?: Types.ObjectId;
   name: string;
   legalName?: string;
   gstin?: string;
@@ -16,6 +18,7 @@ export interface CompanyDoc {
 const schema = new Schema<CompanyDoc>(
   {
     tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true, index: true },
+    groupId: { type: Schema.Types.ObjectId, ref: 'Group', index: true },
     name: { type: String, required: true, trim: true },
     legalName: { type: String, trim: true },
     gstin: { type: String, trim: true, uppercase: true },

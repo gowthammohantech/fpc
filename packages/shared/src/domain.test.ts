@@ -65,6 +65,7 @@ describe('invoice state machine', () => {
       InvoiceStatus.VALIDATED,
       InvoiceStatus.SUBMITTED,
       InvoiceStatus.PENDING_APPROVAL,
+      InvoiceStatus.ACCOUNTING_VERIFICATION,
       InvoiceStatus.APPROVED,
       InvoiceStatus.PAYMENT_PENDING,
       InvoiceStatus.PAYMENT_BATCHED,
@@ -92,6 +93,60 @@ describe('invoice state machine', () => {
     expect(sources).toEqual([InvoiceStatus.PAYMENT_PROCESSING]);
   });
 
+  it('routes business approval through accounting before anything is payable', () => {
+    // APPROVED means "cleared to pay", so clearing the approval chain must not
+    // reach it directly — accounting still has to verify and deduct TDS.
+    expect(
+      invoiceMachine.canTransition(InvoiceStatus.PENDING_APPROVAL, InvoiceStatus.APPROVED),
+    ).toBe(false);
+    expect(
+      invoiceMachine.canTransition(
+        InvoiceStatus.PENDING_APPROVAL,
+        InvoiceStatus.ACCOUNTING_VERIFICATION,
+      ),
+    ).toBe(true);
+    // An invoice with no matching approval rule skips business approval but
+    // never skips accounting.
+    expect(invoiceMachine.canTransition(InvoiceStatus.SUBMITTED, InvoiceStatus.APPROVED)).toBe(
+      false,
+    );
+    expect(
+      invoiceMachine.canTransition(InvoiceStatus.SUBMITTED, InvoiceStatus.ACCOUNTING_VERIFICATION),
+    ).toBe(true);
+  });
+
+  it('lets the trustee stage return an invoice to accounting', () => {
+    expect(
+      invoiceMachine.canTransition(
+        InvoiceStatus.ACCOUNTING_VERIFICATION,
+        InvoiceStatus.TRUSTEE_APPROVAL,
+      ),
+    ).toBe(true);
+    expect(
+      invoiceMachine.canTransition(
+        InvoiceStatus.TRUSTEE_APPROVAL,
+        InvoiceStatus.ACCOUNTING_VERIFICATION,
+      ),
+    ).toBe(true);
+    // Neither new stage is a short cut into the payment pipeline.
+    for (const stage of [InvoiceStatus.ACCOUNTING_VERIFICATION, InvoiceStatus.TRUSTEE_APPROVAL]) {
+      expect(invoiceMachine.nextStates(stage)).not.toContain(InvoiceStatus.PAYMENT_PENDING);
+    }
+  });
+
+  it('keeps APPROVED the only predecessor of PAYMENT_PENDING', () => {
+    const sources = invoiceMachine.states.filter((state) =>
+      invoiceMachine.nextStates(state).includes(InvoiceStatus.PAYMENT_PENDING),
+    );
+    // PAYMENT_BATCHED and PAYMENT_PROCESSING return an obligation to the queue;
+    // APPROVED is the only way *in*.
+    expect(sources).toEqual([
+      InvoiceStatus.APPROVED,
+      InvoiceStatus.PAYMENT_BATCHED,
+      InvoiceStatus.PAYMENT_PROCESSING,
+    ]);
+  });
+
   it('treats RECONCILED and CANCELLED as terminal', () => {
     expect(invoiceMachine.nextStates(InvoiceStatus.RECONCILED)).toEqual([]);
     expect(invoiceMachine.nextStates(InvoiceStatus.CANCELLED)).toEqual([]);
@@ -105,10 +160,31 @@ describe('invoice state machine', () => {
 
 describe('permissions', () => {
   it('keeps payroll invisible to finance executives and AP-side roles', () => {
-    for (const role of [RoleKey.FINANCE_EXECUTIVE, RoleKey.FINANCE_MANAGER, RoleKey.APPROVER]) {
+    for (const role of [
+      RoleKey.FINANCE_EXECUTIVE,
+      RoleKey.FINANCE_MANAGER,
+      RoleKey.APPROVER,
+      RoleKey.VERTICAL_HEAD,
+      RoleKey.ACCOUNTS_TEAM,
+      RoleKey.TRUSTEE,
+    ]) {
       expect(ROLE_PERMISSIONS[role]).not.toContain('payroll:read');
       expect(ROLE_PERMISSIONS[role]).not.toContain('payroll:approve');
     }
+  });
+
+  it('keeps the accounting and trustee stages out of the approval chain', () => {
+    // `withApprovalPermission` filters chain candidates by `invoice:approve`,
+    // and `usersWithRole` matches on the role alone — so granting it here would
+    // silently make every accountant and trustee an eligible approver on every
+    // ordinary invoice.
+    expect(ROLE_PERMISSIONS[RoleKey.ACCOUNTS_TEAM]).not.toContain('invoice:approve');
+    expect(ROLE_PERMISSIONS[RoleKey.TRUSTEE]).not.toContain('invoice:approve');
+    expect(ROLE_PERMISSIONS[RoleKey.ACCOUNTS_TEAM]).toContain('invoice:verify');
+    // The trustee decides escalations; it never verifies them itself.
+    expect(ROLE_PERMISSIONS[RoleKey.TRUSTEE]).not.toContain('invoice:verify');
+    expect(ROLE_PERMISSIONS[RoleKey.TRUSTEE]).toContain('finance_request:act');
+    expect(ROLE_PERMISSIONS[RoleKey.ACCOUNTS_TEAM]).not.toContain('finance_request:act');
   });
 
   it('does not let a finance executive approve anything', () => {

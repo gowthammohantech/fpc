@@ -4,12 +4,19 @@ import type {
   BankAccount,
   BankStatement,
   BankTransaction,
+  BusinessUnit,
   Company,
   DashboardSummary,
   Department,
+  FinanceRequest,
+  FinanceRequestAction,
   GlobalSearchResult,
+  Group,
   Invoice,
   Location,
+  Region,
+  TdsSection,
+  Vertical,
   MailConnection,
   MailIngestion,
   MailIngestionAttachment,
@@ -25,6 +32,26 @@ import type {
   Vendor,
 } from '@fpc/shared';
 import type { ApiClient } from './client.js';
+
+/**
+ * What the accounting team submits from the workbench.
+ *
+ * `netPayable` is absent on purpose: the server derives it from the gross bill
+ * and the deduction, so no client can dictate what the bank pays.
+ */
+export interface VerifyInvoiceBody {
+  action: 'RELEASE' | 'ESCALATE' | 'RETURN';
+  tdsApplicable: boolean;
+  tdsSection?: TdsSection | '';
+  tdsRateBasisPoints?: number;
+  tdsBaseAmount?: number;
+  tdsAmount?: number;
+  glCode?: string;
+  costCentre?: string;
+  notes?: string;
+  priority?: 'P1' | 'P2';
+  remarks?: string;
+}
 
 /**
  * The API surface as typed functions.
@@ -69,6 +96,13 @@ export const endpoints = (api: ApiClient) => ({
       ),
     cancel: (id: string, reason: string) => api.post<Invoice>(`/invoices/${id}/cancel`, { reason }),
     reextract: (id: string) => api.post<{ status: string }>(`/invoices/${id}/reextract`),
+    /**
+     * The accounting stage: clear for payment, escalate to the trustee, or
+     * return for correction. `netPayable` is derived by the server, so it is
+     * deliberately not part of the body.
+     */
+    verify: (id: string, body: VerifyInvoiceBody) =>
+      api.post<Invoice>(`/invoices/${id}/verify`, body),
   },
 
   /** The Invoice Mailbox: a user's own Outlook, and what it has pulled. */
@@ -98,6 +132,21 @@ export const endpoints = (api: ApiClient) => ({
     get: (id: string) => api.get<ApprovalRequest & { canAct: boolean }>(`/approvals/${id}`),
     act: (id: string, action: 'APPROVE' | 'REJECT', comment?: string) =>
       api.post<ApprovalRequest>(`/approvals/${id}/act`, { action, comment }),
+  },
+
+  /** Trustee escalations raised by finance on a single invoice. */
+  financeRequests: {
+    list: (query?: Query) => api.get<Paginated<FinanceRequest>>('/finance-requests', query),
+    get: (id: string) => api.get<FinanceRequest & { canAct: boolean }>(`/finance-requests/${id}`),
+    act: (id: string, action: FinanceRequestAction, remarks?: string) =>
+      api.post<{ request: FinanceRequest; invoiceStatus: string }>(`/finance-requests/${id}/act`, {
+        action,
+        remarks,
+      }),
+    addRemark: (id: string, remarks: string) =>
+      api.post<FinanceRequest>(`/finance-requests/${id}/remarks`, { remarks }),
+    setPriority: (id: string, priority: 'P1' | 'P2') =>
+      api.patch<FinanceRequest>(`/finance-requests/${id}/priority`, { priority }),
   },
 
   payables: {
@@ -246,6 +295,29 @@ export const endpoints = (api: ApiClient) => ({
     updateCompany: (id: string, body: Query) =>
       api.patch<Company>(`/settings/companies/${id}`, body),
     deleteCompany: (id: string) => api.delete<void>(`/settings/companies/${id}`),
+
+    groups: (query?: Query) => api.get<Paginated<Group>>('/settings/groups', query),
+    createGroup: (body: Query) => api.post<Group>('/settings/groups', body),
+    updateGroup: (id: string, body: Query) => api.patch<Group>(`/settings/groups/${id}`, body),
+    deleteGroup: (id: string) => api.delete<void>(`/settings/groups/${id}`),
+
+    regions: (query?: Query) => api.get<Paginated<Region>>('/settings/regions', query),
+    createRegion: (body: Query) => api.post<Region>('/settings/regions', body),
+    updateRegion: (id: string, body: Query) => api.patch<Region>(`/settings/regions/${id}`, body),
+    deleteRegion: (id: string) => api.delete<void>(`/settings/regions/${id}`),
+
+    verticals: (query?: Query) => api.get<Paginated<Vertical>>('/settings/verticals', query),
+    createVertical: (body: Query) => api.post<Vertical>('/settings/verticals', body),
+    updateVertical: (id: string, body: Query) =>
+      api.patch<Vertical>(`/settings/verticals/${id}`, body),
+    deleteVertical: (id: string) => api.delete<void>(`/settings/verticals/${id}`),
+
+    businessUnits: (query?: Query) =>
+      api.get<Paginated<BusinessUnit>>('/settings/business-units', query),
+    createBusinessUnit: (body: Query) => api.post<BusinessUnit>('/settings/business-units', body),
+    updateBusinessUnit: (id: string, body: Query) =>
+      api.patch<BusinessUnit>(`/settings/business-units/${id}`, body),
+    deleteBusinessUnit: (id: string) => api.delete<void>(`/settings/business-units/${id}`),
 
     locations: (query?: Query) => api.get<Paginated<Location>>('/settings/locations', query),
     createLocation: (body: Query) => api.post<Location>('/settings/locations', body),

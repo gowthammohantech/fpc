@@ -1,13 +1,86 @@
 import { Router } from 'express';
-import { schemas, normalizeName } from '@fpc/shared';
+import { BusinessUnitKind, schemas, normalizeName } from '@fpc/shared';
 import { Location } from '../../models/location.model.js';
 import { Department } from '../../models/department.model.js';
+import { Group } from '../../models/group.model.js';
+import { Region } from '../../models/region.model.js';
+import { Vertical } from '../../models/vertical.model.js';
+import { BusinessUnit } from '../../models/businessUnit.model.js';
 import { Vendor } from '../../models/vendor.model.js';
 import { BankAccount } from '../../models/bankAccount.model.js';
 import { crudRouter } from './crudFactory.js';
 import { companyRouter } from './company.routes.js';
 import { roleRouter } from './role.routes.js';
 import { userRouter } from './user.routes.js';
+
+const groupRouter = crudRouter({
+  model: Group,
+  entityType: 'GROUP',
+  name: 'group',
+  permissions: {
+    read: 'group:read',
+    create: 'group:create',
+    update: 'group:update',
+    delete: 'group:delete',
+  },
+  createSchema: schemas.createGroupRequest,
+  updateSchema: schemas.updateGroupRequest,
+  // A group sits above the legal entity, so it has no company of its own.
+  tenantScoped: true,
+});
+
+const regionRouter = crudRouter({
+  model: Region,
+  entityType: 'REGION',
+  name: 'region',
+  permissions: {
+    read: 'region:read',
+    create: 'region:create',
+    update: 'region:update',
+    delete: 'region:delete',
+  },
+  createSchema: schemas.createRegionRequest,
+  updateSchema: schemas.updateRegionRequest,
+  selfScopeAxis: 'regionId',
+});
+
+const verticalRouter = crudRouter({
+  model: Vertical,
+  entityType: 'VERTICAL',
+  name: 'vertical',
+  permissions: {
+    read: 'vertical:read',
+    create: 'vertical:create',
+    update: 'vertical:update',
+    delete: 'vertical:delete',
+  },
+  createSchema: schemas.createVerticalRequest,
+  updateSchema: schemas.updateVerticalRequest,
+  selfScopeAxis: 'verticalId',
+});
+
+const businessUnitRouter = crudRouter({
+  model: BusinessUnit,
+  entityType: 'BUSINESS_UNIT',
+  name: 'business_unit',
+  permissions: {
+    read: 'business_unit:read',
+    create: 'business_unit:create',
+    update: 'business_unit:update',
+    delete: 'business_unit:delete',
+  },
+  createSchema: schemas.createBusinessUnitRequest,
+  updateSchema: schemas.updateBusinessUnitRequest,
+  selfScopeAxis: 'businessUnitId',
+  // A classified unit is reachable only by naming it in your own scope, so
+  // holding the vertical above it is not enough. Administrators who maintain
+  // the master still see them, or they could not be edited at all.
+  extraScope: (principal) =>
+    principal.businessUnitIds.length > 0 || principal.permissions.includes('business_unit:update')
+      ? {}
+      : { kind: BusinessUnitKind.STANDARD },
+  buildFilter: (q) => (q.verticalId ? { verticalId: q.verticalId } : {}),
+});
 
 const locationRouter = crudRouter({
   model: Location,
@@ -21,6 +94,7 @@ const locationRouter = crudRouter({
   },
   createSchema: schemas.createLocationRequest,
   updateSchema: schemas.updateLocationRequest,
+  selfScopeAxis: 'locationId',
 });
 
 const departmentRouter = crudRouter({
@@ -35,6 +109,7 @@ const departmentRouter = crudRouter({
   },
   createSchema: schemas.createDepartmentRequest,
   updateSchema: schemas.updateDepartmentRequest,
+  selfScopeAxis: 'departmentId',
 });
 
 const vendorRouter = crudRouter({
@@ -81,6 +156,10 @@ function deriveVendorCode(name: string): string {
 
 export const organizationRouter: Router = Router();
 organizationRouter.use('/companies', companyRouter);
+organizationRouter.use('/groups', groupRouter);
+organizationRouter.use('/regions', regionRouter);
+organizationRouter.use('/verticals', verticalRouter);
+organizationRouter.use('/business-units', businessUnitRouter);
 organizationRouter.use('/locations', locationRouter);
 organizationRouter.use('/departments', departmentRouter);
 organizationRouter.use('/users', userRouter);

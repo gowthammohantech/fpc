@@ -5,22 +5,30 @@ import {
   ROLE_KEYS,
   ROLE_PERMISSIONS,
   ValidationCode,
+  computeTds,
+  formatINR,
   invoiceMachine,
+  netPayableFor,
   normalizeName,
   parseAmountToMinor,
+  schemas,
+  tdsBaseFor,
   type ExtractionResult,
+  type Permission,
   type RoleKey,
+  type TdsSection,
   type ValidationFinding,
 } from '@fpc/shared';
 import { logger } from '../../config/logger.js';
 import { ApiError } from '../../core/errors.js';
 import { eventBus } from '../../core/eventBus.js';
+import { REFERENCE_PREFIX, nextReference } from '../../core/sequence.js';
 import { contentTypeFor } from '../../integrations/email/index.js';
 import { extractor } from '../../integrations/ocr/index.js';
 import { storage } from '../../integrations/storage/index.js';
 import { DocumentFile } from '../../models/documentFile.model.js';
 import { Invoice, type InvoiceDoc } from '../../models/invoice.model.js';
-import { Vendor } from '../../models/vendor.model.js';
+import { Vendor, type VendorDoc } from '../../models/vendor.model.js';
 import { audit, type AuditContext } from '../audit/audit.service.js';
 import { blockingFindings, validateInvoice } from './invoice.validation.js';
 
@@ -37,6 +45,45 @@ export interface IntakeInput {
 }
 
 const MAX_EXTRACTION_ATTEMPTS = 3;
+
+/**
+ * Pre-fills the TDS figures from the vendor master.
+ *
+ * A proposal, not a decision: the accounting team confirms or overrides every
+ * field before the invoice is cleared for payment. It is applied this early so
+ * that approvers see the real cash figure rather than the gross bill.
+ *
+ * A vendor marked for TDS but with no PAN on file deducts nothing — withholding
+ * against an unidentified payee is worse than not withholding at all, and the
+ * accounting team is the right place to notice and fix it.
+ */
+export function proposeTds(
+  invoice: Pick<
+    InvoiceDoc,
+    | 'subtotal'
+    | 'taxAmount'
+    | 'totalAmount'
+    | 'tdsApplicable'
+    | 'tdsSection'
+    | 'tdsRateBasisPoints'
+    | 'tdsBaseAmount'
+    | 'tdsAmount'
+  >,
+  vendor: Pick<VendorDoc, 'pan' | 'tdsApplicable' | 'tdsSection' | 'tdsRateBasisPoints'>,
+): void {
+  const applicable = !!vendor.tdsApplicable && !!vendor.pan && !!vendor.tdsRateBasisPoints;
+  invoice.tdsApplicable = applicable;
+  invoice.tdsSection = applicable ? vendor.tdsSection : undefined;
+  invoice.tdsRateBasisPoints = applicable ? vendor.tdsRateBasisPoints : undefined;
+
+  const base = tdsBaseFor(invoice);
+  invoice.tdsBaseAmount = applicable ? base : undefined;
+  invoice.tdsAmount = computeTds({
+    tdsApplicable: applicable,
+    baseAmount: base,
+    rateBasisPoints: vendor.tdsRateBasisPoints,
+  });
+}
 
 /**
  * Creates an invoice from an uploaded file or an inbound email attachment
@@ -61,6 +108,9 @@ export async function intake(
   const invoice = await Invoice.create({
     tenantId: input.tenantId,
     companyId: input.companyId,
+    // Allocated up front so the invoice is quotable from the moment it lands,
+    // including in the email that says it was received.
+    trackingId: await nextReference(input.tenantId, REFERENCE_PREFIX.INVOICE),
     currency: 'INR',
     status: InvoiceStatus.RECEIVED,
     source: input.source,
@@ -249,6 +299,7 @@ async function applyExtraction(
         due.setDate(due.getDate() + (vendor.paymentTermsDays ?? 30));
         invoice.dueDate = due;
       }
+      proposeTds(invoice, vendor);
     }
   }
 
@@ -287,10 +338,187 @@ function notifyIfDuplicate(invoice: InvoiceDoc & { _id: Types.ObjectId }): void 
   });
 }
 
+/**
+ * Records what the accounting team keyed, and derives the TDS figures.
+ *
+ * The client never supplies `netPayable` — it is derived from the gross bill
+ * and the deduction here and again in the model's pre-validate hook, so no
+ * request can dictate what the bank pays.
+ */
+export function applyAccountingDecision(
+  invoice: InvoiceDoc,
+  body: schemas.VerifyInvoiceRequest,
+  verifiedByUserId: Types.ObjectId,
+): void {
+  invoice.tdsApplicable = body.tdsApplicable;
+  invoice.tdsSection = body.tdsApplicable ? (body.tdsSection as TdsSection) : undefined;
+  invoice.tdsRateBasisPoints = body.tdsApplicable ? body.tdsRateBasisPoints : undefined;
+
+  const base = body.tdsBaseAmount ?? tdsBaseFor(invoice);
+  invoice.tdsBaseAmount = body.tdsApplicable ? base : undefined;
+
+  const computed = computeTds({
+    tdsApplicable: body.tdsApplicable,
+    baseAmount: base,
+    rateBasisPoints: body.tdsRateBasisPoints,
+  });
+  // An explicit amount overrides the computed one — rounding conventions and
+  // part-period deductions are real — but it can never exceed the invoice.
+  const keyed = body.tdsApplicable ? (body.tdsAmount ?? computed) : 0;
+  invoice.tdsAmount = Math.min(keyed, invoice.totalAmount ?? 0);
+  invoice.netPayable = netPayableFor(invoice.totalAmount ?? 0, invoice.tdsAmount);
+
+  invoice.accounting = {
+    verifiedByUserId,
+    verifiedAt: new Date(),
+    glCode: body.glCode,
+    costCentre: body.costCentre,
+    notes: body.notes,
+  };
+}
+
+/**
+ * Clears a verified invoice for payment and creates its obligation.
+ *
+ * The single release point into the payment pipeline: accounting reaches it
+ * directly, and the trustee reaches it by approving an escalation. Nothing
+ * else may put an invoice into APPROVED.
+ */
+export async function releaseToAccountsPayable(
+  invoice: InvoiceDoc & { _id: Types.ObjectId; save(): Promise<unknown> },
+  context: AuditContext,
+): Promise<void> {
+  const from = invoice.status;
+  await transition(invoice, InvoiceStatus.APPROVED);
+  await invoice.save();
+
+  await audit.recordStatusChange(
+    {
+      event: 'invoice.cleared_for_payment',
+      entityType: 'INVOICE',
+      entityId: invoice._id,
+      entityLabel: invoice.trackingId,
+      tenantId: invoice.tenantId,
+      companyId: invoice.companyId,
+      from,
+      to: InvoiceStatus.APPROVED,
+      metadata: {
+        grossAmount: invoice.totalAmount,
+        tdsAmount: invoice.tdsAmount,
+        netPayable: invoice.netPayable,
+      },
+    },
+    context,
+  );
+
+  const { createObligationForInvoice } = await import('../payments/obligation.service.js');
+  await createObligationForInvoice(invoice._id, context);
+}
+
+/**
+ * Sends an invoice back to the department that raised it.
+ *
+ * The completed approval chain is cancelled with it — an invoice that has to
+ * be corrected must be approved again on its corrected figures, not carry an
+ * old sign-off forward.
+ */
+export async function returnToReview(
+  invoice: InvoiceDoc & { _id: Types.ObjectId; save(): Promise<unknown> },
+  reason: string,
+  context: AuditContext,
+): Promise<void> {
+  const from = invoice.status;
+  await transition(invoice, InvoiceStatus.REVIEW_REQUIRED);
+  invoice.approvalStatus = 'NOT_REQUIRED';
+  invoice.approvalRequestId = undefined;
+  await invoice.save();
+
+  const { cancel: cancelApproval } = await import('../approvals/approval.service.js');
+  await cancelApproval(invoice._id, reason, context);
+
+  await audit.recordStatusChange(
+    {
+      event: 'invoice.returned_to_review',
+      entityType: 'INVOICE',
+      entityId: invoice._id,
+      entityLabel: invoice.trackingId,
+      tenantId: invoice.tenantId,
+      companyId: invoice.companyId,
+      from,
+      to: InvoiceStatus.REVIEW_REQUIRED,
+      reason,
+    },
+    context,
+  );
+
+  eventBus.publish({
+    type: NotificationType.INVOICE_RETURNED_TO_REVIEW,
+    tenantId: String(invoice.tenantId),
+    companyId: String(invoice.companyId),
+    entityType: 'INVOICE',
+    entityId: String(invoice._id),
+    recipientUserIds: invoice.submittedBy ? [String(invoice.submittedBy)] : [],
+    title: `${invoice.trackingId} was returned for correction`,
+    body: reason,
+    link: `/invoices/${String(invoice._id)}`,
+  });
+}
+
 /** Roles that review invoices, so they hear about a suspected duplicate. */
-const DUPLICATE_ALERT_ROLES: RoleKey[] = ROLE_KEYS.filter((role) =>
-  ROLE_PERMISSIONS[role as RoleKey].includes('invoice:resolve_duplicate'),
-) as RoleKey[];
+const DUPLICATE_ALERT_ROLES: RoleKey[] = rolesHolding('invoice:resolve_duplicate');
+
+/** Roles that run the accounting stage. */
+const ACCOUNTING_ROLES: RoleKey[] = rolesHolding('invoice:verify');
+
+function rolesHolding(permission: Permission): RoleKey[] {
+  return ROLE_KEYS.filter((role) =>
+    ROLE_PERMISSIONS[role as RoleKey].includes(permission),
+  ) as RoleKey[];
+}
+
+/**
+ * Hands a business-cleared invoice to the accounting team.
+ *
+ * The single place this move happens — the approval dispatcher and the
+ * auto-approve branch of submit both call it — so no future caller can put an
+ * invoice into APPROVED, and therefore into the payment queue, without
+ * accounting having seen it.
+ */
+export async function advanceToAccounting(
+  invoice: InvoiceDoc & { _id: Types.ObjectId; save(): Promise<unknown> },
+  context: AuditContext,
+): Promise<void> {
+  const from = invoice.status;
+  await transition(invoice, InvoiceStatus.ACCOUNTING_VERIFICATION);
+  await invoice.save();
+
+  await audit.recordStatusChange(
+    {
+      event: 'invoice.awaiting_accounting',
+      entityType: 'INVOICE',
+      entityId: invoice._id,
+      entityLabel: invoice.trackingId,
+      tenantId: invoice.tenantId,
+      companyId: invoice.companyId,
+      from,
+      to: InvoiceStatus.ACCOUNTING_VERIFICATION,
+    },
+    context,
+  );
+
+  eventBus.publish({
+    type: NotificationType.INVOICE_AWAITING_ACCOUNTING,
+    tenantId: String(invoice.tenantId),
+    companyId: String(invoice.companyId),
+    entityType: 'INVOICE',
+    entityId: String(invoice._id),
+    recipientUserIds: [],
+    recipientRoleKeys: ACCOUNTING_ROLES,
+    title: `${invoice.trackingId} is ready for accounting`,
+    body: `${invoice.vendorName ?? 'An invoice'} for ${formatINR(invoice.totalAmount ?? 0)} has cleared business approval and needs verification.`,
+    link: `/accounting/${String(invoice._id)}`,
+  });
+}
 
 /** Re-runs validation after a reviewer edits fields. */
 export async function revalidate(

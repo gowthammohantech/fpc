@@ -14,6 +14,7 @@ import {
   type BankFileFormat,
 } from '@fpc/shared';
 import { ApiError } from '../../core/errors.js';
+import { REFERENCE_PREFIX, nextSequence } from '../../core/sequence.js';
 import { eventBus } from '../../core/eventBus.js';
 import { storage } from '../../integrations/storage/index.js';
 import { BankAccount } from '../../models/bankAccount.model.js';
@@ -67,9 +68,11 @@ export async function createBatch(input: CreateBatchInput, context: AuditContext
     );
   }
 
-  const bankAccount = input.bankAccountId
-    ? await BankAccount.findOne({ _id: input.bankAccountId, tenantId: input.tenantId }).lean()
-    : null;
+  // Scoped to the batch's own company, not merely to the tenant: a batch for
+  // one legal entity must never debit another's account. Every obligation in
+  // the batch already belongs to `input.companyId` — the query above fails the
+  // count check otherwise — so this is the last piece of that guarantee.
+  const bankAccount = await loadDebitAccount(input.tenantId, input.companyId, input.bankAccountId);
 
   const batch = await PaymentBatch.create({
     tenantId: input.tenantId,
@@ -172,9 +175,9 @@ export async function exportBatch(
   const items = await PaymentBatchItem.find({ paymentBatchId: batch._id }).lean();
   if (!items.length) throw ApiError.unprocessable('This batch has no payments to export');
 
-  const bankAccount = batch.bankAccountId
-    ? await BankAccount.findById(batch.bankAccountId).lean()
-    : null;
+  // Re-checked at export, not trusted from the draft: this is the moment the
+  // account number is written into a file the bank will act on.
+  const bankAccount = await loadDebitAccount(batch.tenantId, batch.companyId, batch.bankAccountId);
 
   // Vendor emails are included so the bank can send its own advice; payroll
   // rows deliberately carry none.
@@ -423,6 +426,38 @@ async function advancePayrollBatches(
   }
 }
 
+/**
+ * The account a batch debits.
+ *
+ * Required, and required to belong to the batch's own company. Previously the
+ * lookup was tenant-wide at creation and unscoped entirely at export, so a
+ * batch for Company A could carry Company B's account number into the bank
+ * file.
+ */
+async function loadDebitAccount(
+  tenantId: Types.ObjectId,
+  companyId: Types.ObjectId,
+  bankAccountId: Types.ObjectId | undefined,
+) {
+  if (!bankAccountId) {
+    throw ApiError.unprocessable(
+      'Choose the bank account this batch is paid from. A payment file has to name the account being debited.',
+    );
+  }
+  const account = await BankAccount.findOne({
+    _id: bankAccountId,
+    tenantId,
+    companyId,
+    active: true,
+  }).lean();
+  if (!account) {
+    throw ApiError.unprocessable(
+      'That bank account does not belong to this company. A batch cannot debit another legal entity.',
+    );
+  }
+  return account;
+}
+
 async function vendorEmailsFor(
   items: Array<{ obligationId: Types.ObjectId; type: string }>,
 ): Promise<Map<string, string>> {
@@ -459,19 +494,13 @@ async function vendorEmailsFor(
 /**
  * Allocates the next PB-YYYYMMDD-NNN reference.
  *
- * Counts today's batches rather than keeping a counter document; batch
- * creation is a low-frequency, human-initiated action, and the unique index
- * on `reference` is the real guarantee.
+ * The number comes from the shared per-tenant counter, keyed on the payment
+ * date, rather than from scanning the day's existing references for the
+ * highest — two batches created in the same moment would both have read the
+ * same maximum. The unique index on `reference` remains the backstop.
  */
 async function nextBatchReference(tenantId: Types.ObjectId, paymentDate: Date): Promise<string> {
   const stamp = paymentDate.toISOString().slice(0, 10).replace(/-/g, '');
-  const prefix = `PB-${stamp}-`;
-
-  const latest = await PaymentBatch.findOne({ tenantId, reference: { $regex: `^${prefix}` } })
-    .sort({ reference: -1 })
-    .select('reference')
-    .lean();
-
-  const sequence = latest ? Number(latest.reference.slice(prefix.length)) + 1 : 1;
-  return `${prefix}${String(sequence).padStart(3, '0')}`;
+  const sequence = await nextSequence(tenantId, `${REFERENCE_PREFIX.PAYMENT_BATCH}:${stamp}`);
+  return `PB-${stamp}-${String(sequence).padStart(3, '0')}`;
 }

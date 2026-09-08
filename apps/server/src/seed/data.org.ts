@@ -27,6 +27,57 @@ export const COMPANIES = [
 ];
 
 /**
+ * The group both legal entities belong to.
+ *
+ * Groups sit above the company, so unlike every other level they are keyed on
+ * the tenant alone.
+ */
+export const GROUPS = [{ key: 'nova', name: 'Nova Group', code: 'NOVA' }];
+
+export const REGIONS = [
+  { company: 'engineering', name: 'South', code: 'SOUTH' },
+  { company: 'engineering', name: 'West', code: 'WEST' },
+  { company: 'technologies', name: 'South', code: 'SOUTH' },
+];
+
+/**
+ * Verticals are the new first rung of the approval ladder, so each one that
+ * appears in a chain needs a head. `engineering:OPS` is deliberately headless:
+ * the VERTICAL_HEAD approver type falls back to whoever holds the role, and
+ * this is what exercises that path.
+ */
+export const VERTICALS = [
+  {
+    company: 'engineering',
+    name: 'Technology',
+    code: 'TECH',
+    head: 'verticalhead@nova.example.com',
+  },
+  { company: 'engineering', name: 'Operations', code: 'OPS' },
+  {
+    company: 'technologies',
+    name: 'Product',
+    code: 'PROD',
+    head: 'techapprover@nova.example.com',
+  },
+];
+
+export const BUSINESS_UNITS = [
+  { company: 'engineering', vertical: 'TECH', name: 'Platform', code: 'PLAT' },
+  { company: 'engineering', vertical: 'OPS', name: 'Facilities', code: 'FAC' },
+  // Classified: invisible unless a user is granted it by name, even to someone
+  // who holds the vertical above it.
+  {
+    company: 'engineering',
+    vertical: 'TECH',
+    name: 'Strategic Projects',
+    code: 'STRAT',
+    kind: 'CLASSIFIED' as const,
+  },
+  { company: 'technologies', vertical: 'PROD', name: 'Core Product', code: 'CORE' },
+];
+
+/**
  * Location codes repeat across companies on purpose — both companies have a
  * Bengaluru office. Every lookup in the seed is therefore keyed by
  * `company:code`, never by code alone.
@@ -56,19 +107,31 @@ export const DEPARTMENTS = [
     company: 'engineering',
     name: 'Information Technology',
     code: 'IT',
+    vertical: 'TECH',
     head: 'ithead@nova.example.com',
   },
-  { company: 'engineering', name: 'Operations', code: 'OPS', head: 'opshead@nova.example.com' },
-  { company: 'engineering', name: 'Finance', code: 'FIN' },
+  {
+    company: 'engineering',
+    name: 'Operations',
+    code: 'OPS',
+    vertical: 'OPS',
+    head: 'opshead@nova.example.com',
+  },
+  { company: 'engineering', name: 'Finance', code: 'FIN', vertical: 'TECH' },
+  // Departments outside finance originate invoices too — HR and Admin are the
+  // requirement's own examples.
+  { company: 'engineering', name: 'Human Resources', code: 'HR', vertical: 'OPS' },
+  { company: 'engineering', name: 'Administration', code: 'ADMIN', vertical: 'OPS' },
   {
     company: 'technologies',
     name: 'Engineering',
     code: 'ENG',
+    vertical: 'PROD',
     head: 'techapprover@nova.example.com',
   },
   // Deliberately headless: the DEPARTMENT_HEAD approver type falls back to
   // whoever holds the generic APPROVER role, and this is what exercises it.
-  { company: 'technologies', name: 'Operations', code: 'OPS' },
+  { company: 'technologies', name: 'Operations', code: 'OPS', vertical: 'PROD' },
 ];
 
 /**
@@ -140,6 +203,10 @@ export interface UserSeed {
   companies: string[];
   /** Company-qualified location keys, e.g. `engineering:MAA`. */
   locations?: string[];
+  /** Company-qualified vertical keys, e.g. `engineering:TECH`. */
+  verticals?: string[];
+  /** Company-qualified business unit keys, e.g. `engineering:STRAT`. */
+  businessUnits?: string[];
   status?: 'ACTIVE' | 'INVITED' | 'SUSPENDED';
   note: string;
 }
@@ -252,6 +319,36 @@ export const USERS: UserSeed[] = [
     note: 'Payroll for Nova Technologies',
   },
   {
+    name: 'Karthik Iyer',
+    email: 'verticalhead@nova.example.com',
+    roles: [RoleKey.VERTICAL_HEAD],
+    companies: ['engineering'],
+    verticals: ['engineering:TECH'],
+    note: 'Technology Vertical Head — the first approver in the revised ladder',
+  },
+  {
+    name: 'Sneha Joshi',
+    email: 'accounts@nova.example.com',
+    roles: [RoleKey.ACCOUNTS_TEAM],
+    companies: ['engineering', 'technologies'],
+    note: 'Accounting team — verifies approved invoices, sets TDS, escalates to the trustee',
+  },
+  {
+    name: 'Ramesh Gupta',
+    email: 'trustee@nova.example.com',
+    roles: [RoleKey.TRUSTEE],
+    companies: ['engineering', 'technologies'],
+    note: 'Trustee — decides escalations; read-only everywhere else, including the bank',
+  },
+  {
+    name: 'Aditya Sharma',
+    email: 'tech.vertical@nova.example.com',
+    roles: [RoleKey.FINANCE_EXECUTIVE],
+    companies: ['engineering'],
+    verticals: ['engineering:TECH'],
+    note: 'Scoped to one vertical — sees Technology work and nothing else',
+  },
+  {
     name: 'Rahul Bhat',
     email: 'joining@nova.example.com',
     roles: [RoleKey.FINANCE_EXECUTIVE],
@@ -277,6 +374,11 @@ export interface VendorSeed {
   name: string;
   email?: string;
   gstin?: string;
+  pan?: string;
+  tdsApplicable?: boolean;
+  tdsSection?: string;
+  /** Integer basis points — 10% is 1000. */
+  tdsRateBasisPoints?: number;
   bankAccountNumber?: string;
   ifsc?: string;
   beneficiaryName?: string;
@@ -333,6 +435,25 @@ export const VENDORS: VendorSeed[] = [
     bankAccountNumber: '50200098761234',
     ifsc: 'HDFC0001234',
     paymentTermsDays: 30,
+  },
+  {
+    // The TDS demonstration vendor: professional services under section 194J.
+    // Deliberately not TechZone — INV-9821 is reconciled against a committed
+    // bank fixture, and a deduction would move the amount the statement shows.
+    company: 'engineering',
+    code: 'ABCCONS',
+    name: 'ABC Consulting Services LLP',
+    email: 'accounts@abcconsulting.example.com',
+    gstin: '33AABFA1234C1ZP',
+    pan: 'AABFA1234C',
+    tdsApplicable: true,
+    tdsSection: '194J',
+    tdsRateBasisPoints: 1000,
+    bankAccountNumber: '50200055667788',
+    ifsc: 'HDFC0001234',
+    beneficiaryName: 'ABC Consulting Services LLP',
+    paymentTermsDays: 30,
+    notes: 'Professional services — 10% TDS under 194J.',
   },
   {
     company: 'engineering',

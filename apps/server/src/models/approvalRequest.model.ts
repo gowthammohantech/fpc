@@ -7,7 +7,7 @@ import {
   type ApproverType,
   type RoleKey,
 } from '@fpc/shared';
-import { baseSchemaOptions, scopedFields } from './base.js';
+import { baseSchemaOptions, orgScopedFields, scopedFields } from './base.js';
 
 export interface ApprovalStepDoc {
   order: number;
@@ -28,6 +28,14 @@ export interface ApprovalStepDoc {
 export interface ApprovalRequestDoc {
   tenantId: Types.ObjectId;
   companyId: Types.ObjectId;
+  groupId?: Types.ObjectId;
+  regionId?: Types.ObjectId;
+  verticalId?: Types.ObjectId;
+  businessUnitId?: Types.ObjectId;
+  locationId?: Types.ObjectId;
+  departmentId?: Types.ObjectId;
+  /** Human-readable identifier, e.g. APR-2026-000921. */
+  reference: string;
   subjectType: ApprovalSubjectType;
   subjectId: Types.ObjectId;
   subjectLabel: string;
@@ -69,6 +77,8 @@ const stepSchema = new Schema<ApprovalStepDoc>(
 const schema = new Schema<ApprovalRequestDoc>(
   {
     ...scopedFields(),
+    ...orgScopedFields(),
+    reference: { type: String, required: true },
     subjectType: {
       type: String,
       enum: ['VENDOR_INVOICE', 'PAYROLL_BATCH'],
@@ -99,5 +109,6 @@ const schema = new Schema<ApprovalRequestDoc>(
 // "What is waiting on me" is the single most common approvals query.
 schema.index({ tenantId: 1, status: 1, 'steps.status': 1, 'steps.candidateUserIds': 1 });
 schema.index({ tenantId: 1, companyId: 1, subjectType: 1, status: 1, requestedAt: -1 });
+schema.index({ tenantId: 1, reference: 1 }, { unique: true });
 
 export const ApprovalRequest = model<ApprovalRequestDoc>('ApprovalRequest', schema);

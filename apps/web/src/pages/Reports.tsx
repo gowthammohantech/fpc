@@ -26,6 +26,28 @@ export function ReportsPage() {
 
   const report = catalogue?.items.find((entry) => entry.key === selected);
 
+  // Only fetched for the reports that offer the filter, so a report with no
+  // vendor axis costs no extra request.
+  const needs = (kind: string) => !!report?.filters.includes(kind);
+
+  const { data: verticals } = useQuery({
+    queryKey: ['verticals', 'for-reports', companyId],
+    queryFn: () => api.settings.verticals({ companyId, pageSize: 200 }),
+    enabled: needs('vertical') && can('vertical:read'),
+  });
+
+  const { data: locations } = useQuery({
+    queryKey: ['locations', 'for-reports', companyId],
+    queryFn: () => api.settings.locations({ companyId, pageSize: 200 }),
+    enabled: needs('location') && can('location:read'),
+  });
+
+  const { data: vendors } = useQuery({
+    queryKey: ['vendors', 'for-reports', companyId],
+    queryFn: () => api.settings.vendors({ companyId, pageSize: 200 }),
+    enabled: needs('vendor') && can('vendor:read'),
+  });
+
   const { data, isFetching, error } = useQuery({
     queryKey: ['report', selected, companyId, filters],
     queryFn: () => api.reports.run(selected!, { companyId, ...filters, limit: 500 }),
@@ -101,32 +123,121 @@ export function ReportsPage() {
                 ) : null}
               </div>
 
-              {report.filters.includes('dateRange') ? (
-                <div className="flex flex-wrap gap-3 border-b border-slate-200 px-5 py-3">
-                  <div>
-                    <label className="label" htmlFor="from">
-                      From
-                    </label>
-                    <input
-                      id="from"
-                      type="date"
-                      className="input"
-                      value={filters.dateFrom ?? ''}
-                      onChange={(event) => setFilters({ ...filters, dateFrom: event.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="label" htmlFor="to">
-                      To
-                    </label>
-                    <input
-                      id="to"
-                      type="date"
-                      className="input"
-                      value={filters.dateTo ?? ''}
-                      onChange={(event) => setFilters({ ...filters, dateTo: event.target.value })}
-                    />
-                  </div>
+              {/*
+                Every filter kind the report declares is rendered. The registry
+                has always declared vendor, vertical and business-unit filters;
+                until now only the date range was actually offered, so those
+                reports could not be narrowed from the screen at all.
+              */}
+              {report.filters.length ? (
+                <div className="flex flex-wrap items-end gap-3 border-b border-slate-200 px-5 py-3">
+                  {report.filters.includes('dateRange') ? (
+                    <>
+                      <div>
+                        <label className="label" htmlFor="from">
+                          From
+                        </label>
+                        <input
+                          id="from"
+                          type="date"
+                          className="input"
+                          value={filters.dateFrom ?? ''}
+                          onChange={(event) =>
+                            setFilters({ ...filters, dateFrom: event.target.value })
+                          }
+                        />
+                      </div>
+                      <div>
+                        <label className="label" htmlFor="to">
+                          To
+                        </label>
+                        <input
+                          id="to"
+                          type="date"
+                          className="input"
+                          value={filters.dateTo ?? ''}
+                          onChange={(event) =>
+                            setFilters({ ...filters, dateTo: event.target.value })
+                          }
+                        />
+                      </div>
+                    </>
+                  ) : null}
+
+                  {report.filters.includes('vertical') ? (
+                    <div>
+                      <label className="label" htmlFor="vertical">
+                        Vertical
+                      </label>
+                      <select
+                        id="vertical"
+                        className="input"
+                        value={filters.verticalId ?? ''}
+                        onChange={(event) =>
+                          setFilters({ ...filters, verticalId: event.target.value })
+                        }
+                      >
+                        <option value="">All verticals</option>
+                        {(verticals?.items ?? []).map((vertical) => (
+                          <option key={vertical.id} value={vertical.id}>
+                            {vertical.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : null}
+
+                  {report.filters.includes('location') ? (
+                    <div>
+                      <label className="label" htmlFor="location">
+                        Location
+                      </label>
+                      <select
+                        id="location"
+                        className="input"
+                        value={filters.locationId ?? ''}
+                        onChange={(event) =>
+                          setFilters({ ...filters, locationId: event.target.value })
+                        }
+                      >
+                        <option value="">All locations</option>
+                        {(locations?.items ?? []).map((location) => (
+                          <option key={location.id} value={location.id}>
+                            {location.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : null}
+
+                  {report.filters.includes('vendor') ? (
+                    <div>
+                      <label className="label" htmlFor="vendor">
+                        Vendor
+                      </label>
+                      <select
+                        id="vendor"
+                        className="input"
+                        value={filters.vendorId ?? ''}
+                        onChange={(event) =>
+                          setFilters({ ...filters, vendorId: event.target.value })
+                        }
+                      >
+                        <option value="">All vendors</option>
+                        {(vendors?.items ?? []).map((vendor) => (
+                          <option key={vendor.id} value={vendor.id}>
+                            {vendor.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : null}
+
+                  {Object.values(filters).some(Boolean) ? (
+                    <button className="btn-secondary" onClick={() => setFilters({})}>
+                      Clear
+                    </button>
+                  ) : null}
                 </div>
               ) : null}
 

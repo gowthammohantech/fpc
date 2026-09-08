@@ -4,6 +4,7 @@ import { Types } from 'mongoose';
 import type { LoginResponse } from '@fpc/shared';
 import { ApiError } from '../../core/errors.js';
 import { User } from '../../models/user.model.js';
+import { ORG_SCOPE_FIELDS, type PrincipalOrgScope } from '../../middleware/types.js';
 import { audit, type AuditContext } from '../audit/audit.service.js';
 import { resolvePermissions } from '../organization/role.service.js';
 import {
@@ -12,6 +13,7 @@ import {
   signAccessToken,
   signRefreshToken,
   verifyRefreshToken,
+  type ScopeClaims,
 } from './token.service.js';
 
 const BCRYPT_ROUNDS = 12;
@@ -201,9 +203,7 @@ async function issueTokens(user: InstanceType<typeof User>): Promise<LoginRespon
     email: user.email,
     name: user.name,
     roleKeys,
-    companyIds: user.companyIds.map(String),
-    locationIds: user.locationIds.map(String),
-    departmentIds: user.departmentIds.map(String),
+    ...scopeClaimsFor(user),
   });
 
   const { token: refreshToken } = signRefreshToken(userId, tenantId);
@@ -226,9 +226,7 @@ async function issueTokens(user: InstanceType<typeof User>): Promise<LoginRespon
       name: user.name,
       roleKeys,
       permissions,
-      companyIds: user.companyIds.map(String),
-      locationIds: user.locationIds.map(String),
-      departmentIds: user.departmentIds.map(String),
+      ...scopeClaimsFor(user),
     },
   };
 }
@@ -250,8 +248,21 @@ async function toPrincipalLike(user: InstanceType<typeof User>) {
     name: user.name,
     roleKeys: user.roleKeys,
     permissions: await resolvePermissions(user.tenantId, user.roleKeys),
-    companyIds: user.companyIds,
-    locationIds: user.locationIds,
-    departmentIds: user.departmentIds,
+    ...(Object.fromEntries(
+      ORG_SCOPE_FIELDS.map((field) => [field, user[field] ?? []]),
+    ) as PrincipalOrgScope),
   };
+}
+
+/**
+ * Every org axis the user holds, as strings.
+ *
+ * Driven by `ORG_SCOPE_FIELDS` so a new axis reaches the token and the login
+ * response together — omitting one from the token would silently widen access,
+ * because an empty array means "unrestricted".
+ */
+function scopeClaimsFor(user: InstanceType<typeof User>): ScopeClaims {
+  return Object.fromEntries(
+    ORG_SCOPE_FIELDS.map((field) => [field, (user[field] ?? []).map(String)]),
+  ) as ScopeClaims;
 }

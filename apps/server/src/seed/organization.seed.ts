@@ -2,8 +2,12 @@ import { Types } from 'mongoose';
 import { normalizeName, type Permission } from '@fpc/shared';
 import { ApprovalRule } from '../models/approvalRule.model.js';
 import { BankAccount } from '../models/bankAccount.model.js';
+import { BusinessUnit } from '../models/businessUnit.model.js';
 import { Company } from '../models/company.model.js';
 import { Department } from '../models/department.model.js';
+import { Group } from '../models/group.model.js';
+import { Region } from '../models/region.model.js';
+import { Vertical } from '../models/vertical.model.js';
 import { Location } from '../models/location.model.js';
 import { Role } from '../models/role.model.js';
 import { Tenant } from '../models/tenant.model.js';
@@ -14,14 +18,18 @@ import { invalidateRoleCache } from '../modules/organization/role.service.js';
 import { APPROVAL_RULES, type ConditionRef } from './data.approvals.js';
 import {
   BANK_ACCOUNTS,
+  BUSINESS_UNITS,
   COMPANIES,
   DEMO_PASSWORD,
   DEPARTMENTS,
+  GROUPS,
   LOCATIONS,
+  REGIONS,
   ROLES,
   TENANT,
   USERS,
   VENDORS,
+  VERTICALS,
 } from './data.org.js';
 import { buildActors, keyOf, type SeedContext, type SeedUser } from './context.js';
 
@@ -41,14 +49,37 @@ export async function seedOrganization(): Promise<SeedContext> {
   );
   const tenantId = tenant._id;
 
+  // Groups sit above the legal entity, so they are created before it.
+  const groupIds: Record<string, Types.ObjectId> = {};
+  for (const definition of GROUPS) {
+    const group = await Group.findOneAndUpdate(
+      { tenantId, code: definition.code },
+      { tenantId, name: definition.name, code: definition.code, active: true },
+      { upsert: true, new: true },
+    );
+    groupIds[definition.key] = group._id;
+  }
+  const defaultGroupId = groupIds[GROUPS[0]!.key];
+
   const companyIds: Record<string, Types.ObjectId> = {};
   for (const definition of COMPANIES) {
     const company = await Company.findOneAndUpdate(
       { tenantId, name: definition.name },
-      { ...definition, tenantId, baseCurrency: 'INR', active: true },
+      { ...definition, tenantId, groupId: defaultGroupId, baseCurrency: 'INR', active: true },
       { upsert: true, new: true },
     );
     companyIds[definition.key] = company._id;
+  }
+
+  const regionIds: Record<string, Types.ObjectId> = {};
+  for (const definition of REGIONS) {
+    const companyId = companyIds[definition.company]!;
+    const region = await Region.findOneAndUpdate(
+      { tenantId, companyId, code: definition.code },
+      { tenantId, companyId, name: definition.name, code: definition.code, active: true },
+      { upsert: true, new: true },
+    );
+    regionIds[keyOf(definition.company, definition.code)] = region._id;
   }
 
   const locationIds: Record<string, Types.ObjectId> = {};
@@ -98,6 +129,8 @@ export async function seedOrganization(): Promise<SeedContext> {
         roleKeys: definition.roles,
         companyIds: scopedCompanyIds,
         locationIds: (definition.locations ?? []).map((key) => locationIds[key]!),
+        // Vertical and business-unit grants are applied in a second pass below:
+        // those rows do not exist yet, because a vertical needs its head user.
         status: definition.status ?? 'ACTIVE',
       },
       { upsert: true, new: true },
@@ -111,6 +144,45 @@ export async function seedOrganization(): Promise<SeedContext> {
     };
   }
 
+  // Verticals carry a head, so they follow the users; business units and
+  // departments hang off them, so they follow the verticals.
+  const verticalIds: Record<string, Types.ObjectId> = {};
+  for (const definition of VERTICALS) {
+    const companyId = companyIds[definition.company]!;
+    const vertical = await Vertical.findOneAndUpdate(
+      { tenantId, companyId, code: definition.code },
+      {
+        tenantId,
+        companyId,
+        name: definition.name,
+        code: definition.code,
+        headUserId: definition.head ? users[definition.head]?.id : undefined,
+        active: true,
+      },
+      { upsert: true, new: true },
+    );
+    verticalIds[keyOf(definition.company, definition.code)] = vertical._id;
+  }
+
+  const businessUnitIds: Record<string, Types.ObjectId> = {};
+  for (const definition of BUSINESS_UNITS) {
+    const companyId = companyIds[definition.company]!;
+    const unit = await BusinessUnit.findOneAndUpdate(
+      { tenantId, companyId, code: definition.code },
+      {
+        tenantId,
+        companyId,
+        verticalId: verticalIds[keyOf(definition.company, definition.vertical)]!,
+        name: definition.name,
+        code: definition.code,
+        kind: definition.kind ?? 'STANDARD',
+        active: true,
+      },
+      { upsert: true, new: true },
+    );
+    businessUnitIds[keyOf(definition.company, definition.code)] = unit._id;
+  }
+
   const departmentIds: Record<string, Types.ObjectId> = {};
   for (const definition of DEPARTMENTS) {
     const companyId = companyIds[definition.company]!;
@@ -119,6 +191,9 @@ export async function seedOrganization(): Promise<SeedContext> {
       {
         tenantId,
         companyId,
+        verticalId: definition.vertical
+          ? verticalIds[keyOf(definition.company, definition.vertical)]
+          : undefined,
         name: definition.name,
         code: definition.code,
         headUserId: definition.head ? users[definition.head]?.id : undefined,
@@ -194,8 +269,26 @@ export async function seedOrganization(): Promise<SeedContext> {
     );
   }
 
+  // Second pass: vertical and business-unit grants, now that those rows exist.
+  // A user scoped to a vertical sees only its work, which is what the revised
+  // access model is judged on.
+  for (const definition of USERS) {
+    if (!definition.verticals?.length && !definition.businessUnits?.length) continue;
+    await User.updateOne(
+      { tenantId, email: definition.email },
+      {
+        verticalIds: (definition.verticals ?? []).map((key) => verticalIds[key]!),
+        businessUnitIds: (definition.businessUnits ?? []).map((key) => businessUnitIds[key]!),
+      },
+    );
+  }
+
   return {
     tenantId,
+    groupIds,
+    regionIds,
+    verticalIds,
+    businessUnitIds,
     companyIds,
     locationIds,
     departmentIds,

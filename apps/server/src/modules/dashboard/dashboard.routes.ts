@@ -12,7 +12,7 @@ import { asyncHandler } from '../../core/asyncHandler.js';
 import { query, validateQuery } from '../../core/validate.js';
 import { requirePrincipal } from '../../middleware/authenticate.js';
 import { requirePermission } from '../../middleware/requirePermission.js';
-import { scopeFilter } from '../../middleware/tenantScope.js';
+import { applyOrgScope, scopeFilter } from '../../middleware/tenantScope.js';
 import { BankAccount } from '../../models/bankAccount.model.js';
 import { BankTransaction } from '../../models/banking.model.js';
 import { Invoice } from '../../models/invoice.model.js';
@@ -32,6 +32,18 @@ const OPEN_INVOICE_STATUSES = [
 ];
 
 /**
+ * Everything still owed, for the hierarchy breakdowns — wider than
+ * OPEN_INVOICE_STATUSES because an invoice with an approver or with accounting
+ * is outstanding too.
+ */
+const OUTSTANDING_INVOICE_STATUSES = [
+  InvoiceStatus.PENDING_APPROVAL,
+  InvoiceStatus.ACCOUNTING_VERIFICATION,
+  InvoiceStatus.TRUSTEE_APPROVAL,
+  ...OPEN_INVOICE_STATUSES,
+];
+
+/**
  * The CFO dashboard — PRD §30 and §31.
  *
  * Deliberately operational rather than BI: these are the numbers that answer
@@ -46,7 +58,13 @@ dashboardRouter.get(
     const principal = requirePrincipal(req);
     const q = query<typeof schemas.scopeQuery>(req);
     const base = scopeFilter(principal, q.companyId) as Record<string, unknown>;
+    applyOrgScope(principal, base, q);
     const canSeePayroll = principal.permissions.includes(PAYROLL_VISIBILITY_PERMISSION);
+
+    // Bank accounts and bank transactions belong to a company, not to a
+    // vertical, so narrowing them on org axes they do not carry would return
+    // nothing. Cash is a company-level figure by nature.
+    const companyBase = scopeFilter(principal, q.companyId) as Record<string, unknown>;
 
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
@@ -62,6 +80,8 @@ dashboardRouter.get(
       reconciledToday,
       unreconciled,
       bankBalance,
+      byVertical,
+      byCompany,
     ] = await Promise.all([
       sumBy(Invoice, base, 'status', '$totalAmount'),
       Invoice.countDocuments(base),
@@ -83,7 +103,7 @@ dashboardRouter.get(
       aggregateOne(
         PaymentBatch,
         {
-          ...base,
+          ...companyBase,
           status: { $in: ['EXPORTED', 'PROCESSING', 'PARTIALLY_RECONCILED'] },
         },
         '$totalAmount',
@@ -91,7 +111,7 @@ dashboardRouter.get(
       aggregateOne(
         BankTransaction,
         {
-          ...base,
+          ...companyBase,
           direction: 'DEBIT',
           reconciliationStatus: 'MATCHED',
           updatedAt: { $gte: startOfToday },
@@ -101,13 +121,15 @@ dashboardRouter.get(
       aggregateOne(
         BankTransaction,
         {
-          ...base,
+          ...companyBase,
           direction: 'DEBIT',
           reconciliationStatus: { $in: ['UNMATCHED', 'SUGGESTED'] },
         },
         '$amount',
       ),
-      aggregateOne(BankAccount, { ...base, active: true }, '$currentBalance'),
+      aggregateOne(BankAccount, { ...companyBase, active: true }, '$currentBalance'),
+      outstandingBy(base, '$verticalId'),
+      outstandingBy(base, '$companyId'),
     ]);
 
     const pendingApproval = invoiceStats.get(InvoiceStatus.PENDING_APPROVAL) ?? empty();
@@ -116,6 +138,11 @@ dashboardRouter.get(
       return { count: sum.count + entry.count, amount: sum.amount + entry.amount };
     }, empty());
 
+    // The two new stages: business-approved, not yet cleared to pay. Reported
+    // separately so "approved and unpaid" keeps meaning "ready or in flight".
+    const inAccounting = invoiceStats.get(InvoiceStatus.ACCOUNTING_VERIFICATION) ?? empty();
+    const withTrustee = invoiceStats.get(InvoiceStatus.TRUSTEE_APPROVAL) ?? empty();
+
     const readyForPayment = obligationStats.get('QUEUED') ?? empty();
     const batched = obligationStats.get('BATCHED') ?? empty();
     const processing = obligationStats.get('PROCESSING') ?? empty();
@@ -123,6 +150,7 @@ dashboardRouter.get(
     // Cash visibility (PRD §31): what we know is going out, against what we
     // hold. Payroll is included in the outflow only for those allowed to see
     // it; the response says so rather than quietly under-reporting.
+    // Gross above (what was billed), net here (what will leave the bank).
     const approvedVendorPayables = approvedUnpaid.amount;
     const approvedPayroll = canSeePayroll ? (payroll?.pendingPaymentAmount ?? 0) : 0;
 
@@ -133,11 +161,17 @@ dashboardRouter.get(
         pendingReview,
         pendingApproval: pendingApproval.count,
         pendingApprovalAmount: pendingApproval.amount,
+        accountingVerification: inAccounting.count,
+        accountingVerificationAmount: inAccounting.amount,
+        trusteeApproval: withTrustee.count,
+        trusteeApprovalAmount: withTrustee.amount,
         approvedUnpaid: approvedUnpaid.count,
         approvedUnpaidAmount: approvedUnpaid.amount,
         overdue: overdue.count,
         overdueAmount: overdue.amount,
       },
+      outstandingByVertical: byVertical,
+      outstandingByCompany: byCompany,
       payroll: payroll?.summary ?? null,
       payrollHidden: !canSeePayroll,
       payments: {
@@ -159,6 +193,33 @@ dashboardRouter.get(
     });
   }),
 );
+
+/**
+ * Outstanding money grouped by one organisation axis.
+ *
+ * Answers the "vertical-wise outstanding" and "company-wise outstanding"
+ * questions the CFO dashboard is judged on. Rows with no value on the axis are
+ * reported as `null` rather than dropped, so the totals still add up.
+ */
+async function outstandingBy(
+  base: Record<string, unknown>,
+  field: string,
+): Promise<Array<{ id: string | null; count: number; amount: number }>> {
+  const rows = await Invoice.aggregate<{
+    _id: Types.ObjectId | null;
+    count: number;
+    amount: number;
+  }>([
+    { $match: { ...base, status: { $in: OUTSTANDING_INVOICE_STATUSES } } },
+    { $group: { _id: field, count: { $sum: 1 }, amount: { $sum: '$totalAmount' } } },
+    { $sort: { amount: -1 } },
+  ]);
+  return rows.map((row) => ({
+    id: row._id ? String(row._id) : null,
+    count: row.count,
+    amount: row.amount,
+  }));
+}
 
 const searchQuery = z.object({
   q: z.string().trim().min(2).max(120),
@@ -202,12 +263,15 @@ dashboardRouter.get(
         ? Invoice.find({
             ...base,
             $or: [
+              // The tracking ID is what a person quotes, so it is the first
+              // thing they will paste into search.
+              { trackingId: pattern },
               { invoiceNumber: pattern },
               { vendorName: pattern },
               ...(amountFilter ? [amountFilter] : []),
             ],
           })
-            .select('invoiceNumber vendorName totalAmount status')
+            .select('trackingId invoiceNumber vendorName totalAmount status')
             .limit(perLimit)
             .lean()
         : [],
@@ -239,8 +303,8 @@ dashboardRouter.get(
         ...invoices.map((invoice) => ({
           type: 'INVOICE' as const,
           id: String(invoice._id),
-          title: invoice.invoiceNumber ?? 'Invoice',
-          subtitle: invoice.vendorName,
+          title: invoice.invoiceNumber ?? invoice.trackingId,
+          subtitle: [invoice.trackingId, invoice.vendorName].filter(Boolean).join(' · '),
           amount: invoice.totalAmount,
           status: invoice.status,
           link: `/invoices/${String(invoice._id)}`,

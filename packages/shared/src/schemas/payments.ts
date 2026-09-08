@@ -13,7 +13,11 @@ export type PaymentQueueQuery = z.infer<typeof paymentQueueQuery>;
 export const createPaymentBatchRequest = z.object({
   companyId: objectId,
   paymentDate: isoDate,
-  bankAccountId: objectId.optional(),
+  /**
+   * Required: a payment file names the account being debited, and the account
+   * has to belong to the same legal entity as the payments in the batch.
+   */
+  bankAccountId: objectId,
   bankFileFormat: z.enum(['HDFC', 'ICICI', 'GENERIC_CSV', 'GENERIC_XLSX']).optional(),
   obligationIds: z.array(objectId).min(1, 'Select at least one payment'),
   notes: z.string().trim().max(500).optional(),

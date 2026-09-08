@@ -6,6 +6,11 @@ import {
   ValidationCode,
 } from '@fpc/shared';
 import { BankTransaction } from '../models/banking.model.js';
+import { BusinessUnit } from '../models/businessUnit.model.js';
+import { FinanceRequest } from '../models/financeRequest.model.js';
+import { Group } from '../models/group.model.js';
+import { Region } from '../models/region.model.js';
+import { Vertical } from '../models/vertical.model.js';
 import { Invoice } from '../models/invoice.model.js';
 import { Notification } from '../models/notification.model.js';
 import { PaymentBatch } from '../models/paymentBatch.model.js';
@@ -69,6 +74,8 @@ RUN()('seed coverage', () => {
         InvoiceStatus.RECEIVED,
         InvoiceStatus.REVIEW_REQUIRED,
         InvoiceStatus.PENDING_APPROVAL,
+        InvoiceStatus.ACCOUNTING_VERIFICATION,
+        InvoiceStatus.TRUSTEE_APPROVAL,
         InvoiceStatus.APPROVED,
         InvoiceStatus.PAYMENT_PENDING,
         InvoiceStatus.PAYMENT_BATCHED,
@@ -80,6 +87,57 @@ RUN()('seed coverage', () => {
         InvoiceStatus.FAILED,
       ]),
     );
+  });
+
+  it('gives every organisation level something to show', async () => {
+    // The hierarchy is only useful if the screens that filter by it have rows
+    // to filter, so an empty level is a seeding bug rather than a choice.
+    const [groups, regions, verticals, units] = await Promise.all([
+      Group.countDocuments(),
+      Region.countDocuments(),
+      Vertical.countDocuments(),
+      BusinessUnit.countDocuments(),
+    ]);
+    expect(groups).toBeGreaterThan(0);
+    expect(regions).toBeGreaterThan(0);
+    expect(verticals).toBeGreaterThan(0);
+    expect(units).toBeGreaterThan(0);
+
+    // One vertical is deliberately headless, to exercise the VERTICAL_HEAD
+    // fallback; at least one must have a head or no chain could resolve.
+    expect(await Vertical.countDocuments({ headUserId: { $exists: true } })).toBeGreaterThan(0);
+    expect(
+      await BusinessUnit.countDocuments({ kind: 'CLASSIFIED' }),
+      'a classified unit is what proves scope is enforced below vertical level',
+    ).toBeGreaterThan(0);
+  });
+
+  it('carries TDS on at least one invoice, and none on the flagship', async () => {
+    const withTds = await Invoice.findOne({ tdsAmount: { $gt: 0 } }).lean();
+    expect(withTds, 'the accounting screen needs a deduction to show').toBeTruthy();
+    expect(withTds!.netPayable).toBe((withTds!.totalAmount ?? 0) - withTds!.tdsAmount);
+    expect(withTds!.tdsSection).toBeTruthy();
+
+    // INV-9821 is reconciled against a committed bank fixture, so a deduction
+    // on it would move the amount the statement has to match.
+    const flagship = await Invoice.findOne({ invoiceNumber: 'INV-9821' }).lean();
+    expect(flagship!.tdsAmount).toBe(0);
+    expect(flagship!.netPayable).toBe(flagship!.totalAmount);
+  });
+
+  it('gives every invoice a tracking id', async () => {
+    const missing = await Invoice.countDocuments({
+      $or: [{ trackingId: { $exists: false } }, { trackingId: '' }],
+    });
+    expect(missing).toBe(0);
+  });
+
+  it('leaves a trustee request waiting to be decided', async () => {
+    const pending = await FinanceRequest.findOne({ status: 'PENDING' }).lean();
+    expect(pending, 'the trustee inbox should not open empty').toBeTruthy();
+    expect(pending!.reference).toMatch(/^FR-\d{4}-\d{6}$/);
+    expect(['P1', 'P2']).toContain(pending!.priority);
+    expect(pending!.remarks.length).toBeGreaterThan(0);
   });
 
   it('fills all four reconciliation tabs', async () => {

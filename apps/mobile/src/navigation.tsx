@@ -22,7 +22,7 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function Navigation() {
-  const { user, loading } = useAuth();
+  const { user, loading, can } = useAuth();
 
   if (loading) return <Loading />;
 
@@ -58,7 +58,15 @@ export function Navigation() {
             component={ApprovalDetailScreen}
             options={{ title: 'Approval' }}
           />
-          <Stack.Screen name="Payroll" component={PayrollScreen} options={{ title: 'Payroll' }} />
+          {/*
+            Gated like every screen on the web. Without this the route is
+            registered for everyone: the API still refuses, but a trustee or an
+            accountant could navigate to a screen that only ever shows an
+            error — and "payroll is hidden" has to mean hidden.
+          */}
+          {can('payroll:read') ? (
+            <Stack.Screen name="Payroll" component={PayrollScreen} options={{ title: 'Payroll' }} />
+          ) : null}
           <Stack.Screen
             name="Notifications"
             component={NotificationsScreen}

@@ -7,11 +7,7 @@ import { paginate } from '../../core/paginate.js';
 import { query, validateBody, validateQuery } from '../../core/validate.js';
 import { requirePrincipal } from '../../middleware/authenticate.js';
 import { requirePermission } from '../../middleware/requirePermission.js';
-import {
-  applyLocationScope,
-  resolveWriteCompany,
-  scopeFilter,
-} from '../../middleware/tenantScope.js';
+import { applyOrgScope, resolveWriteCompany, scopeFilter } from '../../middleware/tenantScope.js';
 import { storage } from '../../integrations/storage/index.js';
 import { toApi } from '../../models/base.js';
 import { DocumentFile } from '../../models/documentFile.model.js';
@@ -41,7 +37,7 @@ paymentRouter.get(
     const canSeePayroll = principal.permissions.includes(PAYROLL_VISIBILITY_PERMISSION);
 
     const filter = scopeFilter(principal, q.companyId) as Record<string, unknown>;
-    applyLocationScope(principal, filter, q.locationId);
+    applyOrgScope(principal, filter, q);
     filter.approvalStatus = 'APPROVED';
     filter.paymentStatus = q.paymentStatus ?? {
       $in: [PaymentStatus.QUEUED, PaymentStatus.PENDING],

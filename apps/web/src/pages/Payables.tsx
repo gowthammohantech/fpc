@@ -32,23 +32,23 @@ const VIEWS: Array<{ key: View; label: string }> = [
 
 /** Accounts payable — PRD §16, with the ageing summary from §32. */
 export function PayablesPage() {
-  const { companyId } = useAuth();
+  const { companyId, verticalId } = useAuth();
   const [view, setView] = useState<View>('ALL');
   const [page, setPage] = useState(1);
 
   const { data: summary } = useQuery({
-    queryKey: ['payables', 'summary', companyId],
-    queryFn: () => api.payables.summary({ companyId }),
+    queryKey: ['payables', 'summary', companyId, verticalId],
+    queryFn: () => api.payables.summary({ companyId, verticalId }),
   });
 
   const { data: ageing } = useQuery({
-    queryKey: ['payables', 'ageing', companyId],
-    queryFn: () => api.payables.ageing({ companyId }),
+    queryKey: ['payables', 'ageing', companyId, verticalId],
+    queryFn: () => api.payables.ageing({ companyId, verticalId }),
   });
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['payables', companyId, view, page],
-    queryFn: () => api.payables.list({ companyId, view, page, pageSize: 25 }),
+    queryKey: ['payables', companyId, verticalId, view, page],
+    queryFn: () => api.payables.list({ companyId, verticalId, view, page, pageSize: 25 }),
   });
 
   return (

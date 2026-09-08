@@ -115,6 +115,12 @@ export interface ReconciliationDoc {
   bankTransactionId: Types.ObjectId;
   obligationId?: Types.ObjectId;
   paymentBatchId?: Types.ObjectId;
+  /**
+   * Human-readable identifier, e.g. REC-2026-001282. Allocated when the match
+   * is confirmed, because that is the moment it becomes a record someone might
+   * quote; a suggestion the matcher discards never gets one.
+   */
+  reference?: string;
   status: ReconciliationStatus;
   /** 0-100, from the match scorer. */
   confidence: number;
@@ -136,6 +142,7 @@ const reconciliationSchema = new Schema<ReconciliationDoc>(
     },
     obligationId: { type: Schema.Types.ObjectId, ref: 'PaymentObligation', index: true },
     paymentBatchId: { type: Schema.Types.ObjectId, ref: 'PaymentBatch', index: true },
+    reference: { type: String, index: true, sparse: true },
     status: { type: String, required: true, index: true },
     confidence: { type: Number, default: 0 },
     method: { type: String, enum: ['AUTO_SUGGESTED', 'MANUAL'], required: true },

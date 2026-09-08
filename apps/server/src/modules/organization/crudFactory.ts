@@ -10,7 +10,13 @@ import { paginate } from '../../core/paginate.js';
 import { query, validateBody, validateQuery } from '../../core/validate.js';
 import { requirePrincipal } from '../../middleware/authenticate.js';
 import { requirePermission } from '../../middleware/requirePermission.js';
-import { resolveWriteCompany, scopeFilter } from '../../middleware/tenantScope.js';
+import {
+  ORG_SCOPE_AXES,
+  resolveWriteCompany,
+  scopeFilter,
+  type OrgScopeAxis,
+} from '../../middleware/tenantScope.js';
+import type { Principal } from '../../middleware/types.js';
 import { toApi } from '../../models/base.js';
 import { audit, auditContext } from '../audit/audit.service.js';
 
@@ -36,13 +42,29 @@ export interface CrudConfig<T> {
   };
   createSchema: ZodTypeAny;
   updateSchema: ZodTypeAny;
+  /**
+   * Set for collections that sit above the legal entity (currently only
+   * groups), which therefore carry a tenant but no `companyId`.
+   */
+  tenantScoped?: boolean;
+  /**
+   * Set on the organisation masters themselves.
+   *
+   * A location row *is* a location, so it is narrowed by its own `_id` against
+   * the principal's grant for that axis rather than by a `locationId` field it
+   * does not have. Masters that merely belong to a company — vendors, bank
+   * accounts, approval rules — leave this off.
+   */
+  selfScopeAxis?: OrgScopeAxis;
+  /** Extra narrowing derived from the caller, e.g. classified visibility. */
+  extraScope?: (principal: Principal) => Record<string, unknown>;
   listQuerySchema?: ZodTypeAny;
   /** Extra filter derived from the parsed query. */
   buildFilter?: (q: Record<string, unknown>) => Record<string, unknown>;
   /** Hook to derive stored fields from the validated payload. */
   beforeCreate?: (
     payload: Record<string, unknown>,
-    ctx: { tenantId: Types.ObjectId; companyId: Types.ObjectId },
+    ctx: { tenantId: Types.ObjectId; companyId?: Types.ObjectId },
   ) => Promise<Record<string, unknown>> | Record<string, unknown>;
   defaultSort?: Record<string, 1 | -1>;
   /** Labels the record in the audit trail. */
@@ -62,7 +84,7 @@ export function crudRouter<T>(config: CrudConfig<T>): Router {
       const principal = requirePrincipal(req);
       const q = query(req) as Record<string, any>;
       const filter = {
-        ...scopeFilter(principal, q.companyId),
+        ...baseFilter(config, principal, q.companyId),
         ...(config.buildFilter?.(q) ?? {}),
       };
       if (q.q) filter.name = { $regex: escapeRegex(String(q.q)), $options: 'i' };
@@ -90,7 +112,7 @@ export function crudRouter<T>(config: CrudConfig<T>): Router {
     asyncHandler(async (req, res) => {
       const principal = requirePrincipal(req);
       const doc = await config.model
-        .findOne({ _id: toId(req.params.id), ...scopeFilter(principal) } as never)
+        .findOne({ _id: toId(req.params.id), ...baseFilter(config, principal) } as never)
         .lean();
       if (!doc) throw ApiError.notFound(config.name);
       res.json(toApi(doc));
@@ -104,14 +126,17 @@ export function crudRouter<T>(config: CrudConfig<T>): Router {
     asyncHandler(async (req, res) => {
       const principal = requirePrincipal(req);
       const payload = req.body as Record<string, unknown>;
-      const companyId = resolveWriteCompany(principal, payload.companyId as string | undefined);
+      // A tenant-scoped master (a group) has no company to resolve or store.
+      const companyId = config.tenantScoped
+        ? undefined
+        : resolveWriteCompany(principal, payload.companyId as string | undefined);
 
       const prepared = config.beforeCreate
         ? await config.beforeCreate(payload, { tenantId: principal.tenantId, companyId })
         : payload;
 
       const [doc] = await config.model.create([
-        { ...prepared, tenantId: principal.tenantId, companyId },
+        { ...prepared, tenantId: principal.tenantId, ...(companyId ? { companyId } : {}) },
       ] as never[]);
       const plain = (doc as { toObject: () => Record<string, unknown> }).toObject();
       await audit.record(
@@ -138,7 +163,7 @@ export function crudRouter<T>(config: CrudConfig<T>): Router {
     asyncHandler(async (req, res) => {
       const principal = requirePrincipal(req);
       const existing = await config.model
-        .findOne({ _id: toId(req.params.id), ...scopeFilter(principal) } as never)
+        .findOne({ _id: toId(req.params.id), ...baseFilter(config, principal) } as never)
         .lean();
       if (!existing) throw ApiError.notFound(config.name);
 
@@ -175,7 +200,7 @@ export function crudRouter<T>(config: CrudConfig<T>): Router {
     asyncHandler(async (req, res) => {
       const principal = requirePrincipal(req);
       const existing = await config.model
-        .findOne({ _id: toId(req.params.id), ...scopeFilter(principal) } as never)
+        .findOne({ _id: toId(req.params.id), ...baseFilter(config, principal) } as never)
         .lean();
       if (!existing) throw ApiError.notFound(config.name);
 
@@ -202,6 +227,27 @@ export function crudRouter<T>(config: CrudConfig<T>): Router {
   );
 
   return router;
+}
+
+/**
+ * Tenant + company scoping, or tenant only for masters that sit above the
+ * legal entity.
+ */
+function baseFilter<T>(
+  config: CrudConfig<T>,
+  principal: Principal,
+  requestedCompanyId?: string,
+): Record<string, unknown> {
+  const filter = config.tenantScoped
+    ? { tenantId: principal.tenantId }
+    : (scopeFilter(principal, requestedCompanyId) as Record<string, unknown>);
+
+  if (config.selfScopeAxis) {
+    const granted = principal[ORG_SCOPE_AXES[config.selfScopeAxis]];
+    if (granted.length > 0) filter._id = { $in: granted };
+  }
+  Object.assign(filter, config.extraScope?.(principal) ?? {});
+  return filter;
 }
 
 function toId(value: string | undefined): Types.ObjectId {

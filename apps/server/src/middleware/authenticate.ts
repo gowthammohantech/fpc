@@ -1,9 +1,9 @@
 import type { NextFunction, Request, Response } from 'express';
 import { Types } from 'mongoose';
 import { ApiError } from '../core/errors.js';
-import { verifyAccessToken } from '../modules/auth/token.service.js';
+import { verifyAccessToken, type ScopeClaims } from '../modules/auth/token.service.js';
 import { resolvePermissions } from '../modules/organization/role.service.js';
-import type { Principal } from './types.js';
+import { ORG_SCOPE_FIELDS, type Principal, type PrincipalOrgScope } from './types.js';
 
 /**
  * Layer 1 of access control: establish who is calling.
@@ -40,14 +40,27 @@ export function authenticate(req: Request, _res: Response, next: NextFunction): 
         name: claims.name,
         roleKeys: claims.roleKeys,
         permissions,
-        companyIds: claims.companyIds.map((id) => new Types.ObjectId(id)),
-        locationIds: claims.locationIds.map((id) => new Types.ObjectId(id)),
-        departmentIds: claims.departmentIds.map((id) => new Types.ObjectId(id)),
+        ...toPrincipalScope(claims),
       };
       req.principal = principal;
       next();
     })
     .catch(next);
+}
+
+/**
+ * Reads every org axis off the claims at once.
+ *
+ * Driven by `ORG_SCOPE_FIELDS` rather than written out, so adding an axis
+ * cannot leave one silently unread here — which would quietly widen access.
+ */
+function toPrincipalScope(claims: ScopeClaims): PrincipalOrgScope {
+  return Object.fromEntries(
+    ORG_SCOPE_FIELDS.map((field) => [
+      field,
+      (claims[field] ?? []).map((id) => new Types.ObjectId(id)),
+    ]),
+  ) as PrincipalOrgScope;
 }
 
 /** Throws if the request has no principal. Use inside services. */

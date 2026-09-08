@@ -15,6 +15,7 @@ import {
 } from '@fpc/shared';
 import { logger } from '../../config/logger.js';
 import { ApiError } from '../../core/errors.js';
+import { REFERENCE_PREFIX, nextReference } from '../../core/sequence.js';
 import { eventBus } from '../../core/eventBus.js';
 import { BankStatement, BankTransaction, Reconciliation } from '../../models/banking.model.js';
 import { Invoice } from '../../models/invoice.model.js';
@@ -231,6 +232,7 @@ export async function confirmMatch(
     bankTransactionId: transaction._id,
     obligationId: obligation._id,
     paymentBatchId: obligation.paymentBatchId,
+    reference: await nextReference(transaction.tenantId, REFERENCE_PREFIX.RECONCILIATION),
     status: ReconciliationStatus.MATCHED,
     confidence: scored?.confidence ?? 0,
     method: input.method ?? 'MANUAL',
@@ -434,7 +436,12 @@ async function settleInvoice(
       companyId: invoice.companyId,
       from,
       to: invoice.status,
-      metadata: { paidAt, amount: invoice.totalAmount },
+      metadata: {
+        paidAt,
+        grossAmount: invoice.totalAmount,
+        tdsAmount: invoice.tdsAmount,
+        amount: invoice.netPayable,
+      },
     },
     context,
   );

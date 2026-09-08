@@ -44,6 +44,14 @@ export async function createObligationForInvoice(
   const vendor = invoice.vendorId ? await Vendor.findById(invoice.vendorId).lean() : null;
   if (!vendor) throw ApiError.unprocessable('The invoice has no vendor to pay');
 
+  if (invoice.netPayable <= 0) {
+    // A fully withheld invoice owes the vendor nothing; a bank file row for
+    // zero would be rejected, and silently paying the gross would be worse.
+    throw ApiError.unprocessable(
+      `${invoice.trackingId} nets to nothing after TDS, so there is nothing to pay. Check the deduction on the accounting screen.`,
+    );
+  }
+
   if (!vendor.bankAccountNumber || !vendor.ifsc) {
     // Better to stop here with a clear message than to generate a bank file
     // the bank will reject.
@@ -55,16 +63,23 @@ export async function createObligationForInvoice(
   const obligation = await PaymentObligation.create({
     tenantId: invoice.tenantId,
     companyId: invoice.companyId,
+    groupId: invoice.groupId,
+    regionId: invoice.regionId,
+    verticalId: invoice.verticalId,
+    businessUnitId: invoice.businessUnitId,
     locationId: invoice.locationId,
     departmentId: invoice.departmentId,
     type: ObligationType.VENDOR,
     sourceId: invoice._id,
-    reference: invoice.invoiceNumber ?? String(invoice._id),
+    reference: invoice.invoiceNumber ?? invoice.trackingId,
     payeeName: vendor.name,
     beneficiaryName: vendor.beneficiaryName || vendor.name,
     beneficiaryAccount: vendor.bankAccountNumber,
     ifsc: vendor.ifsc,
-    amount: invoice.totalAmount ?? 0,
+    // Net of TDS: the obligation is an instruction to the bank, and the bank
+    // pays what the vendor actually receives. It is also what the statement
+    // will show, which is what reconciliation matches on.
+    amount: invoice.netPayable,
     currency: 'INR',
     dueDate: invoice.dueDate,
     approvalStatus: ApprovalStatus.APPROVED,
@@ -89,9 +104,12 @@ export async function createObligationForInvoice(
       from,
       to: InvoiceStatus.PAYMENT_PENDING,
       metadata: {
+        grossAmount: invoice.totalAmount,
+        tdsAmount: invoice.tdsAmount,
         amount: obligation.amount,
         beneficiaryAccount: maskAccount(obligation.beneficiaryAccount),
         invoiceId: String(invoice._id),
+        trackingId: invoice.trackingId,
       },
     },
     context,

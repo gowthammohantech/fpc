@@ -80,6 +80,43 @@ function trim(value: number): string {
   return value.toFixed(2).replace(/\.00$/, '');
 }
 
+/**
+ * Rates follow the same discipline as amounts: integers only.
+ *
+ * A rate is stored as **basis points** — hundredths of a percent — so a 10%
+ * TDS rate is the integer 1000 and 0.75% is 75. Nothing rounds twice, and a
+ * rate can be compared and summed exactly.
+ */
+export type BasisPoints = number;
+
+const BASIS_POINTS_PER_UNIT = 10_000;
+
+export function percentToBasisPoints(percent: number): BasisPoints {
+  if (!Number.isFinite(percent)) throw new TypeError(`Not a numeric rate: ${String(percent)}`);
+  return Math.round(percent * 100);
+}
+
+export function basisPointsToPercent(basisPoints: BasisPoints): number {
+  return basisPoints / 100;
+}
+
+/** `10%`, `0.75%` — trailing zeros trimmed, as the rate is displayed on screen. */
+export function formatBasisPoints(basisPoints: BasisPoints): string {
+  return `${String(basisPointsToPercent(basisPoints))}%`;
+}
+
+/**
+ * Apply a basis-point rate to a minor-unit amount, rounding half up.
+ *
+ * The intermediate product stays exact for any amount this product can hold:
+ * ₹100 Cr at 100% is 10^15, comfortably inside the safe integer range.
+ */
+export function applyRate(amount: Minor, basisPoints: BasisPoints): Minor {
+  if (!Number.isInteger(amount)) throw new TypeError('Amount must be an integer minor value');
+  if (!Number.isInteger(basisPoints)) throw new TypeError('Rate must be integer basis points');
+  return Math.round((amount * basisPoints) / BASIS_POINTS_PER_UNIT);
+}
+
 /** Parse amounts as they appear in invoices and bank statements. */
 export function parseAmountToMinor(input: unknown): Minor | null {
   if (input === null || input === undefined || input === '') return null;

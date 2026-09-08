@@ -13,6 +13,9 @@ export const RoleKey = {
   FINANCE_EXECUTIVE: 'FINANCE_EXECUTIVE',
   FINANCE_MANAGER: 'FINANCE_MANAGER',
   APPROVER: 'APPROVER',
+  VERTICAL_HEAD: 'VERTICAL_HEAD',
+  ACCOUNTS_TEAM: 'ACCOUNTS_TEAM',
+  TRUSTEE: 'TRUSTEE',
   CFO: 'CFO',
   PAYROLL_USER: 'PAYROLL_USER',
   AUDITOR: 'AUDITOR',
@@ -26,6 +29,9 @@ export const ROLE_LABELS: Record<RoleKey, string> = {
   FINANCE_EXECUTIVE: 'Finance Executive',
   FINANCE_MANAGER: 'Finance Manager',
   APPROVER: 'Approver',
+  VERTICAL_HEAD: 'Vertical Head',
+  ACCOUNTS_TEAM: 'Accounting Team',
+  TRUSTEE: 'Trustee',
   CFO: 'CFO',
   PAYROLL_USER: 'Payroll User',
   AUDITOR: 'Auditor / Read Only',
@@ -58,6 +64,10 @@ export const InvoiceStatus = {
   VALIDATED: 'VALIDATED',
   SUBMITTED: 'SUBMITTED',
   PENDING_APPROVAL: 'PENDING_APPROVAL',
+  /** Business approval is done; the accounting team verifies and applies TDS. */
+  ACCOUNTING_VERIFICATION: 'ACCOUNTING_VERIFICATION',
+  /** Escalated to the trustee team, with a priority and remarks. */
+  TRUSTEE_APPROVAL: 'TRUSTEE_APPROVAL',
   APPROVED: 'APPROVED',
   PAYMENT_PENDING: 'PAYMENT_PENDING',
   PAYMENT_BATCHED: 'PAYMENT_BATCHED',
@@ -158,8 +168,63 @@ export const ApproverType = {
   ROLE: 'ROLE',
   USER: 'USER',
   DEPARTMENT_HEAD: 'DEPARTMENT_HEAD',
+  VERTICAL_HEAD: 'VERTICAL_HEAD',
 } as const;
 export type ApproverType = (typeof ApproverType)[keyof typeof ApproverType];
+export const APPROVER_TYPES = Object.values(ApproverType);
+
+/**
+ * A business unit that is only visible to users explicitly granted it.
+ *
+ * `CLASSIFIED` sits at the same level of the hierarchy as `STANDARD`, so it is
+ * a discriminator on the business unit rather than a collection of its own.
+ */
+export const BusinessUnitKind = {
+  STANDARD: 'STANDARD',
+  CLASSIFIED: 'CLASSIFIED',
+} as const;
+export type BusinessUnitKind = (typeof BusinessUnitKind)[keyof typeof BusinessUnitKind];
+export const BUSINESS_UNIT_KINDS = Object.values(BusinessUnitKind);
+
+/** Urgency a finance request carries to the trustee team. */
+export const FinanceRequestPriority = {
+  P1: 'P1',
+  P2: 'P2',
+} as const;
+export type FinanceRequestPriority =
+  (typeof FinanceRequestPriority)[keyof typeof FinanceRequestPriority];
+export const FINANCE_REQUEST_PRIORITIES = Object.values(FinanceRequestPriority);
+
+/**
+ * Trustee outcome. `RETURNED` sends the invoice back to accounting for rework
+ * and has no equivalent in the approval-step vocabulary, which is one reason
+ * finance requests are their own collection.
+ */
+export const FinanceRequestStatus = {
+  PENDING: 'PENDING',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
+  RETURNED: 'RETURNED',
+  CANCELLED: 'CANCELLED',
+} as const;
+export type FinanceRequestStatus = (typeof FinanceRequestStatus)[keyof typeof FinanceRequestStatus];
+export const FINANCE_REQUEST_STATUSES = Object.values(FinanceRequestStatus);
+
+export const FinanceRequestAction = {
+  APPROVE: 'APPROVE',
+  REJECT: 'REJECT',
+  RETURN: 'RETURN',
+} as const;
+export type FinanceRequestAction = (typeof FinanceRequestAction)[keyof typeof FinanceRequestAction];
+
+/**
+ * TDS sections the product offers in the accounting workbench.
+ *
+ * Deliberately a short list of the sections that occur on vendor invoices —
+ * the rate is stored per vendor, so this only labels the deduction.
+ */
+export const TDS_SECTIONS = ['194C', '194H', '194I', '194J', '194Q', '195'] as const;
+export type TdsSection = (typeof TDS_SECTIONS)[number];
 
 /** Where an obligation sits in the payment pipeline — PRD §20. */
 export const PaymentStatus = {
@@ -270,6 +335,10 @@ export const NotificationType = {
   INVOICE_APPROVED: 'INVOICE_APPROVED',
   INVOICE_REJECTED: 'INVOICE_REJECTED',
   INVOICE_DUPLICATE_DETECTED: 'INVOICE_DUPLICATE_DETECTED',
+  INVOICE_AWAITING_ACCOUNTING: 'INVOICE_AWAITING_ACCOUNTING',
+  INVOICE_RETURNED_TO_REVIEW: 'INVOICE_RETURNED_TO_REVIEW',
+  FINANCE_REQUEST_RAISED: 'FINANCE_REQUEST_RAISED',
+  FINANCE_REQUEST_DECIDED: 'FINANCE_REQUEST_DECIDED',
   PAYROLL_AWAITING_APPROVAL: 'PAYROLL_AWAITING_APPROVAL',
   PAYROLL_APPROVED: 'PAYROLL_APPROVED',
   PAYROLL_REJECTED: 'PAYROLL_REJECTED',
@@ -283,7 +352,11 @@ export type NotificationType = (typeof NotificationType)[keyof typeof Notificati
 
 export const EntityType = {
   TENANT: 'TENANT',
+  GROUP: 'GROUP',
   COMPANY: 'COMPANY',
+  REGION: 'REGION',
+  VERTICAL: 'VERTICAL',
+  BUSINESS_UNIT: 'BUSINESS_UNIT',
   LOCATION: 'LOCATION',
   DEPARTMENT: 'DEPARTMENT',
   USER: 'USER',
@@ -296,6 +369,7 @@ export const EntityType = {
   PAYMENT_OBLIGATION: 'PAYMENT_OBLIGATION',
   APPROVAL_RULE: 'APPROVAL_RULE',
   APPROVAL_REQUEST: 'APPROVAL_REQUEST',
+  FINANCE_REQUEST: 'FINANCE_REQUEST',
   PAYMENT_BATCH: 'PAYMENT_BATCH',
   BANK_STATEMENT: 'BANK_STATEMENT',
   BANK_TRANSACTION: 'BANK_TRANSACTION',

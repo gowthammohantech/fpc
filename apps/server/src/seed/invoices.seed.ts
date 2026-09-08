@@ -2,8 +2,12 @@ import { Types, type HydratedDocument } from 'mongoose';
 import {
   ApprovalStatus,
   InvoiceStatus,
+  computeTds,
+  netPayableFor,
+  tdsBaseFor,
   toMinor,
   type ExtractionResult,
+  type TdsSection,
   type ValidationFinding,
 } from '@fpc/shared';
 import { logger } from '../config/logger.js';
@@ -12,7 +16,10 @@ import { ApprovalRequest } from '../models/approvalRequest.model.js';
 import { act, startApproval } from '../modules/approvals/approval.service.js';
 import { onApprovalDecided } from '../modules/approvals/approval.dispatcher.js';
 import { audit } from '../modules/audit/audit.service.js';
-import { COMPANIES, VENDORS } from './data.org.js';
+import { REFERENCE_PREFIX, nextReference } from '../core/sequence.js';
+import * as financeRequests from '../modules/financeRequests/financeRequest.service.js';
+import * as invoiceService from '../modules/invoices/invoice.service.js';
+import { COMPANIES, VENDORS, type VendorSeed } from './data.org.js';
 import { INVOICES, type FindingSeed, type InvoiceSeed } from './data.invoices.js';
 import { attachInvoiceDocument } from './documents.seed.js';
 import { actor, daysFromNow, keyOf, user, type SeedContext } from './context.js';
@@ -79,11 +86,24 @@ async function createInvoice(
   return Invoice.create({
     tenantId: context.tenantId,
     companyId,
+    // The tracking ID is what a person quotes; allocated at intake in the
+    // service, and here so seeded rows are quotable too.
+    trackingId: await nextReference(context.tenantId, REFERENCE_PREFIX.INVOICE),
+    groupId: context.groupIds.nova,
     locationId: definition.location
       ? context.locationIds[keyOf(definition.company, definition.location)]
       : undefined,
     departmentId: definition.department
       ? context.departmentIds[keyOf(definition.company, definition.department)]
+      : undefined,
+    regionId: definition.region
+      ? context.regionIds[keyOf(definition.company, definition.region)]
+      : undefined,
+    verticalId: definition.vertical
+      ? context.verticalIds[keyOf(definition.company, definition.vertical)]
+      : undefined,
+    businessUnitId: definition.businessUnit
+      ? context.businessUnitIds[keyOf(definition.company, definition.businessUnit)]
       : undefined,
     vendorId: definition.vendor
       ? context.vendorIds[keyOf(definition.company, definition.vendor)]
@@ -97,6 +117,9 @@ async function createInvoice(
     taxAmount: definition.tax === undefined ? undefined : toMinor(definition.tax),
     totalAmount: definition.total === undefined ? undefined : toMinor(definition.total),
     gstin: vendor?.gstin,
+    // Proposed from the vendor master, exactly as `applyExtraction` does for a
+    // real invoice; the accounting stage below confirms or overrides it.
+    ...proposedTds(vendor, definition),
     status: InvoiceStatus.RECEIVED,
     source: definition.source ?? 'EMAIL',
     // Doubles as the idempotency key for the row with no invoice number.
@@ -112,6 +135,43 @@ async function createInvoice(
 }
 
 /** Walks one invoice from RECEIVED to wherever its definition stops. */
+/**
+ * The TDS figures a seeded invoice arrives with.
+ *
+ * Mirrors `invoice.service.proposeTds`, which cannot be reused directly here
+ * because the seed builds a plain object rather than a hydrated document.
+ */
+function proposedTds(vendor: VendorSeed | undefined, definition: InvoiceSeed) {
+  const amounts = {
+    subtotal: definition.subtotal === undefined ? undefined : toMinor(definition.subtotal),
+    taxAmount: definition.tax === undefined ? undefined : toMinor(definition.tax),
+    totalAmount: definition.total === undefined ? undefined : toMinor(definition.total),
+  };
+  const applicable = !!vendor?.tdsApplicable && !!vendor.pan && !!vendor.tdsRateBasisPoints;
+  if (!applicable) {
+    return {
+      tdsApplicable: false,
+      tdsAmount: 0,
+      netPayable: amounts.totalAmount ?? 0,
+    };
+  }
+
+  const base = tdsBaseFor(amounts);
+  const tdsAmount = computeTds({
+    tdsApplicable: true,
+    baseAmount: base,
+    rateBasisPoints: vendor.tdsRateBasisPoints,
+  });
+  return {
+    tdsApplicable: true,
+    tdsSection: vendor.tdsSection as TdsSection,
+    tdsRateBasisPoints: vendor.tdsRateBasisPoints,
+    tdsBaseAmount: base,
+    tdsAmount,
+    netPayable: netPayableFor(amounts.totalAmount ?? 0, tdsAmount),
+  };
+}
+
 async function walk(
   context: SeedContext,
   definition: InvoiceSeed,
@@ -198,10 +258,12 @@ async function walk(
   );
 
   if (!outcome.request) {
-    // No rule matched, so the service auto-approved. Nothing left to drive.
-    invoice.status = InvoiceStatus.APPROVED;
+    // No rule matched, so business approval is skipped — but accounting still
+    // has to see it, exactly as the submit route does.
+    invoice.status = InvoiceStatus.ACCOUNTING_VERIFICATION;
     invoice.approvalStatus = ApprovalStatus.APPROVED;
     await invoice.save();
+    await runAccountingStage(context, definition, invoice);
     return;
   }
 
@@ -233,22 +295,78 @@ async function walk(
       // `onApprovalDecided` creates the payment obligation, which refuses a
       // vendor with no bank details on file. That is the point of the Swift
       // Logistics row: it rests at APPROVED, visibly unpayable.
-      try {
-        await onApprovalDecided(decision.decision, decision.context);
-      } catch (error) {
-        logger.info(
-          { invoiceNumber: definition.invoiceNumber, err: (error as Error).message },
-          'seeded invoice approved but could not become a payment obligation',
-        );
-      }
+      // Business approval hands the invoice to accounting; the obligation is
+      // created later, by the accounting stage below.
+      await onApprovalDecided(decision.decision, decision.context);
       break;
     }
   }
 
   if (definition.stopAt === 'PARTIALLY_APPROVED') {
     await backdateChain(outcome.request._id, definition.daysAgo);
+    return;
+  }
+
+  if (definition.stopAt === 'REJECTED') return;
+
+  const fresh = await Invoice.findById(invoice._id);
+  if (fresh?.status === InvoiceStatus.ACCOUNTING_VERIFICATION) {
+    await runAccountingStage(context, definition, fresh);
   }
 }
+
+/**
+ * Drives the accounting and trustee stages for a seeded invoice.
+ *
+ * Uses the real services rather than assigning statuses, so the seeded rows
+ * carry the same audit trail, TDS figures and obligations a live invoice
+ * would — which is what makes the demo data trustworthy as a fixture.
+ */
+async function runAccountingStage(
+  context: SeedContext,
+  definition: InvoiceSeed,
+  invoice: HydratedDocument<InvoiceDoc>,
+): Promise<void> {
+  if (definition.stopAt === 'ACCOUNTING_VERIFICATION') return;
+
+  const accountant = user(context, ACCOUNTING_EMAIL);
+  const accountantContext = actor(context, ACCOUNTING_EMAIL);
+
+  if (definition.stopAt === 'TRUSTEE_APPROVAL') {
+    await financeRequests.open(
+      {
+        invoice,
+        priority: definition.trusteePriority ?? 'P2',
+        remarks: definition.trusteeRemarks ?? 'Escalated for a trustee decision.',
+        requestedByUserId: accountant.id,
+        requestedByName: accountant.name,
+      },
+      accountantContext,
+    );
+    return;
+  }
+
+  invoice.accounting = {
+    verifiedByUserId: accountant.id,
+    verifiedAt: daysFromNow(-definition.daysAgo + 2),
+  };
+  await invoice.save();
+
+  try {
+    await invoiceService.releaseToAccountsPayable(invoice, accountantContext);
+  } catch (error) {
+    // `createObligationForInvoice` refuses a vendor with no bank details on
+    // file. That is the point of the Swift Logistics row: it rests visibly
+    // unpayable rather than silently vanishing from the queue.
+    logger.info(
+      { invoiceNumber: definition.invoiceNumber, err: (error as Error).message },
+      'seeded invoice cleared for payment but could not become a payment obligation',
+    );
+  }
+}
+
+/** The accounting team member every seeded verification is attributed to. */
+const ACCOUNTING_EMAIL = 'accounts@nova.example.com';
 
 /**
  * Acts on whatever step is currently active, as an approver who is eligible

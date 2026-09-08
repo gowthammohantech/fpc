@@ -8,8 +8,15 @@ export interface UserDoc {
   passwordHash: string;
   /** Built-in role keys (PRD §7) and the tenant's own, mixed freely. */
   roleKeys: string[];
-  /** Empty means "every company in the tenant" (used by platform admins). */
+  /**
+   * Organisation scope. Empty on an axis means "unrestricted on that axis" —
+   * `companyIds: []` is how a platform admin reaches every company.
+   */
   companyIds: Types.ObjectId[];
+  groupIds: Types.ObjectId[];
+  regionIds: Types.ObjectId[];
+  verticalIds: Types.ObjectId[];
+  businessUnitIds: Types.ObjectId[];
   locationIds: Types.ObjectId[];
   departmentIds: Types.ObjectId[];
   status: 'ACTIVE' | 'INVITED' | 'SUSPENDED';
@@ -34,6 +41,10 @@ const schema = new Schema<UserDoc>(
     // the assignment is validated against the catalogue in the route instead.
     roleKeys: [{ type: String, required: true }],
     companyIds: [{ type: Schema.Types.ObjectId, ref: 'Company' }],
+    groupIds: [{ type: Schema.Types.ObjectId, ref: 'Group' }],
+    regionIds: [{ type: Schema.Types.ObjectId, ref: 'Region' }],
+    verticalIds: [{ type: Schema.Types.ObjectId, ref: 'Vertical' }],
+    businessUnitIds: [{ type: Schema.Types.ObjectId, ref: 'BusinessUnit' }],
     locationIds: [{ type: Schema.Types.ObjectId, ref: 'Location' }],
     departmentIds: [{ type: Schema.Types.ObjectId, ref: 'Department' }],
     status: { type: String, enum: ['ACTIVE', 'INVITED', 'SUSPENDED'], default: 'ACTIVE' },

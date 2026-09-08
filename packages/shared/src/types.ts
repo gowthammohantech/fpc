@@ -5,8 +5,12 @@ import type {
   ApproverType,
   BankFileFormat,
   BankTransactionDirection,
+  BusinessUnitKind,
   Currency,
   EntityType,
+  FinanceRequestAction,
+  FinanceRequestPriority,
+  FinanceRequestStatus,
   InvoiceSource,
   InvoiceStatus,
   MailAttachmentStatus,
@@ -28,6 +32,7 @@ import type {
   ReconciliationStatus,
   RoleKey,
   StatementImportStatus,
+  TdsSection,
   ValidationCode,
   ValidationSeverity,
   VendorStatus,
@@ -44,7 +49,39 @@ export interface Timestamps {
   updatedAt: IsoDate;
 }
 
-export interface Principal {
+/**
+ * The organisation axes a business document is filed under, and the same
+ * vocabulary a user's access is granted in.
+ *
+ * Every axis is denormalised onto the document rather than walked through
+ * parent links, so scoping a query stays a flat `$in` on an indexed field.
+ */
+export interface OrgDimensions {
+  groupId?: Id;
+  regionId?: Id;
+  verticalId?: Id;
+  businessUnitId?: Id;
+  locationId?: Id;
+  departmentId?: Id;
+}
+
+/**
+ * The org axes a principal is restricted to.
+ *
+ * An empty array on any axis means "unrestricted on that axis" — the same
+ * convention `companyIds` has always used for platform and company admins.
+ */
+export interface OrgScope {
+  companyIds: Id[];
+  groupIds: Id[];
+  regionIds: Id[];
+  verticalIds: Id[];
+  businessUnitIds: Id[];
+  locationIds: Id[];
+  departmentIds: Id[];
+}
+
+export interface Principal extends OrgScope {
   userId: Id;
   tenantId: Id;
   email: string;
@@ -52,10 +89,6 @@ export interface Principal {
   /** Built-in role keys (PRD §7) and the tenant's own, mixed freely. */
   roleKeys: string[];
   permissions: Permission[];
-  /** Companies this user may act within. Empty means all companies in tenant. */
-  companyIds: Id[];
-  locationIds: Id[];
-  departmentIds: Id[];
 }
 
 export interface AuthTokens {
@@ -80,12 +113,58 @@ export interface Tenant extends Timestamps {
 export interface Company extends Timestamps {
   id: Id;
   tenantId: Id;
+  /** The group this legal entity belongs to, when the tenant uses groups. */
+  groupId?: Id;
   name: string;
   legalName?: string;
   gstin?: string;
   cin?: string;
   invoiceInboxAddress?: string;
   baseCurrency: Currency;
+  active: boolean;
+}
+
+/**
+ * A group of companies. Sits above the legal entity, so it is scoped to the
+ * tenant rather than to a company.
+ */
+export interface Group extends Timestamps {
+  id: Id;
+  tenantId: Id;
+  name: string;
+  code: string;
+  active: boolean;
+}
+
+export interface Region extends Timestamps {
+  id: Id;
+  tenantId: Id;
+  companyId: Id;
+  name: string;
+  code: string;
+  active: boolean;
+}
+
+export interface Vertical extends Timestamps {
+  id: Id;
+  tenantId: Id;
+  companyId: Id;
+  name: string;
+  code: string;
+  /** Resolved by VERTICAL_HEAD approval steps, mirroring Department. */
+  headUserId?: Id;
+  active: boolean;
+}
+
+export interface BusinessUnit extends Timestamps {
+  id: Id;
+  tenantId: Id;
+  companyId: Id;
+  verticalId: Id;
+  name: string;
+  code: string;
+  /** CLASSIFIED units are invisible unless a user is granted them by name. */
+  kind: BusinessUnitKind;
   active: boolean;
 }
 
@@ -104,21 +183,20 @@ export interface Department extends Timestamps {
   id: Id;
   tenantId: Id;
   companyId: Id;
+  /** The vertical a department reports into, when the tenant uses verticals. */
+  verticalId?: Id;
   name: string;
   code: string;
   headUserId?: Id;
   active: boolean;
 }
 
-export interface User extends Timestamps {
+export interface User extends Timestamps, OrgScope {
   id: Id;
   tenantId: Id;
   name: string;
   email: string;
   roleKeys: string[];
-  companyIds: Id[];
-  locationIds: Id[];
-  departmentIds: Id[];
   status: 'ACTIVE' | 'INVITED' | 'SUSPENDED';
   lastLoginAt?: IsoDate;
 }
@@ -132,6 +210,12 @@ export interface Vendor extends Timestamps {
   email?: string;
   phone?: string;
   gstin?: string;
+  pan?: string;
+  /** Whether TDS is withheld from this vendor's invoices by default. */
+  tdsApplicable: boolean;
+  tdsSection?: TdsSection;
+  /** Integer basis points: 10% is 1000. See `money.ts`. */
+  tdsRateBasisPoints?: number;
   bankAccountNumber?: string;
   ifsc?: string;
   beneficiaryName?: string;
@@ -210,12 +294,21 @@ export interface InvoiceLine {
   taxRate?: number;
 }
 
-export interface Invoice extends Timestamps {
+/** What the accounting team recorded when it verified an invoice. */
+export interface InvoiceAccounting {
+  verifiedByUserId?: Id;
+  verifiedAt?: IsoDate;
+  glCode?: string;
+  costCentre?: string;
+  notes?: string;
+}
+
+export interface Invoice extends Timestamps, OrgDimensions {
   id: Id;
   tenantId: Id;
   companyId: Id;
-  locationId?: Id;
-  departmentId?: Id;
+  /** Human-readable identifier, e.g. FIN-INV-2026-000182. Unique per tenant. */
+  trackingId: string;
   vendorId?: Id;
   vendorName?: string;
   invoiceNumber?: string;
@@ -226,7 +319,21 @@ export interface Invoice extends Timestamps {
   /** All amounts in minor units. */
   subtotal?: number;
   taxAmount?: number;
+  /**
+   * GROSS — what the vendor billed. Unchanged by TDS, which is a deduction at
+   * payment rather than a change to the bill, so ageing, duplicate detection
+   * and the invoice register all keep reading this field.
+   */
   totalAmount?: number;
+  tdsApplicable: boolean;
+  tdsSection?: TdsSection;
+  tdsRateBasisPoints?: number;
+  /** The taxable value the deduction was calculated on. */
+  tdsBaseAmount?: number;
+  tdsAmount: number;
+  /** `totalAmount - tdsAmount` — what the bank actually pays. */
+  netPayable: number;
+  accounting?: InvoiceAccounting;
   gstin?: string;
   status: InvoiceStatus;
   source: InvoiceSource;
@@ -237,6 +344,8 @@ export interface Invoice extends Timestamps {
   findings: ValidationFinding[];
   approvalRequestId?: Id;
   approvalStatus: ApprovalStatus;
+  /** The open trustee escalation, when the invoice has one. */
+  financeRequestId?: Id;
   obligationId?: Id;
   paymentBatchId?: Id;
   paidAt?: IsoDate;
@@ -251,7 +360,15 @@ export interface Invoice extends Timestamps {
 // ── Approvals ───────────────────────────────────────────────
 
 export type ConditionField =
-  'amount' | 'vendorId' | 'departmentId' | 'locationId' | 'currency' | 'employeeCount';
+  | 'amount'
+  | 'vendorId'
+  | 'departmentId'
+  | 'locationId'
+  | 'regionId'
+  | 'verticalId'
+  | 'businessUnitId'
+  | 'currency'
+  | 'employeeCount';
 
 export type ConditionOperator =
   'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'in' | 'nin' | 'between';
@@ -316,7 +433,55 @@ export interface ApprovalRequest extends Timestamps {
   steps: ApprovalStep[];
   requestedByUserId: Id;
   requestedAt: IsoDate;
+  /** Human-readable identifier, e.g. APR-2026-000921. Unique per tenant. */
+  reference: string;
   completedAt?: IsoDate;
+}
+
+// ── Trustee escalation ──────────────────────────────────────
+
+export interface FinanceRequestRemark {
+  userId: Id;
+  userName: string;
+  at: IsoDate;
+  action?: FinanceRequestAction | 'RAISED' | 'REMARK';
+  text: string;
+}
+
+/**
+ * A request from finance to the trustee team about one invoice.
+ *
+ * Deliberately not an extra step on the ApprovalRequest chain: it carries a
+ * priority and remarks that no approval step has, it can be *returned* rather
+ * than only approved or rejected, and a second open chain on the same subject
+ * would break the "cancel the request for this subject" lookup.
+ */
+export interface FinanceRequest extends Timestamps, OrgDimensions {
+  id: Id;
+  tenantId: Id;
+  companyId: Id;
+  /** Human-readable identifier, e.g. FR-2026-000829. Unique per tenant. */
+  reference: string;
+  invoiceId: Id;
+  invoiceTrackingId: string;
+  subjectLabel: string;
+  vendorId?: Id;
+  vendorName?: string;
+  /** Snapshot in minor units, taken when accounting raised the request. */
+  grossAmount: number;
+  tdsAmount: number;
+  netPayable: number;
+  currency: Currency;
+  priority: FinanceRequestPriority;
+  status: FinanceRequestStatus;
+  requestedByUserId: Id;
+  requestedByName: string;
+  requestedAt: IsoDate;
+  remarks: FinanceRequestRemark[];
+  decidedByUserId?: Id;
+  decidedByName?: string;
+  decidedAt?: IsoDate;
+  decision?: FinanceRequestAction;
 }
 
 // ── Payroll ─────────────────────────────────────────────────
@@ -586,19 +751,37 @@ export interface ApiErrorBody {
 
 // ── Dashboard ───────────────────────────────────────────────
 
+/** One row of a hierarchy breakdown. `id` is null for rows with no unit set. */
+export interface OutstandingByUnit {
+  id: Id | null;
+  count: number;
+  amount: number;
+}
+
 export interface DashboardSummary {
   /** Minor units. Excludes payroll when the viewer lacks payroll access. */
   totalPayables: number;
+  /**
+   * Invoice-side figures are GROSS — what was billed. The `payments` and
+   * `cash` blocks below are net of TDS, because that is what leaves the bank.
+   * The difference between the two is the tax withheld, not a discrepancy.
+   */
   invoices: {
     received: number;
     pendingReview: number;
     pendingApproval: number;
     pendingApprovalAmount: number;
+    accountingVerification: number;
+    accountingVerificationAmount: number;
+    trusteeApproval: number;
+    trusteeApprovalAmount: number;
     approvedUnpaid: number;
     approvedUnpaidAmount: number;
     overdue: number;
     overdueAmount: number;
   };
+  outstandingByVertical: OutstandingByUnit[];
+  outstandingByCompany: OutstandingByUnit[];
   payroll: {
     batchId: Id;
     label: string;

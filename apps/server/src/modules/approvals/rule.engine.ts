@@ -19,6 +19,9 @@ export interface RuleContext {
   vendorId?: string;
   departmentId?: string;
   locationId?: string;
+  regionId?: string;
+  verticalId?: string;
+  businessUnitId?: string;
   employeeCount?: number;
 }
 
@@ -99,6 +102,12 @@ function valueOf(field: RuleCondition['field'], context: RuleContext): unknown {
       return context.departmentId;
     case 'locationId':
       return context.locationId;
+    case 'regionId':
+      return context.regionId;
+    case 'verticalId':
+      return context.verticalId;
+    case 'businessUnitId':
+      return context.businessUnitId;
     case 'currency':
       return context.currency;
     case 'employeeCount':

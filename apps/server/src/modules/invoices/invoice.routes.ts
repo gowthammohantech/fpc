@@ -14,11 +14,7 @@ import { paginate } from '../../core/paginate.js';
 import { query, validateBody, validateQuery } from '../../core/validate.js';
 import { requirePrincipal } from '../../middleware/authenticate.js';
 import { requirePermission } from '../../middleware/requirePermission.js';
-import {
-  applyLocationScope,
-  resolveWriteCompany,
-  scopeFilter,
-} from '../../middleware/tenantScope.js';
+import { applyOrgScope, resolveWriteCompany, scopeFilter } from '../../middleware/tenantScope.js';
 import { toApi } from '../../models/base.js';
 import { DocumentFile } from '../../models/documentFile.model.js';
 import { Invoice } from '../../models/invoice.model.js';
@@ -54,10 +50,9 @@ invoiceRouter.get(
     const q = query<typeof schemas.invoiceListQuery>(req);
 
     const filter = scopeFilter(principal, q.companyId) as Record<string, unknown>;
-    applyLocationScope(principal, filter, q.locationId);
+    applyOrgScope(principal, filter, q);
 
     if (q.vendorId) filter.vendorId = new Types.ObjectId(q.vendorId);
-    if (q.departmentId) filter.departmentId = new Types.ObjectId(q.departmentId);
     if (q.status) filter.status = Array.isArray(q.status) ? { $in: q.status } : q.status;
     Object.assign(filter, viewFilter(q.view));
 
@@ -360,6 +355,10 @@ invoiceRouter.post(
         requestedByUserId: principal.userId,
         departmentId: invoice.departmentId,
         locationId: invoice.locationId,
+        regionId: invoice.regionId,
+        verticalId: invoice.verticalId,
+        businessUnitId: invoice.businessUnitId,
+        groupId: invoice.groupId,
         vendorId: invoice.vendorId,
         link: `/invoices/${String(invoice._id)}`,
       },
@@ -372,13 +371,11 @@ invoiceRouter.post(
       invoice.approvalStatus = 'IN_PROGRESS';
       await invoice.save();
     } else {
-      // No rule matched: approve directly and record why in the audit trail.
-      await invoiceService.transition(invoice, InvoiceStatus.APPROVED);
+      // No rule matched: business approval is skipped and the reason recorded,
+      // but the invoice still goes to accounting — nothing reaches the bank
+      // unverified.
       invoice.approvalStatus = 'APPROVED';
-      await invoice.save();
-
-      const { createObligationForInvoice } = await import('../payments/obligation.service.js');
-      await createObligationForInvoice(invoice._id, auditContext(req));
+      await invoiceService.advanceToAccounting(invoice, auditContext(req));
     }
 
     await audit.record(
@@ -407,6 +404,88 @@ invoiceRouter.post(
   }),
 );
 
+/**
+ * The accounting stage — PRD §16a.
+ *
+ * One endpoint for the three things the accounting team can do with a
+ * business-approved invoice: clear it for payment, escalate it to the trustee,
+ * or send it back. TDS is recorded on all three, so a returned invoice still
+ * carries what accounting found.
+ *
+ * `netPayable` is never taken from the request; it is derived from the gross
+ * bill and the deduction, so no client can dictate what the bank pays.
+ */
+invoiceRouter.post(
+  '/:id/verify',
+  requirePermission('invoice:verify'),
+  validateBody(schemas.verifyInvoiceRequest),
+  asyncHandler(async (req, res) => {
+    const principal = requirePrincipal(req);
+    const invoice = await findScopedDoc(req);
+    const body = req.body as schemas.VerifyInvoiceRequest;
+
+    if (invoice.status !== InvoiceStatus.ACCOUNTING_VERIFICATION) {
+      throw ApiError.conflict(
+        `${invoice.trackingId} is ${invoice.status}, so the accounting team cannot act on it`,
+      );
+    }
+
+    if (body.tdsApplicable) {
+      const vendor = invoice.vendorId ? await Vendor.findById(invoice.vendorId).lean() : null;
+      if (!vendor?.pan) {
+        // Withholding against an unidentified payee cannot be filed, so it is
+        // refused here rather than discovered at return-filing time.
+        throw ApiError.unprocessable(
+          `${invoice.vendorName ?? 'This vendor'} has no PAN on file, so TDS cannot be deducted. Add it in Settings → Vendors first.`,
+        );
+      }
+    }
+
+    invoiceService.applyAccountingDecision(invoice, body, principal.userId);
+    await invoice.save();
+
+    await audit.record(
+      {
+        event: 'invoice.tds_recorded',
+        entityType: 'INVOICE',
+        entityId: invoice._id,
+        entityLabel: invoice.trackingId,
+        tenantId: invoice.tenantId,
+        companyId: invoice.companyId,
+        newValue: {
+          tdsApplicable: invoice.tdsApplicable,
+          tdsSection: invoice.tdsSection,
+          tdsRateBasisPoints: invoice.tdsRateBasisPoints,
+          tdsAmount: invoice.tdsAmount,
+          netPayable: invoice.netPayable,
+        },
+      },
+      auditContext(req),
+    );
+
+    if (body.action === 'RELEASE') {
+      await invoiceService.releaseToAccountsPayable(invoice, auditContext(req));
+    } else if (body.action === 'ESCALATE') {
+      const financeRequests = await import('../financeRequests/financeRequest.service.js');
+      await financeRequests.open(
+        {
+          invoice,
+          priority: body.priority as 'P1' | 'P2',
+          remarks: body.remarks ?? '',
+          requestedByUserId: principal.userId,
+          requestedByName: principal.name,
+        },
+        auditContext(req),
+      );
+    } else {
+      await invoiceService.returnToReview(invoice, body.remarks ?? '', auditContext(req));
+    }
+
+    const fresh = await Invoice.findById(invoice._id).lean();
+    res.json(toApi(fresh));
+  }),
+);
+
 invoiceRouter.post(
   '/:id/cancel',
   requirePermission('invoice:cancel'),
@@ -419,6 +498,9 @@ invoiceRouter.post(
 
     const { cancel: cancelApproval } = await import('../approvals/approval.service.js');
     await cancelApproval(invoice._id, reason, auditContext(req));
+
+    const financeRequests = await import('../financeRequests/financeRequest.service.js');
+    await financeRequests.cancelForInvoice(invoice._id, reason, auditContext(req));
 
     await audit.recordStatusChange(
       {
@@ -445,6 +527,10 @@ function viewFilter(view: string | undefined): Record<string, unknown> {
       return { status: { $in: [InvoiceStatus.REVIEW_REQUIRED, InvoiceStatus.FAILED] } };
     case 'PENDING_APPROVAL':
       return { status: InvoiceStatus.PENDING_APPROVAL };
+    case 'ACCOUNTING':
+      return { status: InvoiceStatus.ACCOUNTING_VERIFICATION };
+    case 'TRUSTEE':
+      return { status: InvoiceStatus.TRUSTEE_APPROVAL };
     case 'APPROVED':
       return { status: InvoiceStatus.APPROVED };
     case 'PAYMENT_PENDING':
@@ -477,22 +563,28 @@ function viewFilter(view: string | undefined): Record<string, unknown> {
   }
 }
 
-async function findScoped(req: Parameters<typeof requirePrincipal>[0]) {
+/**
+ * The scoped lookup behind every single-invoice route.
+ *
+ * Narrowed on the caller's org axes as well as their companies: without that,
+ * a user restricted to one vertical could read any invoice in the company
+ * simply by knowing its id, even though the list never showed it to them.
+ */
+function scopedInvoiceFilter(req: Parameters<typeof requirePrincipal>[0]) {
   const principal = requirePrincipal(req);
-  const invoice = await Invoice.findOne({
-    _id: objectId(req.params.id),
-    ...scopeFilter(principal),
-  }).lean();
+  const filter = scopeFilter(principal) as Record<string, unknown>;
+  applyOrgScope(principal, filter);
+  return { _id: objectId(req.params.id), ...filter };
+}
+
+async function findScoped(req: Parameters<typeof requirePrincipal>[0]) {
+  const invoice = await Invoice.findOne(scopedInvoiceFilter(req)).lean();
   if (!invoice) throw ApiError.notFound('Invoice');
   return invoice;
 }
 
 async function findScopedDoc(req: Parameters<typeof requirePrincipal>[0]) {
-  const principal = requirePrincipal(req);
-  const invoice = await Invoice.findOne({
-    _id: objectId(req.params.id),
-    ...scopeFilter(principal),
-  });
+  const invoice = await Invoice.findOne(scopedInvoiceFilter(req));
   if (!invoice) throw ApiError.notFound('Invoice');
   return invoice;
 }

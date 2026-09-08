@@ -16,6 +16,22 @@ export const PERMISSIONS = [
   'company:create',
   'company:update',
   'company:delete',
+  'group:read',
+  'group:create',
+  'group:update',
+  'group:delete',
+  'region:read',
+  'region:create',
+  'region:update',
+  'region:delete',
+  'vertical:read',
+  'vertical:create',
+  'vertical:update',
+  'vertical:delete',
+  'business_unit:read',
+  'business_unit:create',
+  'business_unit:update',
+  'business_unit:delete',
   'location:read',
   'location:create',
   'location:update',
@@ -52,6 +68,10 @@ export const PERMISSIONS = [
   'invoice:cancel',
   'invoice:delete',
   'invoice:approve',
+  // The accounting team's stage: verify an approved invoice, set TDS and
+  // release it to accounts payable. Distinct from `invoice:approve`, which is
+  // business sign-off.
+  'invoice:verify',
 
   // Mailbox connectors — a user's own Outlook, connected to pull invoices.
   // `manage` is deliberately one permission rather than a create/update/delete
@@ -67,6 +87,13 @@ export const PERMISSIONS = [
   'approval_rule:delete',
   'approval:read',
   'approval:read_all',
+
+  // Trustee escalation. `act` is the decision (approve / reject / return);
+  // `create` is finance raising the request in the first place.
+  'finance_request:read',
+  'finance_request:read_all',
+  'finance_request:create',
+  'finance_request:act',
 
   // Accounts payable
   'payable:read',
@@ -125,6 +152,10 @@ export function permissionAction(permission: Permission): string {
 export const PERMISSION_RESOURCE_LABELS: Record<string, string> = {
   tenant: 'Tenant',
   company: 'Companies',
+  group: 'Groups',
+  region: 'Regions',
+  vertical: 'Verticals',
+  business_unit: 'Business units',
   location: 'Locations',
   department: 'Departments',
   user: 'Users',
@@ -135,6 +166,7 @@ export const PERMISSION_RESOURCE_LABELS: Record<string, string> = {
   mail_connection: 'Mailbox connectors',
   approval_rule: 'Approval rules',
   approval: 'Approvals',
+  finance_request: 'Trustee requests',
   payable: 'Accounts payable',
   payroll: 'Payroll',
   obligation: 'Payment obligations',
@@ -198,13 +230,54 @@ const READ_ONLY: Permission[] = ALL.filter(
 );
 
 /**
+ * Every organisation level, read-only.
+ *
+ * Held by anyone who can filter or file work by them — which is everyone with
+ * an operational screen, since the scope bar offers these axes. Managing them
+ * is a separate, admin-only set.
+ */
+const ORG_READ: Permission[] = [
+  'company:read',
+  'group:read',
+  'region:read',
+  'vertical:read',
+  'business_unit:read',
+  'location:read',
+  'department:read',
+];
+
+/** The same levels, fully managed. Company Admin and above only. */
+const ORG_MANAGE: Permission[] = [
+  ...ORG_READ,
+  'company:create',
+  'company:update',
+  'company:delete',
+  'group:create',
+  'group:update',
+  'group:delete',
+  'region:create',
+  'region:update',
+  'region:delete',
+  'vertical:create',
+  'vertical:update',
+  'vertical:delete',
+  'business_unit:create',
+  'business_unit:update',
+  'business_unit:delete',
+  'location:create',
+  'location:update',
+  'location:delete',
+  'department:create',
+  'department:update',
+  'department:delete',
+];
+
+/**
  * Finance Executive (PRD §7): prepares work but never approves it and never
  * sees payroll. Explicitly excludes `invoice:approve` and every `payroll:*`.
  */
 const FINANCE_EXECUTIVE: Permission[] = [
-  'company:read',
-  'location:read',
-  'department:read',
+  ...ORG_READ,
   'vendor:read',
   'vendor:create',
   'vendor:update',
@@ -243,6 +316,10 @@ const FINANCE_MANAGER: Permission[] = [
   'mail_connection:read_all',
   'invoice:cancel',
   'approval:read_all',
+  // The finance head is who escalates to the trustee, and follows the outcome.
+  'finance_request:create',
+  'finance_request:read',
+  'finance_request:read_all',
   'approval_rule:read',
   'obligation:update',
   'payment_batch:delete',
@@ -252,9 +329,7 @@ const FINANCE_MANAGER: Permission[] = [
 ];
 
 const APPROVER: Permission[] = [
-  'company:read',
-  'location:read',
-  'department:read',
+  ...ORG_READ,
   'vendor:read',
   'invoice:read',
   'invoice:approve',
@@ -263,6 +338,72 @@ const APPROVER: Permission[] = [
   'dashboard:read',
   'notification:read',
   'report:read',
+];
+
+/**
+ * Vertical Head: the first business approver in the revised ladder. An
+ * Approver whose remit is a vertical rather than a department — the difference
+ * is enforced by the user's vertical scope, not by extra permissions.
+ */
+const VERTICAL_HEAD: Permission[] = [...APPROVER];
+
+/**
+ * Accounting Team: verifies business-approved invoices, sets TDS and either
+ * releases to accounts payable or escalates to the trustee.
+ *
+ * Deliberately not an approver — it holds `invoice:verify`, not
+ * `invoice:approve`, so the accounting stage cannot substitute for business
+ * sign-off. No payroll, like every other AP-side role.
+ */
+const ACCOUNTS_TEAM: Permission[] = [
+  ...ORG_READ,
+  'vendor:read',
+  'vendor:update',
+  'invoice:read',
+  'invoice:update',
+  'invoice:verify',
+  'approval:read_all',
+  'finance_request:read',
+  'finance_request:create',
+  'payable:read',
+  'obligation:read',
+  'payment_batch:read',
+  'bank_account:read',
+  'bank_statement:read',
+  'bank_transaction:read',
+  'reconciliation:read',
+  'report:read',
+  'report:export',
+  'audit:read',
+  'dashboard:read',
+  'notification:read',
+];
+
+/**
+ * Trustee: decides escalated finance requests. Read-only everywhere else,
+ * including the bank — the trustee sees the position and the evidence, and the
+ * only thing it can change is a request's outcome.
+ */
+const TRUSTEE: Permission[] = [
+  ...ORG_READ,
+  'vendor:read',
+  'invoice:read',
+  'approval:read_all',
+  'finance_request:read',
+  'finance_request:read_all',
+  'finance_request:act',
+  'payable:read',
+  'obligation:read',
+  'payment_batch:read',
+  'bank_account:read',
+  'bank_statement:read',
+  'bank_transaction:read',
+  'reconciliation:read',
+  'report:read',
+  'report:export',
+  'audit:read',
+  'dashboard:read',
+  'notification:read',
 ];
 
 const CFO: Permission[] = [
@@ -276,9 +417,7 @@ const CFO: Permission[] = [
 ];
 
 const PAYROLL_USER: Permission[] = [
-  'company:read',
-  'location:read',
-  'department:read',
+  ...ORG_READ,
   'payroll:read',
   'payroll:create',
   'payroll:update',
@@ -292,18 +431,7 @@ const PAYROLL_USER: Permission[] = [
 ];
 
 const COMPANY_ADMIN: Permission[] = [
-  'company:read',
-  'company:create',
-  'company:update',
-  'company:delete',
-  'location:read',
-  'location:create',
-  'location:update',
-  'location:delete',
-  'department:read',
-  'department:create',
-  'department:update',
-  'department:delete',
+  ...ORG_MANAGE,
   'user:read',
   'user:create',
   'user:update',
@@ -325,6 +453,9 @@ const COMPANY_ADMIN: Permission[] = [
   'approval_rule:update',
   'approval_rule:delete',
   'approval:read_all',
+  // Oversight only — a company admin watches trustee requests, never decides
+  // one, the same way it watches approvals without approving.
+  'finance_request:read_all',
   'invoice:read',
   // Oversight only. A company admin cannot create invoices, so it never gets
   // `mail_connection:manage` — it can watch the connectors, not run them.
@@ -351,6 +482,9 @@ export const ROLE_PERMISSIONS: Record<RoleKey, Permission[]> = {
   [RoleKey.FINANCE_EXECUTIVE]: dedupe(FINANCE_EXECUTIVE),
   [RoleKey.FINANCE_MANAGER]: dedupe(FINANCE_MANAGER),
   [RoleKey.APPROVER]: dedupe(APPROVER),
+  [RoleKey.VERTICAL_HEAD]: dedupe(VERTICAL_HEAD),
+  [RoleKey.ACCOUNTS_TEAM]: dedupe(ACCOUNTS_TEAM),
+  [RoleKey.TRUSTEE]: dedupe(TRUSTEE),
   [RoleKey.CFO]: dedupe(CFO),
   [RoleKey.PAYROLL_USER]: dedupe(PAYROLL_USER),
   [RoleKey.AUDITOR]: dedupe(AUDITOR),

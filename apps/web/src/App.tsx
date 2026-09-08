@@ -8,6 +8,8 @@ import { InvoiceMailboxPage } from '@/pages/InvoiceMailbox';
 import { InvoicesPage } from '@/pages/Invoices';
 import { InvoiceDetailPage } from '@/pages/InvoiceDetail';
 import { ApprovalDetailPage, ApprovalsPage } from '@/pages/Approvals';
+import { AccountingPage } from '@/pages/Accounting';
+import { FinanceRequestsPage } from '@/pages/FinanceRequests';
 import { PayablesPage } from '@/pages/Payables';
 import { PayrollDetailPage, PayrollImportPage, PayrollPage } from '@/pages/Payroll';
 import { PaymentBatchDetailPage, PaymentBatchesPage, PaymentQueuePage } from '@/pages/Payments';
@@ -19,11 +21,15 @@ import { NotificationsPage } from '@/pages/Notifications';
 import { AccountPage } from '@/pages/Account';
 import {
   BankAccountsPage,
+  BusinessUnitsPage,
   CompaniesPage,
   DepartmentsPage,
+  GroupsPage,
   LocationsPage,
+  RegionsPage,
   UsersPage,
   VendorsPage,
+  VerticalsPage,
 } from '@/pages/settings';
 import { ApprovalRulesPage } from '@/pages/settings/ApprovalRules';
 import { RolesPage } from '@/pages/settings/Roles';
@@ -103,6 +109,39 @@ export function App() {
           element={
             <RequirePermission permissions={['approval:read', 'approval:read_all']}>
               <ApprovalDetailPage />
+            </RequirePermission>
+          }
+        />
+
+        <Route
+          path="/accounting"
+          element={
+            <RequirePermission permissions={['invoice:verify']}>
+              <AccountingPage />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="/accounting/:id"
+          element={
+            <RequirePermission permissions={['invoice:verify']}>
+              <AccountingPage />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="/finance-requests"
+          element={
+            <RequirePermission permissions={['finance_request:read', 'finance_request:read_all']}>
+              <FinanceRequestsPage />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="/finance-requests/:id"
+          element={
+            <RequirePermission permissions={['finance_request:read', 'finance_request:read_all']}>
+              <FinanceRequestsPage />
             </RequirePermission>
           }
         />
@@ -223,6 +262,38 @@ export function App() {
           element={
             <RequirePermission permissions={['company:read']}>
               <CompaniesPage />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="/settings/groups"
+          element={
+            <RequirePermission permissions={['group:read']}>
+              <GroupsPage />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="/settings/regions"
+          element={
+            <RequirePermission permissions={['region:read']}>
+              <RegionsPage />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="/settings/verticals"
+          element={
+            <RequirePermission permissions={['vertical:read']}>
+              <VerticalsPage />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="/settings/business-units"
+          element={
+            <RequirePermission permissions={['business_unit:read']}>
+              <BusinessUnitsPage />
             </RequirePermission>
           }
         />

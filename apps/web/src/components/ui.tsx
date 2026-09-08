@@ -87,11 +87,16 @@ function toneFor(status: string): Tone {
   if (
     [
       'PENDING_APPROVAL',
+      'ACCOUNTING_VERIFICATION',
+      'TRUSTEE_APPROVAL',
+      'RETURNED',
       'REVIEW_REQUIRED',
       'SUGGESTED',
       'IN_PROGRESS',
       'PENDING',
       'PARTIAL',
+      'P1',
+      'P2',
     ].includes(value)
   ) {
     return 'attention';
