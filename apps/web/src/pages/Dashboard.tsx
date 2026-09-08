@@ -170,12 +170,12 @@ export function DashboardPage() {
                   tone="warning"
                 />
               ) : null}
-              {data.invoices.trusteeApproval > 0 ? (
+              {data.invoices.treasuryApproval > 0 ? (
                 <StatCard
-                  label="With the trustee"
-                  value={data.invoices.trusteeApproval}
+                  label="With Treasury"
+                  value={data.invoices.treasuryApproval}
                   icon={Gavel}
-                  sub={formatCompactINR(data.invoices.trusteeApprovalAmount)}
+                  sub={formatCompactINR(data.invoices.treasuryApprovalAmount)}
                   tone="warning"
                 />
               ) : null}

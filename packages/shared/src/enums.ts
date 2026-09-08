@@ -15,7 +15,7 @@ export const RoleKey = {
   APPROVER: 'APPROVER',
   VERTICAL_HEAD: 'VERTICAL_HEAD',
   ACCOUNTS_TEAM: 'ACCOUNTS_TEAM',
-  TRUSTEE: 'TRUSTEE',
+  TREASURY: 'TREASURY',
   CFO: 'CFO',
   PAYROLL_USER: 'PAYROLL_USER',
   AUDITOR: 'AUDITOR',
@@ -31,7 +31,7 @@ export const ROLE_LABELS: Record<RoleKey, string> = {
   APPROVER: 'Approver',
   VERTICAL_HEAD: 'Vertical Head',
   ACCOUNTS_TEAM: 'Accounting Team',
-  TRUSTEE: 'Trustee',
+  TREASURY: 'Treasury',
   CFO: 'CFO',
   PAYROLL_USER: 'Payroll User',
   AUDITOR: 'Auditor / Read Only',
@@ -66,8 +66,8 @@ export const InvoiceStatus = {
   PENDING_APPROVAL: 'PENDING_APPROVAL',
   /** Business approval is done; the accounting team verifies and applies TDS. */
   ACCOUNTING_VERIFICATION: 'ACCOUNTING_VERIFICATION',
-  /** Escalated to the trustee team, with a priority and remarks. */
-  TRUSTEE_APPROVAL: 'TRUSTEE_APPROVAL',
+  /** Escalated to the Treasury team, with a priority and remarks. */
+  TREASURY_APPROVAL: 'TREASURY_APPROVAL',
   APPROVED: 'APPROVED',
   PAYMENT_PENDING: 'PAYMENT_PENDING',
   PAYMENT_BATCHED: 'PAYMENT_BATCHED',
@@ -186,7 +186,7 @@ export const BusinessUnitKind = {
 export type BusinessUnitKind = (typeof BusinessUnitKind)[keyof typeof BusinessUnitKind];
 export const BUSINESS_UNIT_KINDS = Object.values(BusinessUnitKind);
 
-/** Urgency a finance request carries to the trustee team. */
+/** Urgency a finance request carries to the Treasury team. */
 export const FinanceRequestPriority = {
   P1: 'P1',
   P2: 'P2',
@@ -196,7 +196,7 @@ export type FinanceRequestPriority =
 export const FINANCE_REQUEST_PRIORITIES = Object.values(FinanceRequestPriority);
 
 /**
- * Trustee outcome. `RETURNED` sends the invoice back to accounting for rework
+ * Treasury outcome. `RETURNED` sends the invoice back to accounting for rework
  * and has no equivalent in the approval-step vocabulary, which is one reason
  * finance requests are their own collection.
  */

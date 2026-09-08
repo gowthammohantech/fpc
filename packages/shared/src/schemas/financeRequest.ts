@@ -3,7 +3,7 @@ import { FINANCE_REQUEST_PRIORITIES, FINANCE_REQUEST_STATUSES } from '../enums.j
 import { objectId, paginationQuery, scopeQuery } from './common.js';
 
 /**
- * The trustee's decision.
+ * Treasury's decision.
  *
  * `RETURN` is the reason finance requests are not approval steps: an approval
  * step can only be approved or rejected, and sending work back to accounting is

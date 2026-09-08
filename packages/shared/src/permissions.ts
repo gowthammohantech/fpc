@@ -88,7 +88,7 @@ export const PERMISSIONS = [
   'approval:read',
   'approval:read_all',
 
-  // Trustee escalation. `act` is the decision (approve / reject / return);
+  // Treasury escalation. `act` is the decision (approve / reject / return);
   // `create` is finance raising the request in the first place.
   'finance_request:read',
   'finance_request:read_all',
@@ -166,7 +166,7 @@ export const PERMISSION_RESOURCE_LABELS: Record<string, string> = {
   mail_connection: 'Mailbox connectors',
   approval_rule: 'Approval rules',
   approval: 'Approvals',
-  finance_request: 'Trustee requests',
+  finance_request: 'Treasury requests',
   payable: 'Accounts payable',
   payroll: 'Payroll',
   obligation: 'Payment obligations',
@@ -316,7 +316,7 @@ const FINANCE_MANAGER: Permission[] = [
   'mail_connection:read_all',
   'invoice:cancel',
   'approval:read_all',
-  // The finance head is who escalates to the trustee, and follows the outcome.
+  // The finance head is who escalates to Treasury, and follows the outcome.
   'finance_request:create',
   'finance_request:read',
   'finance_request:read_all',
@@ -349,7 +349,7 @@ const VERTICAL_HEAD: Permission[] = [...APPROVER];
 
 /**
  * Accounting Team: verifies business-approved invoices, sets TDS and either
- * releases to accounts payable or escalates to the trustee.
+ * releases to accounts payable or escalates to Treasury.
  *
  * Deliberately not an approver — it holds `invoice:verify`, not
  * `invoice:approve`, so the accounting stage cannot substitute for business
@@ -380,11 +380,11 @@ const ACCOUNTS_TEAM: Permission[] = [
 ];
 
 /**
- * Trustee: decides escalated finance requests. Read-only everywhere else,
- * including the bank — the trustee sees the position and the evidence, and the
+ * Treasury: decides escalated finance requests. Read-only everywhere else,
+ * including the bank — Treasury sees the position and the evidence, and the
  * only thing it can change is a request's outcome.
  */
-const TRUSTEE: Permission[] = [
+const TREASURY: Permission[] = [
   ...ORG_READ,
   'vendor:read',
   'invoice:read',
@@ -453,7 +453,7 @@ const COMPANY_ADMIN: Permission[] = [
   'approval_rule:update',
   'approval_rule:delete',
   'approval:read_all',
-  // Oversight only — a company admin watches trustee requests, never decides
+  // Oversight only — a company admin watches Treasury requests, never decides
   // one, the same way it watches approvals without approving.
   'finance_request:read_all',
   'invoice:read',
@@ -484,7 +484,7 @@ export const ROLE_PERMISSIONS: Record<RoleKey, Permission[]> = {
   [RoleKey.APPROVER]: dedupe(APPROVER),
   [RoleKey.VERTICAL_HEAD]: dedupe(VERTICAL_HEAD),
   [RoleKey.ACCOUNTS_TEAM]: dedupe(ACCOUNTS_TEAM),
-  [RoleKey.TRUSTEE]: dedupe(TRUSTEE),
+  [RoleKey.TREASURY]: dedupe(TREASURY),
   [RoleKey.CFO]: dedupe(CFO),
   [RoleKey.PAYROLL_USER]: dedupe(PAYROLL_USER),
   [RoleKey.AUDITOR]: dedupe(AUDITOR),

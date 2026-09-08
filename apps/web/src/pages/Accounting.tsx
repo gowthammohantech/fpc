@@ -26,7 +26,7 @@ import {
   Tabs,
 } from '@/components/ui';
 
-type View = 'ACCOUNTING' | 'TRUSTEE';
+type View = 'ACCOUNTING' | 'TREASURY';
 
 /**
  * The accounting workbench.
@@ -62,7 +62,7 @@ export function AccountingPage() {
           <Tabs
             tabs={[
               { key: 'ACCOUNTING', label: 'To verify' },
-              { key: 'TRUSTEE', label: 'With the trustee' },
+              { key: 'TREASURY', label: 'With Treasury' },
             ]}
             active={view}
             onChange={(key) => {
@@ -80,7 +80,7 @@ export function AccountingPage() {
           ) : !rows.length ? (
             <EmptyState
               illustration="approved"
-              title={view === 'ACCOUNTING' ? 'Nothing to verify' : 'Nothing with the trustee'}
+              title={view === 'ACCOUNTING' ? 'Nothing to verify' : 'Nothing with Treasury'}
               hint={
                 view === 'ACCOUNTING'
                   ? 'Invoices arrive here once the business approvers have signed off.'
@@ -123,7 +123,7 @@ export function AccountingPage() {
 
         <div className="lg:col-span-3">
           {selectedId ? (
-            <VerificationPanel invoiceId={selectedId} readOnly={view === 'TRUSTEE'} />
+            <VerificationPanel invoiceId={selectedId} readOnly={view === 'TREASURY'} />
           ) : null}
         </div>
       </div>
@@ -238,9 +238,9 @@ function VerificationPanel({ invoiceId, readOnly }: { invoiceId: string; readOnl
 
       {readOnly ? (
         <div className="px-5 py-4 text-sm text-slate-600">
-          This invoice is with the trustee. Its decision is made on the{' '}
+          This invoice is with Treasury. Its decision is made on the{' '}
           <Link className="text-brand-700" to="/finance-requests">
-            trustee requests
+            Treasury requests
           </Link>{' '}
           screen.
         </div>
@@ -348,7 +348,7 @@ function VerificationPanel({ invoiceId, readOnly }: { invoiceId: string; readOnl
               disabled={verify.isPending}
               onClick={() => verify.mutate('ESCALATE')}
             >
-              Escalate to trustee
+              Escalate to Treasury
             </button>
 
             <button

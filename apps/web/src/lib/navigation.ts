@@ -89,7 +89,7 @@ export const NAV_GROUPS: NavGroup[] = [
       },
       {
         to: '/finance-requests',
-        label: 'Trustee Requests',
+        label: 'Treasury Requests',
         icon: Gavel,
         permissions: ['finance_request:read', 'finance_request:read_all'],
       },

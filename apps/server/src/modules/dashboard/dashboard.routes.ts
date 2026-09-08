@@ -39,7 +39,7 @@ const OPEN_INVOICE_STATUSES = [
 const OUTSTANDING_INVOICE_STATUSES = [
   InvoiceStatus.PENDING_APPROVAL,
   InvoiceStatus.ACCOUNTING_VERIFICATION,
-  InvoiceStatus.TRUSTEE_APPROVAL,
+  InvoiceStatus.TREASURY_APPROVAL,
   ...OPEN_INVOICE_STATUSES,
 ];
 
@@ -141,7 +141,7 @@ dashboardRouter.get(
     // The two new stages: business-approved, not yet cleared to pay. Reported
     // separately so "approved and unpaid" keeps meaning "ready or in flight".
     const inAccounting = invoiceStats.get(InvoiceStatus.ACCOUNTING_VERIFICATION) ?? empty();
-    const withTrustee = invoiceStats.get(InvoiceStatus.TRUSTEE_APPROVAL) ?? empty();
+    const withTreasury = invoiceStats.get(InvoiceStatus.TREASURY_APPROVAL) ?? empty();
 
     const readyForPayment = obligationStats.get('QUEUED') ?? empty();
     const batched = obligationStats.get('BATCHED') ?? empty();
@@ -163,8 +163,8 @@ dashboardRouter.get(
         pendingApprovalAmount: pendingApproval.amount,
         accountingVerification: inAccounting.count,
         accountingVerificationAmount: inAccounting.amount,
-        trusteeApproval: withTrustee.count,
-        trusteeApprovalAmount: withTrustee.amount,
+        treasuryApproval: withTreasury.count,
+        treasuryApprovalAmount: withTreasury.amount,
         approvedUnpaid: approvedUnpaid.count,
         approvedUnpaidAmount: approvedUnpaid.amount,
         overdue: overdue.count,

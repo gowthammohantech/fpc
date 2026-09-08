@@ -82,7 +82,7 @@ export interface InvoiceDoc {
   findings: ValidationFinding[];
   approvalRequestId?: Types.ObjectId;
   approvalStatus: ApprovalStatus;
-  /** The open trustee escalation, when the invoice has one. */
+  /** The open Treasury escalation, when the invoice has one. */
   financeRequestId?: Types.ObjectId;
   obligationId?: Types.ObjectId;
   paymentBatchId?: Types.ObjectId;
@@ -192,7 +192,7 @@ schema.index({ tenantId: 1, companyId: 1, vendorId: 1, invoiceNumberNormalized: 
 schema.index({ tenantId: 1, companyId: 1, totalAmount: 1 });
 schema.index({ tenantId: 1, emailMessageId: 1 }, { sparse: true });
 schema.index({ tenantId: 1, trackingId: 1 }, { unique: true });
-// The accounting and trustee queues, and the vertical-wise dashboard.
+// The accounting and Treasury queues, and the vertical-wise dashboard.
 schema.index({ tenantId: 1, companyId: 1, verticalId: 1, status: 1 });
 
 schema.pre('validate', function normalize(next) {

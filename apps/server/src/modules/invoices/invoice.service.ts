@@ -381,7 +381,7 @@ export function applyAccountingDecision(
  * Clears a verified invoice for payment and creates its obligation.
  *
  * The single release point into the payment pipeline: accounting reaches it
- * directly, and the trustee reaches it by approving an escalation. Nothing
+ * directly, and Treasury reaches it by approving an escalation. Nothing
  * else may put an invoice into APPROVED.
  */
 export async function releaseToAccountsPayable(

@@ -6,7 +6,7 @@ import { defineStateMachine } from './stateMachine.js';
  *
  * The happy path is a straight ladder:
  *   RECEIVED → EXTRACTING → REVIEW_REQUIRED → VALIDATED → SUBMITTED →
- *   PENDING_APPROVAL → ACCOUNTING_VERIFICATION → [TRUSTEE_APPROVAL] →
+ *   PENDING_APPROVAL → ACCOUNTING_VERIFICATION → [TREASURY_APPROVAL] →
  *   APPROVED → PAYMENT_PENDING → PAYMENT_BATCHED → PAYMENT_PROCESSING →
  *   PAID → RECONCILED
  *
@@ -21,7 +21,7 @@ import { defineStateMachine } from './stateMachine.js';
  * clearing the approval chain moves an invoice to ACCOUNTING_VERIFICATION
  * rather than to APPROVED.
  *
- * TRUSTEE_APPROVAL is conditional: accounting either clears the invoice itself
+ * TREASURY_APPROVAL is conditional: accounting either clears the invoice itself
  * or raises a finance request, so both edges leave ACCOUNTING_VERIFICATION.
  *
  * Note that PAID is only reachable from PAYMENT_PROCESSING, and in practice
@@ -69,16 +69,16 @@ const T: Record<InvoiceStatus, InvoiceStatus[]> = {
   [InvoiceStatus.ACCOUNTING_VERIFICATION]: [
     // Accounting verified it and cleared it for payment.
     InvoiceStatus.APPROVED,
-    // Accounting raised a finance request for the trustee team.
-    InvoiceStatus.TRUSTEE_APPROVAL,
+    // Accounting raised a finance request for the Treasury team.
+    InvoiceStatus.TREASURY_APPROVAL,
     // Sent back to the originating department for correction.
     InvoiceStatus.REVIEW_REQUIRED,
     InvoiceStatus.REJECTED,
     InvoiceStatus.CANCELLED,
   ],
-  [InvoiceStatus.TRUSTEE_APPROVAL]: [
+  [InvoiceStatus.TREASURY_APPROVAL]: [
     InvoiceStatus.APPROVED,
-    // The trustee returned it to accounting rather than deciding.
+    // Treasury returned it to accounting rather than deciding.
     InvoiceStatus.ACCOUNTING_VERIFICATION,
     InvoiceStatus.REJECTED,
     InvoiceStatus.CANCELLED,

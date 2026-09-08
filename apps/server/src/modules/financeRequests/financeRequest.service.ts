@@ -19,8 +19,8 @@ import type { InvoiceDoc } from '../../models/invoice.model.js';
 import { audit, type AuditContext } from '../audit/audit.service.js';
 import * as invoiceService from '../invoices/invoice.service.js';
 
-/** Roles that decide escalations, so the trustee inbox lights up for them. */
-const TRUSTEE_ROLES: RoleKey[] = ROLE_KEYS.filter((role) =>
+/** Roles that decide escalations, so the Treasury inbox lights up for them. */
+const TREASURY_ROLES: RoleKey[] = ROLE_KEYS.filter((role) =>
   ROLE_PERMISSIONS[role as RoleKey].includes('finance_request:act'),
 ) as RoleKey[];
 
@@ -36,10 +36,10 @@ export interface OpenFinanceRequestInput {
 }
 
 /**
- * Raises a trustee escalation for one invoice and parks the invoice on it.
+ * Raises a Treasury escalation for one invoice and parks the invoice on it.
  *
  * The amounts are snapshotted rather than read back through the invoice, so
- * the trustee decides on the figures that were put in front of them even if
+ * Treasury decides on the figures that were put in front of them even if
  * accounting later re-verifies a returned invoice.
  */
 export async function open(
@@ -54,7 +54,7 @@ export async function open(
     status: FinanceRequestStatus.PENDING,
   }).lean();
   if (existing) {
-    throw ApiError.conflict(`${invoice.trackingId} already has an open trustee request`);
+    throw ApiError.conflict(`${invoice.trackingId} already has an open Treasury request`);
   }
 
   const request = await FinanceRequest.create({
@@ -93,7 +93,7 @@ export async function open(
   });
 
   const from = invoice.status;
-  await invoiceService.transition(invoice, InvoiceStatus.TRUSTEE_APPROVAL);
+  await invoiceService.transition(invoice, InvoiceStatus.TREASURY_APPROVAL);
   invoice.financeRequestId = request._id;
   await invoice.save();
 
@@ -106,7 +106,7 @@ export async function open(
       tenantId: invoice.tenantId,
       companyId: invoice.companyId,
       from,
-      to: InvoiceStatus.TRUSTEE_APPROVAL,
+      to: InvoiceStatus.TREASURY_APPROVAL,
       metadata: {
         invoiceId: String(invoice._id),
         trackingId: invoice.trackingId,
@@ -124,8 +124,8 @@ export async function open(
     entityType: 'FINANCE_REQUEST',
     entityId: String(request._id),
     recipientUserIds: [],
-    recipientRoleKeys: TRUSTEE_ROLES,
-    title: `${input.priority}: ${request.reference} needs a trustee decision`,
+    recipientRoleKeys: TREASURY_ROLES,
+    title: `${input.priority}: ${request.reference} needs a Treasury decision`,
     body: `${invoice.vendorName ?? 'An invoice'} for ${formatINR(invoice.netPayable)} net. ${input.remarks}`,
     link: `/finance-requests/${String(request._id)}`,
   });
@@ -149,7 +149,7 @@ const OUTCOME: Record<FinanceRequestAction, FinanceRequestStatus> = {
 };
 
 /**
- * Applies the trustee's decision to both the request and the invoice.
+ * Applies Treasury's decision to both the request and the invoice.
  *
  * The only place a finance request closes, mirroring how the approval
  * dispatcher is the only place an approval chain becomes a lifecycle change.
@@ -219,7 +219,7 @@ export async function decide(input: DecideInput, context: AuditContext): Promise
     entityId: String(request._id),
     recipientUserIds: [String(request.requestedByUserId)],
     title: `${request.reference} was ${outcome.toLowerCase()}`,
-    body: input.remarks ?? `The trustee ${outcome.toLowerCase()} ${request.subjectLabel}.`,
+    body: input.remarks ?? `Treasury ${outcome.toLowerCase()} ${request.subjectLabel}.`,
     link: `/finance-requests/${String(request._id)}`,
   });
 }
@@ -237,7 +237,7 @@ export function assertNotOwnRequest(
 ): void {
   if (request.requestedByUserId.equals(actorUserId)) {
     throw ApiError.forbidden(
-      'You raised this request, so you cannot decide it. Another trustee must act.',
+      'You raised this request, so you cannot decide it. Another member of Treasury must act.',
     );
   }
 }

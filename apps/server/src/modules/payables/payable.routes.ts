@@ -16,14 +16,14 @@ export const payableRouter: Router = Router();
  * Invoices that represent money still owed.
  *
  * Everything from the moment it is with an approver to the moment it is paid,
- * which now includes the accounting and trustee stages — an invoice sitting
+ * which now includes the accounting and Treasury stages — an invoice sitting
  * with accounting is every bit as much a liability as one sitting with an
  * approver.
  */
 const OPEN_STATUSES: InvoiceStatus[] = [
   InvoiceStatus.PENDING_APPROVAL,
   InvoiceStatus.ACCOUNTING_VERIFICATION,
-  InvoiceStatus.TRUSTEE_APPROVAL,
+  InvoiceStatus.TREASURY_APPROVAL,
   InvoiceStatus.APPROVED,
   InvoiceStatus.PAYMENT_PENDING,
   InvoiceStatus.PAYMENT_BATCHED,

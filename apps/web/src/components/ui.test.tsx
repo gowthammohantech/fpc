@@ -50,7 +50,7 @@ describe('StatusBadge', () => {
     expect(tone('PENDING_APPROVAL')).toBe('attention');
     // The two new workflow stages read as work in hand, not as a problem.
     expect(tone('ACCOUNTING_VERIFICATION')).toBe('attention');
-    expect(tone('TRUSTEE_APPROVAL')).toBe('attention');
+    expect(tone('TREASURY_APPROVAL')).toBe('attention');
   });
 
   it('tones the mailbox connector statuses', () => {

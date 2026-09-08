@@ -88,7 +88,7 @@ function toneFor(status: string): Tone {
     [
       'PENDING_APPROVAL',
       'ACCOUNTING_VERIFICATION',
-      'TRUSTEE_APPROVAL',
+      'TREASURY_APPROVAL',
       'RETURNED',
       'REVIEW_REQUIRED',
       'SUGGESTED',

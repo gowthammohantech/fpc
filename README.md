@@ -25,7 +25,7 @@ single **payment obligation**, and everything downstream is shared:
   Accounting                    │
   (verify, TDS)                 │
         ▼                       │
-  Trustee  ── optional          │
+  Treasury  ── optional         │
         │                       │
         └──────────┬────────────┘
                    ▼
@@ -88,8 +88,8 @@ Open http://localhost:5173 and sign in. Every account below uses the password
 | `ithead@nova.example.com` | Approver | First approver on the large invoice |
 | `opshead@nova.example.com` | Approver | Operations Head, first approver on the Pune chain |
 | `financemanager@nova.example.com` | Finance Manager | Finance Head in the chain; releases bank files |
-| `accounts@nova.example.com` | Accounting Team | Verifies approved invoices, sets TDS, escalates to the trustee |
-| `trustee@nova.example.com` | Trustee | Decides escalations; read-only everywhere else, bank included |
+| `accounts@nova.example.com` | Accounting Team | Verifies approved invoices, sets TDS, escalates to Treasury |
+| `treasury@nova.example.com` | Treasury | Decides escalations; read-only everywhere else, bank included |
 | `cfo@nova.example.com` | CFO | Final approver, sees payroll and the full position |
 | `payroll@nova.example.com` | Payroll User | Payroll only, no invoice access |
 | `auditor@nova.example.com` | Auditor | Read-only, including the audit trail |
@@ -128,8 +128,8 @@ that no screen opens empty. On a fresh `pnpm seed` you also get:
   with heads (and one deliberately headless), business units including a
   classified one, and departments — HR and Admin among them — that raise
   invoices of their own.
-- **Invoices in the accounting and trustee stages**, one of them with a real
-  194J deduction, plus an open P1 trustee request with its remark thread.
+- **Invoices in the accounting and Treasury stages**, one of them with a real
+  194J deduction, plus an open P1 Treasury request with its remark thread.
 - **Two tenant-defined roles**, one of them held by a real user, alongside the
   eight built-ins on Settings → Roles.
 - **Every reconciliation tab populated** — matched, suggested, unmatched and
@@ -181,10 +181,10 @@ state.
    payment confirmation is in Mailpit at http://localhost:8025, and the audit
    trail on the invoice shows every step and who took it, by name.
 
-### Demo: the trustee stage
+### Demo: the Treasury stage
 
-**INV-4482** rests with the trustee on an open P1 request. Sign in as
-`trustee`, open Trustee Requests, and you get the gross/TDS/net breakdown, the
+**INV-4482** rests with Treasury on an open P1 request. Sign in as
+`treasury`, open Treasury Requests, and you get the gross/TDS/net breakdown, the
 remark finance left, and three outcomes: approve (which clears it for
 payment), return (back to accounting for rework), or reject. Try it as
 `accounts` first — whoever raised a request cannot decide it.
@@ -246,7 +246,7 @@ endpoint that forgets to narrow fails a test rather than leaking.
 Three domain rules sit on top: payroll permissions are disjoint from AP
 permissions, so salary data is invisible to the rest of the finance team; a
 submitter can never approve their own item, at any level, and whoever raises a
-trustee request cannot decide it; and a business unit marked classified is
+Treasury request cannot decide it; and a business unit marked classified is
 invisible unless a user is granted it by name, so holding the vertical above it
 is not enough.
 
@@ -318,7 +318,7 @@ invoice; the seed leaves one vertical headless to exercise that.
 
 Every tracked entity gets one, allocated from a per-tenant counter: invoices
 `FIN-INV-2026-000001` at intake, approvals `APR-2026-…` when the chain starts,
-trustee requests `FR-2026-…` when raised, reconciliations `REC-2026-…` when a
+Treasury requests `FR-2026-…` when raised, reconciliations `REC-2026-…` when a
 match is confirmed, and payment batches `PB-20260908-001`, which keep their
 date-stamped form. The year is part of both the counter key and the printed
 reference, so numbering restarts each January and a reference says when it was

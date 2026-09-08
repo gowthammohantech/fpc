@@ -24,7 +24,7 @@ type View =
   | 'REVIEW'
   | 'PENDING_APPROVAL'
   | 'ACCOUNTING'
-  | 'TRUSTEE'
+  | 'TREASURY'
   | 'APPROVED'
   | 'PAYMENT_PENDING'
   | 'PAID'
@@ -35,7 +35,7 @@ const VIEWS: Array<{ key: View; label: string }> = [
   { key: 'REVIEW', label: 'Needs review' },
   { key: 'PENDING_APPROVAL', label: 'Pending approval' },
   { key: 'ACCOUNTING', label: 'With accounting' },
-  { key: 'TRUSTEE', label: 'With the trustee' },
+  { key: 'TREASURY', label: 'With Treasury' },
   { key: 'APPROVED', label: 'Approved' },
   { key: 'PAYMENT_PENDING', label: 'Payment pending' },
   { key: 'PAID', label: 'Paid' },

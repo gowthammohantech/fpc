@@ -97,7 +97,7 @@ export const endpoints = (api: ApiClient) => ({
     cancel: (id: string, reason: string) => api.post<Invoice>(`/invoices/${id}/cancel`, { reason }),
     reextract: (id: string) => api.post<{ status: string }>(`/invoices/${id}/reextract`),
     /**
-     * The accounting stage: clear for payment, escalate to the trustee, or
+     * The accounting stage: clear for payment, escalate to Treasury, or
      * return for correction. `netPayable` is derived by the server, so it is
      * deliberately not part of the body.
      */
@@ -134,7 +134,7 @@ export const endpoints = (api: ApiClient) => ({
       api.post<ApprovalRequest>(`/approvals/${id}/act`, { action, comment }),
   },
 
-  /** Trustee escalations raised by finance on a single invoice. */
+  /** Treasury escalations raised by finance on a single invoice. */
   financeRequests: {
     list: (query?: Query) => api.get<Paginated<FinanceRequest>>('/finance-requests', query),
     get: (id: string) => api.get<FinanceRequest & { canAct: boolean }>(`/finance-requests/${id}`),

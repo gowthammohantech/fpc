@@ -18,7 +18,7 @@ import {
 } from '@/components/ui';
 
 /**
- * The trustee inbox.
+ * The Treasury inbox.
  *
  * Priority first, then age — a P1 raised this morning outranks a P2 from last
  * week, which is the whole reason finance attaches one.
@@ -44,8 +44,8 @@ export function FinanceRequestsPage() {
   return (
     <>
       <PageHeader
-        title="Trustee requests"
-        subtitle="Payments finance has escalated for a trustee decision"
+        title="Treasury requests"
+        subtitle="Payments finance has escalated for a Treasury decision"
       />
 
       <div className="grid gap-6 lg:grid-cols-5">
@@ -115,7 +115,7 @@ export function FinanceRequestsPage() {
  * One escalation, with its remark thread.
  *
  * The remarks are the record of the conversation, so they are shown in full
- * rather than summarised — a trustee deciding a P1 needs the reason it was
+ * rather than summarised — Treasury deciding a P1 needs the reason it was
  * raised, not a count.
  */
 function RequestPanel({ requestId }: { requestId: string }) {
@@ -255,7 +255,7 @@ function RequestPanel({ requestId }: { requestId: string }) {
               </>
             ) : (
               <p className="text-sm text-slate-500">
-                You raised this request, so another trustee has to decide it.
+                You raised this request, so someone else in Treasury has to decide it.
               </p>
             )}
             <button
@@ -269,7 +269,7 @@ function RequestPanel({ requestId }: { requestId: string }) {
         </div>
       ) : (
         <p className="border-t border-slate-200 px-5 py-3 text-sm text-slate-600">
-          Decided by {request.decidedByName ?? 'the trustee'}
+          Decided by {request.decidedByName ?? 'Treasury'}
           {request.decidedAt ? ` on ${formatDateTime(request.decidedAt)}` : ''}.
         </p>
       )}

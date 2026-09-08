@@ -60,7 +60,7 @@ const tdsSection = z.enum(TDS_SECTIONS as unknown as [string, ...string[]]);
 /**
  * The accounting team's decision on a business-approved invoice.
  *
- * `RELEASE` clears it for payment, `ESCALATE` raises a trustee request, and
+ * `RELEASE` clears it for payment, `ESCALATE` raises a Treasury request, and
  * `RETURN` sends it back to the originating department. The TDS fields are
  * accepted on every action so a return still records what accounting found.
  *
@@ -91,7 +91,7 @@ export const verifyInvoiceRequest = z
     path: ['tdsRateBasisPoints'],
   })
   .refine((body) => body.action !== 'ESCALATE' || !!body.priority, {
-    message: 'A trustee request needs a priority',
+    message: 'A Treasury request needs a priority',
     path: ['priority'],
   })
   .refine((body) => body.action === 'RELEASE' || (body.remarks?.length ?? 0) >= 3, {
@@ -114,7 +114,7 @@ export const invoiceListQuery = paginationQuery.merge(scopeQuery).extend({
       'REVIEW',
       'PENDING_APPROVAL',
       'ACCOUNTING',
-      'TRUSTEE',
+      'TREASURY',
       'APPROVED',
       'PAYMENT_PENDING',
       'PAID',

@@ -60,7 +60,7 @@ export function Navigation() {
           />
           {/*
             Gated like every screen on the web. Without this the route is
-            registered for everyone: the API still refuses, but a trustee or an
+            registered for everyone: the API still refuses, but Treasury or an
             accountant could navigate to a screen that only ever shows an
             error — and "payroll is hidden" has to mean hidden.
           */}

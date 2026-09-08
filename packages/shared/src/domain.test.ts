@@ -115,21 +115,21 @@ describe('invoice state machine', () => {
     ).toBe(true);
   });
 
-  it('lets the trustee stage return an invoice to accounting', () => {
+  it('lets the Treasury stage return an invoice to accounting', () => {
     expect(
       invoiceMachine.canTransition(
         InvoiceStatus.ACCOUNTING_VERIFICATION,
-        InvoiceStatus.TRUSTEE_APPROVAL,
+        InvoiceStatus.TREASURY_APPROVAL,
       ),
     ).toBe(true);
     expect(
       invoiceMachine.canTransition(
-        InvoiceStatus.TRUSTEE_APPROVAL,
+        InvoiceStatus.TREASURY_APPROVAL,
         InvoiceStatus.ACCOUNTING_VERIFICATION,
       ),
     ).toBe(true);
     // Neither new stage is a short cut into the payment pipeline.
-    for (const stage of [InvoiceStatus.ACCOUNTING_VERIFICATION, InvoiceStatus.TRUSTEE_APPROVAL]) {
+    for (const stage of [InvoiceStatus.ACCOUNTING_VERIFICATION, InvoiceStatus.TREASURY_APPROVAL]) {
       expect(invoiceMachine.nextStates(stage)).not.toContain(InvoiceStatus.PAYMENT_PENDING);
     }
   });
@@ -166,24 +166,24 @@ describe('permissions', () => {
       RoleKey.APPROVER,
       RoleKey.VERTICAL_HEAD,
       RoleKey.ACCOUNTS_TEAM,
-      RoleKey.TRUSTEE,
+      RoleKey.TREASURY,
     ]) {
       expect(ROLE_PERMISSIONS[role]).not.toContain('payroll:read');
       expect(ROLE_PERMISSIONS[role]).not.toContain('payroll:approve');
     }
   });
 
-  it('keeps the accounting and trustee stages out of the approval chain', () => {
+  it('keeps the accounting and Treasury stages out of the approval chain', () => {
     // `withApprovalPermission` filters chain candidates by `invoice:approve`,
     // and `usersWithRole` matches on the role alone — so granting it here would
-    // silently make every accountant and trustee an eligible approver on every
-    // ordinary invoice.
+    // silently make every accountant and Treasury user an eligible approver on
+    // every ordinary invoice.
     expect(ROLE_PERMISSIONS[RoleKey.ACCOUNTS_TEAM]).not.toContain('invoice:approve');
-    expect(ROLE_PERMISSIONS[RoleKey.TRUSTEE]).not.toContain('invoice:approve');
+    expect(ROLE_PERMISSIONS[RoleKey.TREASURY]).not.toContain('invoice:approve');
     expect(ROLE_PERMISSIONS[RoleKey.ACCOUNTS_TEAM]).toContain('invoice:verify');
-    // The trustee decides escalations; it never verifies them itself.
-    expect(ROLE_PERMISSIONS[RoleKey.TRUSTEE]).not.toContain('invoice:verify');
-    expect(ROLE_PERMISSIONS[RoleKey.TRUSTEE]).toContain('finance_request:act');
+    // Treasury decides escalations; it never verifies them itself.
+    expect(ROLE_PERMISSIONS[RoleKey.TREASURY]).not.toContain('invoice:verify');
+    expect(ROLE_PERMISSIONS[RoleKey.TREASURY]).toContain('finance_request:act');
     expect(ROLE_PERMISSIONS[RoleKey.ACCOUNTS_TEAM]).not.toContain('finance_request:act');
   });
 

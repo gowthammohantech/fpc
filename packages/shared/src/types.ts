@@ -344,7 +344,7 @@ export interface Invoice extends Timestamps, OrgDimensions {
   findings: ValidationFinding[];
   approvalRequestId?: Id;
   approvalStatus: ApprovalStatus;
-  /** The open trustee escalation, when the invoice has one. */
+  /** The open Treasury escalation, when the invoice has one. */
   financeRequestId?: Id;
   obligationId?: Id;
   paymentBatchId?: Id;
@@ -438,7 +438,7 @@ export interface ApprovalRequest extends Timestamps {
   completedAt?: IsoDate;
 }
 
-// ── Trustee escalation ──────────────────────────────────────
+// ── Treasury escalation ─────────────────────────────────────
 
 export interface FinanceRequestRemark {
   userId: Id;
@@ -449,7 +449,7 @@ export interface FinanceRequestRemark {
 }
 
 /**
- * A request from finance to the trustee team about one invoice.
+ * A request from finance to the Treasury team about one invoice.
  *
  * Deliberately not an extra step on the ApprovalRequest chain: it carries a
  * priority and remarks that no approval step has, it can be *returned* rather
@@ -773,8 +773,8 @@ export interface DashboardSummary {
     pendingApprovalAmount: number;
     accountingVerification: number;
     accountingVerificationAmount: number;
-    trusteeApproval: number;
-    trusteeApprovalAmount: number;
+    treasuryApproval: number;
+    treasuryApprovalAmount: number;
     approvedUnpaid: number;
     approvedUnpaidAmount: number;
     overdue: number;

@@ -17,7 +17,7 @@ export interface FinanceRequestRemarkDoc {
 }
 
 /**
- * A request from finance to the trustee team about one invoice.
+ * A request from finance to the Treasury team about one invoice.
  *
  * Deliberately not extra steps on the ApprovalRequest chain. An approval step
  * has no priority and no remarks, `ApprovalStepStatus` has no value for
@@ -101,7 +101,7 @@ const schema = new Schema<FinanceRequestDoc>(
 );
 
 schema.index({ tenantId: 1, reference: 1 }, { unique: true });
-// The trustee inbox: highest priority first, then oldest.
+// The Treasury inbox: highest priority first, then oldest.
 schema.index({ tenantId: 1, companyId: 1, status: 1, priority: 1, requestedAt: 1 });
 // At most one open request per invoice, so "the escalation" is never ambiguous.
 schema.index(

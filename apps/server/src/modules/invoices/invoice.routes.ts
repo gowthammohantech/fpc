@@ -408,7 +408,7 @@ invoiceRouter.post(
  * The accounting stage — PRD §16a.
  *
  * One endpoint for the three things the accounting team can do with a
- * business-approved invoice: clear it for payment, escalate it to the trustee,
+ * business-approved invoice: clear it for payment, escalate it to Treasury,
  * or send it back. TDS is recorded on all three, so a returned invoice still
  * carries what accounting found.
  *
@@ -529,8 +529,8 @@ function viewFilter(view: string | undefined): Record<string, unknown> {
       return { status: InvoiceStatus.PENDING_APPROVAL };
     case 'ACCOUNTING':
       return { status: InvoiceStatus.ACCOUNTING_VERIFICATION };
-    case 'TRUSTEE':
-      return { status: InvoiceStatus.TRUSTEE_APPROVAL };
+    case 'TREASURY':
+      return { status: InvoiceStatus.TREASURY_APPROVAL };
     case 'APPROVED':
       return { status: InvoiceStatus.APPROVED };
     case 'PAYMENT_PENDING':

@@ -125,8 +125,23 @@ RAILWAY_DOCKERFILE_PATH=/apps/web/Dockerfile
 API_URL=http://${{server.RAILWAY_PRIVATE_DOMAIN}}:4000
 ```
 
-Replace `server` with whatever the API service is actually named. Then
-generate a public domain for this service — it is the only one users hit.
+Replace `server` with whatever the API service is actually named — this is the
+single most common cause of `502` on every `/api/*` call. The image's built-in
+default is `server.railway.internal`, so a project whose API service is called
+anything else resolves nothing until `API_URL` is set explicitly. Then generate
+a public domain for this service — it is the only one users hit.
+
+If private networking is not an option, `API_URL` can be the API's **public**
+URL instead, with no `/api` suffix and no trailing slash:
+
+```
+API_URL=https://<api-service>.up.railway.app
+```
+
+nginx forwards the upstream's own hostname as `Host` and negotiates SNI, so an
+HTTPS upstream behind a shared edge routes correctly. It costs a round trip out
+to the public edge and back, and it needs `RESOLVER` to be a nameserver that
+answers for public domains, so prefer the private address where you can.
 
 Railway sets `PORT` itself; nginx picks it up from the config template.
 

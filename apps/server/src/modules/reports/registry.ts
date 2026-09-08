@@ -502,7 +502,7 @@ const consolidatedPayables: ReportDefinition = {
     { key: 'netPayable', header: 'Net Payable', format: 'money', width: 16 },
     { key: 'approvalStatus', header: 'Business Approval', format: 'status', width: 18 },
     { key: 'accountingStatus', header: 'Accounting', format: 'status', width: 16 },
-    { key: 'trusteeStatus', header: 'Trustee', format: 'status', width: 16 },
+    { key: 'treasuryStatus', header: 'Treasury', format: 'status', width: 16 },
     { key: 'status', header: 'Invoice Status', format: 'status', width: 22 },
     { key: 'paymentStatus', header: 'Payment', format: 'status', width: 16 },
     { key: 'reconciliationStatus', header: 'Reconciliation', format: 'status', width: 18 },
@@ -541,10 +541,10 @@ const consolidatedPayables: ReportDefinition = {
 
     const obligationBySource = new Map(obligations.map((row) => [String(row.sourceId), row]));
     // Most recent first, so the first write per invoice is the latest outcome.
-    const trusteeByInvoice = new Map<string, string>();
+    const treasuryByInvoice = new Map<string, string>();
     for (const request of requests) {
       const key = String(request.invoiceId);
-      if (!trusteeByInvoice.has(key)) trusteeByInvoice.set(key, request.status);
+      if (!treasuryByInvoice.has(key)) treasuryByInvoice.set(key, request.status);
     }
 
     return invoices.map((invoice) => {
@@ -563,7 +563,7 @@ const consolidatedPayables: ReportDefinition = {
           : invoice.status === InvoiceStatus.ACCOUNTING_VERIFICATION
             ? 'PENDING'
             : '',
-        trusteeStatus: trusteeByInvoice.get(String(invoice._id)) ?? '',
+        treasuryStatus: treasuryByInvoice.get(String(invoice._id)) ?? '',
         paymentStatus: obligation?.paymentStatus ?? '',
         reconciliationStatus: obligation?.reconciliationStatus ?? '',
         paymentBatchReference: obligation?.paymentBatchReference ?? '',
