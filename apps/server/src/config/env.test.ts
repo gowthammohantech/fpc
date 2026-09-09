@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { booleanFlag } from './env.js';
+import { booleanFlag, validateOutlookConfig } from './env.js';
 
 /**
  * These lock down a bug that shipped once: `z.coerce.boolean()` is
@@ -34,5 +34,53 @@ describe('boolean environment flags', () => {
   it('rejects an ambiguous value rather than guessing', () => {
     expect(() => booleanFlag(false).parse('maybe')).toThrow(/Expected a boolean/);
     expect(() => booleanFlag(false).parse('2')).toThrow(/Expected a boolean/);
+  });
+});
+
+describe('Outlook environment configuration', () => {
+  const validOutlookConfig = {
+    NODE_ENV: 'development',
+    OUTLOOK_ENABLED: true,
+    OUTLOOK_CLIENT_ID: '00000000-0000-0000-0000-000000000001',
+    OUTLOOK_CLIENT_SECRET: 'client-secret-value',
+    OUTLOOK_REDIRECT_URI: 'http://localhost:4000/api/auth/outlook/callback',
+  } satisfies Parameters<typeof validateOutlookConfig>[0];
+
+  it('allows localhost callback URLs in development', () => {
+    expect(() => validateOutlookConfig(validOutlookConfig)).not.toThrow();
+  });
+
+  it('does not require Outlook credentials while the connector is disabled', () => {
+    expect(() =>
+      validateOutlookConfig({
+        NODE_ENV: 'development',
+        OUTLOOK_ENABLED: false,
+        OUTLOOK_REDIRECT_URI: 'http://localhost:4000/api/auth/outlook/callback',
+      }),
+    ).not.toThrow();
+  });
+
+  it('requires both delegated OAuth credentials when the connector is enabled', () => {
+    expect(() =>
+      validateOutlookConfig({ ...validOutlookConfig, OUTLOOK_CLIENT_ID: undefined }),
+    ).toThrow(/OUTLOOK_ENABLED=true/);
+    expect(() =>
+      validateOutlookConfig({ ...validOutlookConfig, OUTLOOK_CLIENT_SECRET: undefined }),
+    ).toThrow(/OUTLOOK_ENABLED=true/);
+  });
+
+  it('rejects client secret values pasted into OUTLOOK_CLIENT_ID', () => {
+    expect(() =>
+      validateOutlookConfig({
+        ...validOutlookConfig,
+        OUTLOOK_CLIENT_ID: 'Q6c8Q~2upJx5Li6LvgwFj1Eb2G~8A.NhMGRxsdxw',
+      }),
+    ).toThrow(/Application \(client\) ID/);
+  });
+
+  it('requires an HTTPS Outlook callback in production', () => {
+    expect(() => validateOutlookConfig({ ...validOutlookConfig, NODE_ENV: 'production' })).toThrow(
+      /OUTLOOK_REDIRECT_URI must be https/,
+    );
   });
 });

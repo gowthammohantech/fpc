@@ -24,6 +24,7 @@ export class FakeOutlookOAuth implements OutlookOAuthClient {
   readonly name = 'fake';
   /** Every state token handed out, so a test can replay the real callback. */
   readonly issuedStates: string[] = [];
+  mailboxAccessError: Error | null = null;
 
   constructor(private readonly account: OutlookAccount) {}
 
@@ -48,6 +49,10 @@ export class FakeOutlookOAuth implements OutlookOAuthClient {
 
   async me(): Promise<OutlookAccount> {
     return this.account;
+  }
+
+  async assertMailboxAccess(): Promise<void> {
+    if (this.mailboxAccessError) throw this.mailboxAccessError;
   }
 
   private issue(): OutlookTokenResponse {

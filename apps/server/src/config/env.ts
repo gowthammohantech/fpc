@@ -106,6 +106,37 @@ const schema = z.object({
   OUTLOOK_SWEEP_CRON: z.string().default('*/5 * * * *'),
 });
 
+type ParsedEnv = z.infer<typeof schema>;
+
+const MICROSOFT_ENTRA_CLIENT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function validateOutlookConfig(
+  value: Pick<
+    ParsedEnv,
+    | 'NODE_ENV'
+    | 'OUTLOOK_ENABLED'
+    | 'OUTLOOK_CLIENT_ID'
+    | 'OUTLOOK_CLIENT_SECRET'
+    | 'OUTLOOK_REDIRECT_URI'
+  >,
+): void {
+  if (!value.OUTLOOK_ENABLED) return;
+
+  if (!value.OUTLOOK_CLIENT_ID || !value.OUTLOOK_CLIENT_SECRET) {
+    throw new Error('OUTLOOK_ENABLED=true requires OUTLOOK_CLIENT_ID and OUTLOOK_CLIENT_SECRET');
+  }
+
+  if (!MICROSOFT_ENTRA_CLIENT_ID.test(value.OUTLOOK_CLIENT_ID)) {
+    throw new Error(
+      'OUTLOOK_CLIENT_ID must be the Microsoft Entra Application (client) ID, which is a GUID. It looks like the client secret may have been pasted there.',
+    );
+  }
+
+  if (value.NODE_ENV === 'production' && !value.OUTLOOK_REDIRECT_URI.startsWith('https://')) {
+    throw new Error('OUTLOOK_REDIRECT_URI must be https in production');
+  }
+}
+
 /**
  * Decodes the secret-encryption key, accepting base64 or hex.
  *
@@ -119,7 +150,7 @@ export function decodeEncryptionKey(value: string): Buffer {
   return Buffer.from(value, 'utf8');
 }
 
-export type Env = z.infer<typeof schema> & { corsOrigins: string[] };
+export type Env = ParsedEnv & { corsOrigins: string[] };
 
 function load(): Env {
   const parsed = schema.safeParse(process.env);
@@ -151,13 +182,9 @@ function load(): Env {
         'SECRET_ENCRYPTION_KEY must decode to exactly 32 bytes (openssl rand -base64 32)',
       );
     }
-    if (value.OUTLOOK_ENABLED && (!value.OUTLOOK_CLIENT_ID || !value.OUTLOOK_CLIENT_SECRET)) {
-      throw new Error('OUTLOOK_ENABLED=true requires OUTLOOK_CLIENT_ID and OUTLOOK_CLIENT_SECRET');
-    }
-    if (value.OUTLOOK_ENABLED && !value.OUTLOOK_REDIRECT_URI.startsWith('https://')) {
-      throw new Error('OUTLOOK_REDIRECT_URI must be https in production');
-    }
   }
+
+  validateOutlookConfig(value);
 
   const corsOrigins = value.CORS_ORIGINS.split(',')
     .map((origin) => origin.trim())

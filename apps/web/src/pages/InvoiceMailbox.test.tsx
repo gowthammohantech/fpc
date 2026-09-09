@@ -127,6 +127,15 @@ describe('InvoiceMailboxPage', () => {
     expect(screen.getByText(/Nothing in your mailbox is changed/)).toBeInTheDocument();
   });
 
+  it('explains when Microsoft signs in an account without a readable mailbox', async () => {
+    mailApi.connection.mockResolvedValue(null);
+    renderWithProviders(<InvoiceMailboxPage />, {
+      route: '/integrations/outlook?connect=error&reason=mailbox_unavailable',
+    });
+
+    expect(await screen.findByText(/does not have an Outlook mailbox/)).toBeInTheDocument();
+  });
+
   it('shows the connected account and what it has pulled', async () => {
     mailApi.connection.mockResolvedValue(connection({ lastSyncAt: '2026-09-01T10:02:00.000Z' }));
     renderWithProviders(<InvoiceMailboxPage />);

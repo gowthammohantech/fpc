@@ -1,5 +1,6 @@
 import { env } from '../../../config/env.js';
 import { logger } from '../../../config/logger.js';
+import { OutlookMailboxUnavailableError } from './errors.js';
 
 /**
  * The Microsoft identity platform, behind a seam.
@@ -35,6 +36,7 @@ export interface OutlookOAuthClient {
   exchangeCode(code: string): Promise<OutlookTokenResponse>;
   refresh(refreshToken: string): Promise<OutlookTokenResponse>;
   me(accessToken: string): Promise<OutlookAccount>;
+  assertMailboxAccess(accessToken: string): Promise<void>;
 }
 
 /**
@@ -121,6 +123,27 @@ class MicrosoftOAuthClient implements OutlookOAuthClient {
     });
     if (!response.ok) throw new Error(`Could not read the Microsoft account (${response.status})`);
     return (await response.json()) as OutlookAccount;
+  }
+
+  async assertMailboxAccess(accessToken: string): Promise<void> {
+    const response = await fetch(
+      'https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$top=1&$select=id',
+      {
+        headers: { authorization: `Bearer ${accessToken}` },
+      },
+    );
+    if (response.ok) return;
+
+    const payload = (await response.json().catch(() => ({}))) as TokenPayload;
+    logger.warn(
+      { status: response.status, code: payload.error },
+      'outlook mailbox access check failed',
+    );
+
+    if ([401, 403, 404].includes(response.status)) {
+      throw new OutlookMailboxUnavailableError();
+    }
+    throw new Error(`Could not access the Outlook mailbox (${response.status})`);
   }
 }
 

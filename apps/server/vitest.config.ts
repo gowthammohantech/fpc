@@ -10,6 +10,10 @@ export default defineConfig({
     // `env` is parsed once at import time, so a flag set inside a hook comes
     // too late. The connector suite replaces Microsoft through the driver
     // seams, so enabling it here costs nothing and never reaches the network.
-    env: { OUTLOOK_ENABLED: 'true' },
+    env: {
+      OUTLOOK_ENABLED: 'true',
+      OUTLOOK_CLIENT_ID: '00000000-0000-0000-0000-000000000001',
+      OUTLOOK_CLIENT_SECRET: 'test-client-secret',
+    },
   },
 });

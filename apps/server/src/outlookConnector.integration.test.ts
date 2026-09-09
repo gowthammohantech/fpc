@@ -14,6 +14,10 @@ import { Invoice } from './models/invoice.model.js';
 import { MailConnection } from './models/mailConnection.model.js';
 import { MailIngestion } from './models/mailIngestion.model.js';
 import { decryptSecret } from './core/crypto.js';
+import {
+  OUTLOOK_MAILBOX_UNAVAILABLE_REASON,
+  OutlookMailboxUnavailableError,
+} from './modules/integrations/outlook/errors.js';
 import { setOutlookOAuth } from './modules/integrations/outlook/oauth.client.js';
 import { runSync } from './modules/integrations/outlook/outlook.sync.js';
 import { DEMO_PASSWORD } from './seed/data.js';
@@ -136,6 +140,28 @@ RUN()('outlook connector', () => {
 
   beforeEach(async () => {
     ravi = await token('ravi@nova.example.com');
+  });
+
+  it('does not connect an account whose Outlook mailbox cannot be read', async () => {
+    oauth.mailboxAccessError = new OutlookMailboxUnavailableError();
+    try {
+      const authorize = await request(app)
+        .post('/api/integrations/outlook/authorize')
+        .set('authorization', `Bearer ${ravi}`)
+        .send({ defaultCompanyId: companyId });
+      expect(authorize.status, JSON.stringify(authorize.body)).toBe(200);
+
+      const state = new URL(authorize.body.authorizeUrl).searchParams.get('state');
+      const callback = await request(app)
+        .get('/api/auth/outlook/callback')
+        .query({ code: 'fake-code', state });
+
+      expect(callback.status).toBe(302);
+      expect(callback.headers.location).toContain(`reason=${OUTLOOK_MAILBOX_UNAVAILABLE_REASON}`);
+      expect(await MailConnection.exists({ providerAccountId: 'graph-account-1' })).toBeNull();
+    } finally {
+      oauth.mailboxAccessError = null;
+    }
   });
 
   it('connects a mailbox and stores the refresh token encrypted', async () => {

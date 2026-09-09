@@ -63,6 +63,7 @@ export function InvoiceMailboxPage() {
   const page = Number(params.get('page') ?? 1);
   const search = params.get('q') ?? '';
   const connectOutcome = params.get('connect');
+  const connectReason = params.get('reason');
 
   const canManage = can('mail_connection:manage');
 
@@ -172,7 +173,11 @@ export function InvoiceMailboxPage() {
       />
 
       {connectOutcome ? (
-        <ConnectOutcomeNotice outcome={connectOutcome} onDismiss={dismissOutcome} />
+        <ConnectOutcomeNotice
+          outcome={connectOutcome}
+          reason={connectReason}
+          onDismiss={dismissOutcome}
+        />
       ) : null}
 
       {connectionQuery.isLoading ? (
@@ -328,13 +333,23 @@ export function InvoiceMailboxPage() {
 }
 
 /** The one-line result of coming back from Microsoft. */
-function ConnectOutcomeNotice({ outcome, onDismiss }: { outcome: string; onDismiss(): void }) {
+function ConnectOutcomeNotice({
+  outcome,
+  reason,
+  onDismiss,
+}: {
+  outcome: string;
+  reason: string | null;
+  onDismiss(): void;
+}) {
   const message =
     outcome === 'success'
       ? 'Outlook connected. Press Sync now to pull your first invoices.'
       : outcome === 'conflict'
         ? 'That mailbox is already connected by someone else in your organisation.'
-        : 'Outlook was not connected. Nothing has changed — you can try again.';
+        : reason === 'mailbox_unavailable'
+          ? 'Microsoft signed you in, but that account does not have an Outlook mailbox we can read. Choose a mailbox-enabled Microsoft 365 or Outlook.com account and try again.'
+          : 'Outlook was not connected. Nothing has changed — you can try again.';
 
   return (
     <div

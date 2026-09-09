@@ -23,6 +23,7 @@ import {
 import { User } from '../../../models/user.model.js';
 import { audit, type AuditContext } from '../../audit/audit.service.js';
 import * as invoiceService from '../../invoices/invoice.service.js';
+import { OutlookMailboxUnavailableError } from './errors.js';
 import { accessTokenFor } from './outlook.tokens.js';
 import {
   AttachmentSkipReason,
@@ -173,6 +174,17 @@ export async function runSync(
   } catch (error) {
     summary.outcome = 'FAILED';
     lastSyncError = (error as Error).message;
+    if (error instanceof OutlookMailboxUnavailableError) {
+      await MailConnection.updateOne(
+        { _id: connectionId },
+        {
+          $set: {
+            status: MailConnectionStatus.ERROR,
+            statusMessage: error.message,
+          },
+        },
+      );
+    }
     logger.error({ err: error, connectionId: String(connectionId) }, 'outlook sync failed');
   } finally {
     // Non-negotiable. Without releasing the lock here a thrown fetch would keep

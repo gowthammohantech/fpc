@@ -1,4 +1,5 @@
 import { Client } from '@microsoft/microsoft-graph-client';
+import { OutlookMailboxUnavailableError } from '../../modules/integrations/outlook/errors.js';
 import type {
   DelegatedMailFetcher,
   DelegatedMailPage,
@@ -93,7 +94,7 @@ export class DelegatedGraphMailFetcher implements DelegatedMailFetcher {
       .select(SELECT_FIELDS);
 
     for (let page = 0; page < MAX_PAGES; page += 1) {
-      const response = (await request.get()) as GraphList<GraphMessage>;
+      const response = (await readGraph(() => request.get())) as GraphList<GraphMessage>;
       raw.push(...(response.value ?? []));
 
       const next = response['@odata.nextLink'];
@@ -137,10 +138,12 @@ export class DelegatedGraphMailFetcher implements DelegatedMailFetcher {
    * discover it is not a PDF.
    */
   private async attachmentsFor(client: Client, messageId: string): Promise<InboundAttachment[]> {
-    const listed = (await client
-      .api(`/me/messages/${messageId}/attachments`)
-      .select('id,name,contentType,size,isInline')
-      .get()) as GraphList<GraphAttachment>;
+    const listed = (await readGraph(() =>
+      client
+        .api(`/me/messages/${messageId}/attachments`)
+        .select('id,name,contentType,size,isInline')
+        .get(),
+    )) as GraphList<GraphAttachment>;
 
     const attachments: InboundAttachment[] = [];
     for (const item of listed.value ?? []) {
@@ -161,9 +164,9 @@ export class DelegatedGraphMailFetcher implements DelegatedMailFetcher {
         continue;
       }
 
-      const full = (await client
-        .api(`/me/messages/${messageId}/attachments/${item.id}`)
-        .get()) as GraphAttachment;
+      const full = (await readGraph(() =>
+        client.api(`/me/messages/${messageId}/attachments/${item.id}`).get(),
+      )) as GraphAttachment;
       if (full['@odata.type'] !== '#microsoft.graph.fileAttachment') continue;
 
       attachments.push({
@@ -177,6 +180,21 @@ export class DelegatedGraphMailFetcher implements DelegatedMailFetcher {
     }
     return attachments;
   }
+}
+
+async function readGraph<T>(operation: () => Promise<T>): Promise<T> {
+  try {
+    return await operation();
+  } catch (error) {
+    if (isMailboxAccessFailure(error)) throw new OutlookMailboxUnavailableError();
+    throw error;
+  }
+}
+
+export function isMailboxAccessFailure(error: unknown): boolean {
+  const candidate = error as { statusCode?: unknown; status?: unknown };
+  const status = candidate.statusCode ?? candidate.status;
+  return status === 401 || status === 403 || status === 404;
 }
 
 function clientFor(accessToken: string): Client {

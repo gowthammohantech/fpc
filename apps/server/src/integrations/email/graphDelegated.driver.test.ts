@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildMessageFilter } from './graphDelegated.driver.js';
+import { OutlookMailboxUnavailableError } from '../../modules/integrations/outlook/errors.js';
+import { buildMessageFilter, isMailboxAccessFailure } from './graphDelegated.driver.js';
 import type { DelegatedMailQuery } from './types.js';
 
 function query(overrides: Partial<DelegatedMailQuery> = {}): DelegatedMailQuery {
@@ -47,5 +48,22 @@ describe('buildMessageFilter', () => {
   it('escapes quotes in an address rather than breaking the filter', () => {
     const filter = buildMessageFilter(query({ senderAllowlist: ["o'brien@x.com"] }));
     expect(filter).toContain("o''brien@x.com");
+  });
+});
+
+describe('isMailboxAccessFailure', () => {
+  it('recognises auth-shaped Graph mailbox failures', () => {
+    for (const statusCode of [401, 403, 404]) {
+      expect(isMailboxAccessFailure({ statusCode })).toBe(true);
+    }
+  });
+
+  it('leaves transient and malformed failures alone', () => {
+    expect(isMailboxAccessFailure({ statusCode: 429 })).toBe(false);
+    expect(isMailboxAccessFailure(new Error('network'))).toBe(false);
+  });
+
+  it('uses the same user-facing error the sync stores on the connection', () => {
+    expect(new OutlookMailboxUnavailableError().message).toContain('mailbox-enabled');
   });
 });

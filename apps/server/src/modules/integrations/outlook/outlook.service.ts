@@ -11,6 +11,7 @@ import { Company } from '../../../models/company.model.js';
 import { MailConnection, type MailConnectionDoc } from '../../../models/mailConnection.model.js';
 import { User } from '../../../models/user.model.js';
 import { audit, type AuditContext } from '../../audit/audit.service.js';
+import { OUTLOOK_MAILBOX_UNAVAILABLE_REASON, OutlookMailboxUnavailableError } from './errors.js';
 import { outlookOAuth, type OutlookTokenResponse } from './oauth.client.js';
 import { signStateToken, verifyStateToken } from './oauth.state.js';
 import { encryptAccessToken, encryptRefreshToken } from './outlook.tokens.js';
@@ -101,8 +102,18 @@ export async function completeConnect(
     );
   }
 
-  const issued = await outlookOAuth().exchangeCode(input.code);
-  const account = await outlookOAuth().me(issued.accessToken);
+  let issued: OutlookTokenResponse;
+  let account;
+  try {
+    issued = await outlookOAuth().exchangeCode(input.code);
+    account = await outlookOAuth().me(issued.accessToken);
+    await outlookOAuth().assertMailboxAccess(issued.accessToken);
+  } catch (error) {
+    if (error instanceof OutlookMailboxUnavailableError) {
+      return { redirectTo: returnUrl('error', OUTLOOK_MAILBOX_UNAVAILABLE_REASON) };
+    }
+    throw error;
+  }
   const accountEmail = (account.mail ?? account.userPrincipalName ?? '').toLowerCase();
 
   const tenantId = new Types.ObjectId(claims.tenantId);
